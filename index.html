@@ -1,141 +1,140 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EasyBranding AI | Smart, Organic Automation for South African Startups</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyBranding AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary: #1A3C34;
-      --accent: #A8C686;
-      --background: #F5F5F0;
-      --highlight: #00B0B9;
-      --text: #2C3E3E;
+      --organic-green: #4CAF50;
+      --machine-silver: #9E9E9E;
+      --deep-forest: #1B5E20;
+      --light-leaf: #A5D6A7;
+      --text-dark: #212121;
+      --text-light: #FFFFFF;
     }
-
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
     body {
-      font-family: 'Barlow', Arial, sans-serif;
-      margin: 0; padding: 0;
-      background: var(--background);
-      color: var(--text);
+      font-family: 'Barlow', sans-serif;
+      color: var(--text-dark);
+      background-color: var(--light-leaf);
       line-height: 1.6;
     }
-
     header {
-      background-color: var(--primary);
-      color: var(--accent);
-      padding: 1.5rem 1rem;
+      background-color: var(--deep-forest);
+      color: var(--text-light);
+      padding: 2rem;
       text-align: center;
     }
-
     header h1 {
-      margin: 0;
-      font-weight: 700;
-      font-size: 2rem;
+      font-size: 2.5rem;
     }
-
-    header p {
-      margin-top: 0.5rem;
-      font-weight: 500;
-      font-size: 1.1rem;
-    }
-
     main {
-      max-width: 900px;
-      margin: 2rem auto;
-      padding: 0 1rem;
+      padding: 2rem;
     }
-
     section {
-      margin-bottom: 3rem;
+      margin-bottom: 2rem;
     }
-
-    h2 {
-      color: var(--primary);
-      border-bottom: 3px solid var(--accent);
-      padding-bottom: 0.3rem;
-      margin-bottom: 1rem;
-    }
-
-    ul {
-      list-style: disc inside;
-      margin-left: 1rem;
-    }
-
-    a {
-      color: var(--highlight);
+    .btn {
+      display: inline-block;
+      background-color: var(--organic-green);
+      color: white;
+      padding: 0.75rem 1.5rem;
       text-decoration: none;
-      font-weight: 600;
+      border-radius: 8px;
+      transition: background 0.3s ease;
     }
-
-    a:hover {
-      text-decoration: underline;
+    .btn:hover {
+      background-color: var(--deep-forest);
     }
-
     footer {
       text-align: center;
       padding: 1rem;
-      font-size: 0.9rem;
+      background-color: var(--machine-silver);
       color: white;
-      background-color: var(--primary);
-      margin-top: 4rem;
     }
-
-    .btn {
-      background-color: var(--highlight);
-      color: white;
-      padding: 0.7rem 1.5rem;
-      border-radius: 30px;
-      font-weight: 600;
-      display: inline-block;
-      margin-top: 1rem;
+    .pricing-table {
+      display: grid;
+      gap: 1rem;
     }
-
-    .btn:hover {
-      background-color: #00818a;
+    .price-card {
+      background: white;
+      border: 2px solid var(--organic-green);
+      border-radius: 12px;
+      padding: 1rem;
+    }
+    .price-card h3 {
+      margin-bottom: 0.5rem;
+    }
+    .price-card ul {
+      margin: 0.5rem 0;
+      padding-left: 1.2rem;
     }
   </style>
 </head>
 <body>
   <header>
     <h1>EasyBranding AI</h1>
-    <p>Smart, Organic Automation for South African Startups</p>
-  </header>
-  <main>
+    <p>Branding made simple with the power of AI and nature.</p>
+  </header>  <main>
     <section>
-      <h2>Who We Help</h2>
-      <p>
-        We help <strong>South African freelancers, brands, and startup teams</strong> automate their support, branding, and admin processes using AI-powered tools and human-friendly systems.
-      </p>
-      <p>
-        Whether you run a creative business, wellness service, or digital hustle — we help you stay grounded and grow smart.
-      </p>
-    </section>
-
-    <section id="services">
       <h2>What We Offer</h2>
       <ul>
-        <li><strong>WhatsApp AI Assistants</strong> — Human-like auto replies to bookings and questions</li>
-        <li><strong>Branding Systems</strong> — Easy forms, smart assets, and Canva-ready templates</li>
-        <li><strong>Client Support Automation</strong> — Chatbots, autoresponders, and booking tools</li>
+        <li>🎨 AI-Powered Logo & Brand Kit</li>
+        <li>🤖 Automated Customer Support Setup</li>
+        <li>🧑‍💻 Tools & Training for Freelancers</li>
+        <li>🌿 Natural + Tech branding expertise</li>
       </ul>
-      <p>
-        We use free and accessible tools like ChatGPT, Tidio, Zapier, Google Forms, and Canva to build thoughtful tech for South African creatives.
-      </p>
-    </section>
-
-    <section id="contact">
-      <h2>Contact Us</h2>
-      <p>Book a free consult or send us a WhatsApp message:</p>
+    </section><section>
+  <h2>Service Packages</h2>
+  <div class="pricing-table">
+    <div class="price-card">
+      <h3>🟢 Starter — R349</h3>
       <ul>
-        <li>📱 <a href="https://wa.me/27846549578" target="_blank">Chat on WhatsApp</a></li>
-        <li>📧 Email: <a href="mailto:easybranding1@outlook.com">easybranding1@outlook.com</a></li>
-        <li>📅 <a href="https://calendly.com/yourlink" target="_blank">Book on Calendly</a></li>
+        <li>Logo with AI tools</li>
+        <li>Basic brand color guide</li>
+        <li>WhatsApp link setup</li>
       </ul>
-    </section>
-  </main>
-  <footer>
-    &copy; 2025 EasyBranding AI — Natural Intelligence for the New South Africa
+    </div>
+    <div class="price-card">
+      <h3>🟡 Pro — R799</h3>
+      <ul>
+        <li>Everything in Starter</li>
+        <li>Branded Google Form</li>
+        <li>WhatsApp or email autoresponder</li>
+        <li>Custom Canva banner</li>
+      </ul>
+    </div>
+    <div class="price-card">
+      <h3>🔴 Premium — R1499</h3>
+      <ul>
+        <li>Everything in Pro</li>
+        <li>1-page AI-powered website</li>
+        <li>Automated FAQ chatbot</li>
+        <li>30-min brand strategy session</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Get Started Now</h2>
+  <p>Fill out our quick form and we'll reach out to you via WhatsApp.</p>
+  <a class="btn" href="https://forms.gle/YOUR_FORM_LINK" target="_blank">Launch Form</a>
+</section>
+
+<section>
+  <h2>Contact Us</h2>
+  <p>📞 WhatsApp: <a href="https://wa.me/27846549578" class="btn">Message Us</a></p>
+  <p>📧 Email: <a href="mailto:easybranding1@outlook.com">easybranding1@outlook.com</a></p>
+</section>
+
+  </main>  <footer>
+    <p>&copy; 2025 EasyBranding AI. All rights reserved.</p>
   </footer>
 </body>
 </html>
