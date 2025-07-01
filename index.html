@@ -1,140 +1,117 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EasyBranding AI</title>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --organic-green: #4CAF50;
-      --machine-silver: #9E9E9E;
-      --deep-forest: #1B5E20;
-      --light-leaf: #A5D6A7;
-      --text-dark: #212121;
-      --text-light: #FFFFFF;
-    }
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    body {
-      font-family: 'Barlow', sans-serif;
-      color: var(--text-dark);
-      background-color: var(--light-leaf);
-      line-height: 1.6;
-    }
-    header {
-      background-color: var(--deep-forest);
-      color: var(--text-light);
-      padding: 2rem;
-      text-align: center;
-    }
-    header h1 {
-      font-size: 2.5rem;
-    }
-    main {
-      padding: 2rem;
-    }
-    section {
-      margin-bottom: 2rem;
-    }
-    .btn {
-      display: inline-block;
-      background-color: var(--organic-green);
-      color: white;
-      padding: 0.75rem 1.5rem;
-      text-decoration: none;
-      border-radius: 8px;
-      transition: background 0.3s ease;
-    }
-    .btn:hover {
-      background-color: var(--deep-forest);
-    }
-    footer {
-      text-align: center;
-      padding: 1rem;
-      background-color: var(--machine-silver);
-      color: white;
-    }
-    .pricing-table {
-      display: grid;
-      gap: 1rem;
-    }
-    .price-card {
-      background: white;
-      border: 2px solid var(--organic-green);
-      border-radius: 12px;
-      padding: 1rem;
-    }
-    .price-card h3 {
-      margin-bottom: 0.5rem;
-    }
-    .price-card ul {
-      margin: 0.5rem 0;
-      padding-left: 1.2rem;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Easy Branding offers AI-driven chatbot, auto-response, and helpdesk solutions for South African businesses.">
+  <meta property="og:title" content="Easy Branding">
+  <meta property="og:description" content="AI-driven branding solutions for South African businesses.">
+  <meta property="og:url" content="https://creations11.github.io/Easybranding/">
+  <meta property="og:image" content="https://creations11.github.io/Easybranding/logo.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="favicon.ico">
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&display=swap" as="style">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <title>Easy Branding</title>
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-XXXXX-Y"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'UA-XXXXX-Y');
+  </script>
 </head>
 <body>
-  <header>
-    <h1>EasyBranding AI</h1>
-    <p>Branding made simple with the power of AI and nature.</p>
-  </header>  <main>
-    <section>
-      <h2>What We Offer</h2>
-      <ul>
-        <li>🎨 AI-Powered Logo & Brand Kit</li>
-        <li>🤖 Automated Customer Support Setup</li>
-        <li>🧑‍💻 Tools & Training for Freelancers</li>
-        <li>🌿 Natural + Tech branding expertise</li>
-      </ul>
-    </section><section>
-  <h2>Service Packages</h2>
-  <div class="pricing-table">
-    <div class="price-card">
-      <h3>🟢 Starter — R349</h3>
-      <ul>
-        <li>Logo with AI tools</li>
-        <li>Basic brand color guide</li>
-        <li>WhatsApp link setup</li>
-      </ul>
-    </div>
-    <div class="price-card">
-      <h3>🟡 Pro — R799</h3>
-      <ul>
-        <li>Everything in Starter</li>
-        <li>Branded Google Form</li>
-        <li>WhatsApp or email autoresponder</li>
-        <li>Custom Canva banner</li>
-      </ul>
-    </div>
-    <div class="price-card">
-      <h3>🔴 Premium — R1499</h3>
-      <ul>
-        <li>Everything in Pro</li>
-        <li>1-page AI-powered website</li>
-        <li>Automated FAQ chatbot</li>
-        <li>30-min brand strategy session</li>
-      </ul>
-    </div>
-  </div>
-</section>
+  <header role="banner">
+    <img src="logo.png" alt="Easy Branding Logo" class="logo">
+    <h1>Easy Branding</h1>
+    <p>Helping South African businesses grow with AI-driven support solutions</p>
+  </header>
 
-<section>
-  <h2>Get Started Now</h2>
-  <p>Fill out our quick form and we'll reach out to you via WhatsApp.</p>
-  <a class="btn" href="https://forms.gle/YOUR_FORM_LINK" target="_blank">Launch Form</a>
-</section>
+  <main>
+    <section id="services">
+      <h2>Our Services</h2>
+      <div class="service-box">
+        <h3><span class="icon" aria-hidden="true">🤖</span> AI Chatbot Setup</h3>
+        <p>Get a smart chatbot for your website, WhatsApp, or Facebook page — perfect for handling FAQs, sales queries, and booking requests automatically.</p>
+      </div>
+      <div class="service-box">
+        <h3><span class="icon" aria-hidden="true">📧</span> Auto-Response System</h3>
+        <p>24/7 email replies powered by AI, connected to your contact forms or Gmail — so you never leave a client waiting again.</p>
+      </div>
+      <div class="service-box">
+        <h3><span class="icon" aria-hidden="true">📚</span> Help Desk Content + FAQ Writing</h3>
+        <p>Professional FAQs, return policies, and onboarding guides written clearly using AI — tailored for your local audience.</p>
+      </div>
+      <div class="service-box">
+        <h3><span class="icon" aria-hidden="true">⚙️</span> Helpdesk Automation</h3>
+        <p>We link everything up using tools like Zapier to streamline enquiries, update your Google Sheets, or trigger CRM actions automatically.</p>
+      </div>
+    </section>
 
-<section>
-  <h2>Contact Us</h2>
-  <p>📞 WhatsApp: <a href="https://wa.me/27846549578" class="btn">Message Us</a></p>
-  <p>📧 Email: <a href="mailto:easybranding1@outlook.com">easybranding1@outlook.com</a></p>
-</section>
+    <section id="portfolio">
+      <h2>Our Work</h2>
+      <div class="portfolio-grid">
+        <article class="project">
+          <img src="project1.jpg" alt="Chatbot for Cape Town Retailer" loading="lazy">
+          <h3>Retail Chatbot</h3>
+          <p>Built a WhatsApp chatbot for a Cape Town retailer, reducing response time by 50% and boosting sales by 20%.</p>
+        </article>
+        <article class="project">
+          <img src="project2.jpg" alt="Automated Helpdesk for SME" loading="lazy">
+          <h3>SME Helpdesk</h3>
+          <p>Implemented AI-driven FAQ and auto-response system for a Johannesburg SME, improving customer satisfaction.</p>
+        </article>
+      </div>
+    </section>
 
-  </main>  <footer>
-    <p>&copy; 2025 EasyBranding AI. All rights reserved.</p>
+    <section id="pricing">
+      <h2>Packages & Pricing (ZAR)</h2>
+      <div class="package-grid">
+        <div class="package">
+          <strong>Starter</strong><br>
+          1 chatbot or FAQ setup — <strong>R950</strong>
+        </div>
+        <div class="package">
+          <strong>Pro</strong><br>
+          Chatbot + FAQ + auto-responses — <strong>R2,250</strong>
+        </div>
+        <div class="package">
+          <strong>Full Setup</strong><br>
+          All services above + CRM & automation integration — <strong>R3,800</strong>
+        </div>
+      </div>
+    </section>
+
+    <section id="testimonials">
+      <h2>What Our Clients Say</h2>
+      <blockquote>
+        <p>"Easy Branding transformed our customer support with a seamless chatbot integration!"</p>
+        <cite>— Jane D., Cape Town Retail</cite>
+      </blockquote>
+    </section>
+
+    <section id="contact" class="cta">
+      <h2>Let’s brand your business the smart way</h2>
+      <p>Email us to get started or request a <strong>free support audit</strong> for your business.</p>
+      <div class="contact-options">
+        <a href="mailto:hello@easybranding.co.za" class="btn">Email Us</a>
+        <a href="https://wa.me/1234567890" class="btn">Chat on WhatsApp</a>
+      </div>
+      <form action="https://formspree.io/f/your-id" method="POST" class="contact-form">
+        <label for="email">Your Email</label>
+        <input type="email" id="email" name="email" placeholder="Your Email" required>
+        <label for="message">Your Message</label>
+        <textarea id="message" name="message" placeholder="Your Message" required></textarea>
+        <button type="submit" class="btn">Send Message</button>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Easy Branding. All rights reserved.</p>
   </footer>
 </body>
 </html>
