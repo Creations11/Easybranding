@@ -51,6 +51,7 @@
     <a href="#pricing">Pricing</a>
     <a href="#testimonials">Testimonials</a>
     <a href="#contact">Contact</a>
+    <a href="#demo">Demo</a> <!-- Added to navigation -->
   </nav>
 
   <main>
@@ -75,6 +76,14 @@
           <p>We link everything up using tools like Zapier to streamline enquiries, update your Google Sheets, or trigger CRM actions automatically.</p>
         </div>
       </div>
+    </section>
+
+    <section id="demo">
+      <h2>Live Demo</h2>
+      <p>Experience our AI chatbot in action! This demo showcases how it handles customer queries seamlessly.</p>
+      <img src="demo-image.jpg" alt="AI Chatbot Demo" class="demo-image" loading="lazy" />
+      <p><em>Note: This is a static mockup. Contact us for a live personalized demo!</em></p>
+      <a href="#contact" class="btn">Request Live Demo</a>
     </section>
 
     <section id="portfolio">
@@ -132,10 +141,23 @@
       </form>
     </section>
   </main>
-<script src="https://code.tidio.co/xiyvrsnrjwk0uae0xheqqsj8sijhyots.js"></script>
+
   <footer>
     <p>© 2025 Easy Branding AI. All rights reserved.</p>
   </footer>
 
   <script src="service-worker.js"></script>
-  <script src="//code
+  <script src="//code.tidio.co/xiyvrsnrjwk0uae0xheqqsj8sijhyots.js" async></script>
+  <script>
+    function validateForm() {
+      const email = document.getElementById('email').value;
+      const message = document.getElementById('message').value;
+      if (!email || !message) {
+        alert('Please fill in all fields.');
+        return false;
+      }
+      return true;
+    }
+  </script>
+</body>
+</html>
