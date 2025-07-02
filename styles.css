@@ -7,7 +7,7 @@
   --black: #000000;
 }
 
-/* General Reset */
+/* General Reset and Base Styles */
 * {
   margin: 0;
   padding: 0;
@@ -19,6 +19,8 @@ body {
   background: linear-gradient(135deg, var(--white), var(--green));
   color: var(--grey);
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased; /* Improves text rendering */
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Header */
@@ -60,7 +62,7 @@ nav {
   justify-content: center;
   gap: 2rem;
   font-weight: 600;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
   z-index: 1000;
@@ -79,13 +81,13 @@ nav a:focus {
   background-color: var(--white);
   color: var(--green);
   outline: none;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* Main Sections */
 main {
   max-width: 1000px;
-  margin: auto;
+  margin: 0 auto;
   padding: 1rem;
 }
 
@@ -148,6 +150,29 @@ h3 {
 
 .demo-btn:hover {
   background-color: var(--brown);
+}
+
+/* Demo Section */
+#demo {
+  padding: 2rem;
+  background: rgba(var(--white), 0.9);
+  margin: 1rem 0;
+  border-radius: 0.75rem;
+  animation: fadeInUp 1s ease-out;
+  text-align: center;
+}
+
+.demo-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.demo-image:hover {
+  transform: scale(1.03);
 }
 
 /* Portfolio */
@@ -311,7 +336,9 @@ footer {
   nav a {
     padding: 0.5rem;
   }
-  .service-grid, .portfolio-grid, .package-grid {
+  .service-grid,
+  .portfolio-grid,
+  .package-grid {
     grid-template-columns: 1fr;
   }
   header h1 {
@@ -320,4 +347,30 @@ footer {
   .cta {
     padding: 1.5rem;
   }
+  .demo-image {
+    max-width: 90%;
+  }
+}
+
+/* Accessibility Enhancements */
+:focus {
+  outline: 2px solid var(--brown);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* Performance Optimizations */
+img {
+  max-width: 100%;
+  height: auto;
 }
