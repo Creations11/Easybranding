@@ -1,0 +1,16 @@
+{
+  "name": "Easy Branding AI",
+  "short_name": "Easy Branding AI",
+  "description": "AI-driven branding solutions for South African businesses.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#3D9140",
+  "theme_color": "#8B5E3C",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
