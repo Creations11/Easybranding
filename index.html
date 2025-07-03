@@ -15,6 +15,59 @@
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <title>Easy Branding AI</title>
+  <style>
+    /* Smooth scroll */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /* Sticky Contact Us button */
+    #contact-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #ec008c;
+      color: white;
+      padding: 15px 20px;
+      border-radius: 30px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(236, 0, 140, 0.5);
+      z-index: 9999;
+      text-decoration: none;
+      transition: background-color 0.3s ease;
+    }
+    #contact-btn:hover,
+    #contact-btn:focus {
+      background-color: #1b0039;
+      outline: none;
+    }
+
+    /* Responsive tweaks */
+    @media (max-width: 768px) {
+      nav a {
+        display: block;
+        padding: 10px;
+      }
+      .service-grid, .portfolio-grid, .package-grid {
+        display: block;
+      }
+      .service-box, .project, .package {
+        margin-bottom: 20px;
+      }
+      .demo-image {
+        width: 100%;
+        height: auto;
+      }
+    }
+
+    /* Keyboard focus outline */
+    a:focus, button:focus, input:focus, textarea:focus {
+      outline: 3px solid #ec008c;
+      outline-offset: 2px;
+    }
+  </style>
+
   <script async src="https://www.googletagmanager.com/gtag/js?id=UA-XXXXX-Y"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -22,6 +75,7 @@
     gtag('js', new Date());
     gtag('config', 'UA-XXXXX-Y');
   </script>
+
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -51,7 +105,7 @@
     <a href="#pricing">Pricing</a>
     <a href="#testimonials">Testimonials</a>
     <a href="#contact">Contact</a>
-    <a href="#demo">Demo</a> <!-- Added to navigation -->
+    <a href="#demo">Demo</a>
   </nav>
 
   <main>
@@ -80,9 +134,13 @@
 
     <section id="demo">
       <h2>Live Demo</h2>
-      <p>Experience our AI chatbot in action! This demo showcases how it handles customer queries seamlessly.</p>
-      <img src="demo-image.jpg" alt="AI Chatbot Demo" class="demo-image" loading="lazy" />
-      <p><em>Note: This is a static mockup. Contact us for a live personalized demo!</em></p>
+      <p>Experience our AI chatbot in action! Try it out below:</p>
+      <div id="chatbot" style="border:1px solid #ccc; padding:10px; width:100%; max-width:320px; font-family: 'Barlow', sans-serif;">
+        <div id="chat-output" style="height:180px; overflow-y:auto; border-bottom:1px solid #ddd; margin-bottom:10px; padding:5px;" aria-live="polite" aria-atomic="true"></div>
+        <input id="chat-input" type="text" placeholder="Ask me about Easy Branding AI" style="width:calc(100% - 60px);" aria-label="Chat input"/>
+        <button onclick="sendMessage()" style="width:50px;" aria-label="Send message">Send</button>
+      </div>
+      <p><em>Note: This is a demo chatbot. Contact us for a full personalized experience!</em></p>
       <a href="#contact" class="btn">Request Live Demo</a>
     </section>
 
@@ -146,18 +204,46 @@
     <p>© 2025 Easy Branding AI. All rights reserved.</p>
   </footer>
 
+  <a id="contact-btn" href="#contact" aria-label="Contact Easy Branding AI">Contact Us</a>
+
   <script src="service-worker.js"></script>
   <script src="//code.tidio.co/xiyvrsnrjwk0uae0xheqqsj8sijhyots.js" async></script>
+
   <script>
     function validateForm() {
-      const email = document.getElementById('email').value;
-      const message = document.getElementById('message').value;
+      const email = document.getElementById('email').value.trim();
+      const message = document.getElementById('message').value.trim();
       if (!email || !message) {
         alert('Please fill in all fields.');
         return false;
       }
       return true;
     }
+
+    const output = document.getElementById('chat-output');
+    const input = document.getElementById('chat-input');
+
+    function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+      output.innerHTML += `<div><b>You:</b> ${text}</div>`;
+      input.value = '';
+      output.scrollTop = output.scrollHeight;
+
+      setTimeout(() => {
+        let reply = 'Sorry, I am just a demo bot. Please contact us for more info.';
+        const lowered = text.toLowerCase();
+        if (lowered.includes('price')) reply = 'Our pricing starts at R950.';
+        else if (lowered.includes('features')) reply = 'We offer chatbots, auto responses, help desk content, and automation.';
+        else if (lowered.includes('contact')) reply = 'You can reach us at easybranding1@outlook.com or WhatsApp +27846549578.';
+        output.innerHTML += `<div><b>Bot:</b> ${reply}</div>`;
+        output.scrollTop = output.scrollHeight;
+      }, 1000);
+    }
+
+    input.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') sendMessage();
+    });
   </script>
 </body>
 </html>
