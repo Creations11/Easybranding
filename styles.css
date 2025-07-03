@@ -1,10 +1,28 @@
 /* Root Variables */
 :root {
-  --green: #3D9140;
-  --brown: #8B5E3C;
+  --green-r: 61;
+  --green-g: 145;
+  --green-b: 64;
+  --green: rgb(var(--green-r), var(--green-g), var(--green-b));
+  
+  --brown-r: 139;
+  --brown-g: 94;
+  --brown-b: 60;
+  --brown: rgb(var(--brown-r), var(--brown-g), var(--brown-b));
+  
   --grey: #555555; /* Darkened for better contrast */
-  --white: #ffffff;
-  --black: #000000;
+  
+  --white-r: 255;
+  --white-g: 255;
+  --white-b: 255;
+  --white: rgb(var(--white-r), var(--white-g), var(--white-b));
+  
+  --black-r: 0;
+  --black-g: 0;
+  --black-b: 0;
+  --black: rgb(var(--black-r), var(--black-g), var(--black-b));
+  
+  --light-grey: #f4f4f4;
 }
 
 /* General Reset and Base Styles */
@@ -38,6 +56,7 @@ header .logo {
   display: block;
   border-radius: 10px;
   transition: transform 0.3s ease;
+  will-change: transform;
 }
 
 header .logo:hover {
@@ -93,7 +112,7 @@ main {
 
 section {
   padding: 2rem;
-  background: rgba(var(--white), 0.9);
+  background: rgba(var(--white-r), var(--white-g), var(--white-b), 0.9);
   margin: 1rem 0;
   border-radius: 0.75rem;
   animation: fadeInUp 1s ease-out;
@@ -121,22 +140,25 @@ h3 {
 
 .service-box {
   border-left: 6px solid var(--green);
-  background-color: #f4f4f4;
+  background-color: var(--light-grey);
   padding: 1.5rem;
   margin: 1rem 0;
   border-radius: 0.75rem;
   transition: transform 0.3s ease;
+  will-change: transform;
 }
 
 .service-box:hover {
   transform: translateY(-5px);
 }
 
+/* Icon inside service box */
 .service-box .icon {
   margin-right: 0.5rem;
   font-size: 1.5rem;
 }
 
+/* Demo Button */
 .demo-btn {
   display: inline-block;
   margin-top: 1rem;
@@ -155,7 +177,7 @@ h3 {
 /* Demo Section */
 #demo {
   padding: 2rem;
-  background: rgba(var(--white), 0.9);
+  background: rgba(var(--white-r), var(--white-g), var(--white-b), 0.9);
   margin: 1rem 0;
   border-radius: 0.75rem;
   animation: fadeInUp 1s ease-out;
@@ -169,6 +191,7 @@ h3 {
   margin: 1rem 0;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
+  will-change: transform;
 }
 
 .demo-image:hover {
@@ -186,6 +209,7 @@ h3 {
   max-width: 100%;
   border-radius: 0.5rem;
   transition: transform 0.3s ease;
+  will-change: transform;
 }
 
 .project:hover img {
@@ -214,6 +238,7 @@ h3 {
   padding: 1rem;
   text-align: center;
   transition: transform 0.3s ease;
+  will-change: transform;
 }
 
 .package:hover {
@@ -225,7 +250,7 @@ blockquote {
   font-style: italic;
   margin: 1rem 0;
   padding: 1rem;
-  background-color: #f4f4f4;
+  background-color: var(--light-grey);
   border-radius: 0.5rem;
   border-left: 4px solid var(--green);
 }
@@ -239,7 +264,7 @@ cite {
 
 /* CTA and Contact */
 .cta {
-  background-color: var(--green);
+  background-color: rgba(var(--green-r), var(--green-g), var(--green-b), 1);
   color: var(--white);
   text-align: center;
   padding: 2rem;
@@ -272,6 +297,7 @@ cite {
   background-color: var(--brown);
 }
 
+/* Contact Form */
 .contact-form {
   max-width: 600px;
   margin: 1rem auto;
@@ -290,7 +316,7 @@ cite {
   border: 1px solid var(--grey);
   border-radius: 0.5rem;
   font-size: 1rem;
-  background-color: rgba(var(--white), 0.8);
+  background-color: rgba(var(--white-r), var(--white-g), var(--white-b), 0.8);
 }
 
 .contact-form button {
