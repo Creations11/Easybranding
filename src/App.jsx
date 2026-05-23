@@ -6,7 +6,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white">
-      {/* Top Navigation */}
+      {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 border-b border-white/10 bg-[#0A0A0A]/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -23,8 +23,8 @@ function App() {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-24 px-6 text-center">
+      {/* Hero */}
+      <section className="pt-32 pb-20 px-6 text-center">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-6xl md:text-7xl font-bold leading-none tracking-tighter mb-8">
             Intelligence that feels<br />
@@ -45,13 +45,40 @@ function App() {
         </div>
       </section>
 
+      {/* Features Section */}
+      <section className="py-20 px-6 bg-[#111111]">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-4xl font-bold text-center mb-16">Built for Real Operations</h2>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-[#1A1A1A] p-8 rounded-3xl">
+              <div className="text-green-400 text-4xl mb-4">📱</div>
+              <h3 className="text-2xl font-semibold mb-3">WhatsApp Automation</h3>
+              <p className="text-gray-400">Apply, track, and manage loans directly inside WhatsApp.</p>
+            </div>
+
+            <div className="bg-[#1A1A1A] p-8 rounded-3xl">
+              <div className="text-teal-400 text-4xl mb-4">🧠</div>
+              <h3 className="text-2xl font-semibold mb-3">Lendly AI Assistant</h3>
+              <p className="text-gray-400">Intelligent guidance for your entire business operations.</p>
+            </div>
+
+            <div className="bg-[#1A1A1A] p-8 rounded-3xl">
+              <div className="text-cyan-400 text-4xl mb-4">📊</div>
+              <h3 className="text-2xl font-semibold mb-3">Smart Dashboards</h3>
+              <p className="text-gray-400">Real-time insights and operational intelligence.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Lendly Chat Modal */}
       {isChatOpen && (
         <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4">
           <div className="bg-[#111111] w-full max-w-lg rounded-3xl overflow-hidden">
             <div className="p-5 border-b border-white/10 flex justify-between">
               <div>Lendly • AI Operations Assistant</div>
-              <button onClick={() => setIsChatOpen(false)} className="text-xl">✕</button>
+              <button onClick={() => setIsChatOpen(false)} className="text-2xl">✕</button>
             </div>
             <div className="h-96 p-6 overflow-y-auto bg-[#0A0A0A]">
               <div className="bg-[#1F1F1F] rounded-3xl p-4">
