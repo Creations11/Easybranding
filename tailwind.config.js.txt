@@ -1,0 +1,19 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,jsx,ts,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        obsidian: "#0A0A0A",
+        graphite: "#111111",
+        "organic-green": "#22C55E",
+        "organic-teal": "#14B8A6",
+        "organic-cyan": "#67E8F9",
+      },
+    },
+  },
+  plugins: [],
+}
