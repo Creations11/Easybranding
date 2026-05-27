@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 function App() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { type: 'bot', text: "Hello! I'm Lendly, your AI Operations Assistant for Easy Branding AI.\nHow can I help you today?" }
+    { type: 'bot', text: "I am Lendly.\nA living intelligence, grown to help African businesses operate with clarity and grace.\nHow may I serve you today?" }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -17,7 +17,6 @@ function App() {
 
   const sendMessage = () => {
     if (!input.trim() || isTyping) return;
-
     const userMsg = input.trim();
     setMessages(prev => [...prev, { type: 'user', text: userMsg }]);
     setInput('');
@@ -25,158 +24,117 @@ function App() {
 
     setTimeout(() => {
       setIsTyping(false);
-      let reply = "Thank you! I'm here to help you automate your operations and grow your business.";
-      if (userMsg.toLowerCase().includes("price") || userMsg.toLowerCase().includes("cost") || userMsg.toLowerCase().includes("plan")) {
-        reply = "Our Growth plan starts at R2,450/month. Would you like me to show you the full pricing?";
+      let reply = "I hear you. I'm here with you.";
+      if (userMsg.toLowerCase().includes("price") || userMsg.toLowerCase().includes("cost")) {
+        reply = "Our Growth plan begins at R2,450 per month. Would you like me to show you what becomes possible?";
       }
       setMessages(prev => [...prev, { type: 'bot', text: reply }]);
-    }, 900);
+    }, 950);
   };
 
   return (
-    <div className="min-h-screen bg-[#080808] text-white font-sans overflow-x-hidden">
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 border-b border-white/10 bg-[#080808]/95 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-lime-400 to-emerald-400 flex items-center justify-center text-sm font-bold text-black shadow-lg">EB</div>
-            <span className="text-2xl font-bold tracking-tighter">Easy Branding AI</span>
-          </div>
+    <div className="min-h-screen bg-[#050505] text-white font-sans overflow-x-hidden relative">
+      {/* Living background */}
+      <div className="fixed inset-0 bg-[radial-gradient(at_40%_25%,rgba(163,255,79,0.09)_0%,transparent_70%)] pointer-events-none"></div>
 
+      {/* Navigation */}
+      <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-[#050505]/95 backdrop-blur-2xl">
+        <div className="max-w-7xl mx-auto px-8 py-6 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-3xl bg-gradient-to-br from-lime-300 to-emerald-400 flex items-center justify-center text-2xl font-bold text-black shadow-2xl">EB</div>
+            <span className="text-3xl font-display font-bold tracking-[-1.8px]">Easy Branding AI</span>
+          </div>
           <button 
             onClick={() => setIsChatOpen(true)}
-            className="px-8 py-3.5 bg-lime-400 text-black rounded-2xl font-medium hover:bg-lime-300 transition-all active:scale-95"
+            className="px-10 py-4 bg-white text-black rounded-3xl font-medium hover:bg-lime-400 transition-all active:scale-95 flex items-center gap-3"
           >
-            Talk to Lendly
+            Speak with Lendly <span className="text-xl">🌿</span>
           </button>
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="pt-40 pb-28 px-6 text-center">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-6xl md:text-7xl font-bold leading-none tracking-tighter mb-8">
-            Intelligence that feels<br />
-            <span className="bg-gradient-to-r from-lime-400 via-emerald-400 to-teal-400 bg-clip-text text-transparent">
-              naturally alive.
-            </span>
+      {/* Hero - More Direct Business Description */}
+      <section className="pt-52 pb-36 px-6 text-center relative">
+        <div className="max-w-5xl mx-auto">
+          <h1 className="text-7xl md:text-[5.8rem] font-display font-bold leading-none tracking-[-4px] mb-10">
+            Intelligence<br />that feels<br />
+            <span className="bg-gradient-to-r from-lime-300 via-teal-300 to-cyan-300 bg-clip-text text-transparent">naturally alive</span>
           </h1>
-          <p className="text-xl md:text-2xl text-gray-400 max-w-2xl mx-auto mb-12">
-            AI Operations Infrastructure for African SMEs.<br />
-            Simple. Intelligent. Built for real business.
+          <p className="text-2xl text-gray-400 max-w-3xl mx-auto mb-16 leading-relaxed">
+            We help African businesses automate customer support, WhatsApp communication, lead generation, and daily operations using intelligent AI systems.
           </p>
           <button 
             onClick={() => setIsChatOpen(true)}
-            className="px-12 py-5 bg-lime-400 hover:bg-lime-300 text-black rounded-2xl text-lg font-medium transition-all active:scale-95"
+            className="px-16 py-7 bg-white text-xl text-black rounded-3xl font-medium hover:bg-lime-400 transition-all active:scale-95"
           >
-            Start Free Trial — Talk to Lendly
+            Begin a Conversation with Lendly
           </button>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="py-24 px-6 bg-[#0F0F0D]">
+      {/* Services */}
+      <section className="py-28 px-6 bg-[#0A0A0A]">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-16">Built for Real Operations</h2>
+          <h2 className="text-5xl font-display font-bold text-center mb-20">What We Deliver</h2>
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-[#1A1A18] p-10 rounded-3xl hover:-translate-y-3 transition-all border border-white/5 hover:border-lime-400/30 group">
-              <div className="text-lime-400 text-6xl mb-8 group-hover:scale-110 transition">📱</div>
-              <h3 className="text-2xl font-bold mb-3">WhatsApp Automation</h3>
-              <p className="text-gray-400">Your customers are already on WhatsApp. We bring your entire operations there.</p>
-            </div>
-            <div className="bg-[#1A1A18] p-10 rounded-3xl hover:-translate-y-3 transition-all border border-white/5 hover:border-lime-400/30 group">
-              <div className="text-lime-400 text-6xl mb-8 group-hover:scale-110 transition">🧠</div>
-              <h3 className="text-2xl font-bold mb-3">Lendly AI Assistant</h3>
-              <p className="text-gray-400">Your intelligent co-pilot for daily operations and decision making.</p>
-            </div>
-            <div className="bg-[#1A1A18] p-10 rounded-3xl hover:-translate-y-3 transition-all border border-white/5 hover:border-lime-400/30 group">
-              <div className="text-lime-400 text-6xl mb-8 group-hover:scale-110 transition">📊</div>
-              <h3 className="text-2xl font-bold mb-3">Smart Dashboards</h3>
-              <p className="text-gray-400">Real-time visibility into what's working and what needs attention.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section className="py-24 px-6 bg-[#080808]">
-        <div className="max-w-6xl mx-auto text-center">
-          <h2 className="text-4xl font-bold mb-6">Simple, Transparent Pricing</h2>
-          <p className="text-gray-400 mb-16">No hidden fees. Cancel anytime.</p>
-          
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-[#1A1A18] p-10 rounded-3xl border border-white/10 hover:border-lime-400/30 transition-all">
-              <h3 className="text-2xl font-bold mb-2">Starter</h3>
-              <p className="text-5xl font-bold mb-8">R950<span className="text-base font-normal text-gray-400">/mo</span></p>
-              <ul className="space-y-4 mb-10 text-left text-gray-400">
-                <li className="flex items-center gap-2"><span className="text-lime-400">✓</span> WhatsApp Automation</li>
-                <li className="flex items-center gap-2"><span className="text-lime-400">✓</span> Basic Lendly Access</li>
-                <li className="flex items-center gap-2"><span className="text-lime-400">✓</span> 1 Dashboard</li>
-              </ul>
-              <button className="w-full py-4 border border-white/30 rounded-2xl hover:bg-white/5">Get Started</button>
-            </div>
-
-            <div className="bg-gradient-to-b from-lime-400 to-emerald-400 p-10 rounded-3xl text-black relative scale-105 shadow-2xl">
-              <div className="absolute -top-4 right-6 bg-black text-white text-xs px-5 py-1 rounded-full">Most Popular</div>
-              <h3 className="text-2xl font-bold mb-2">Growth</h3>
-              <p className="text-5xl font-bold mb-8">R2,450<span className="text-base font-normal opacity-75">/mo</span></p>
-              <ul className="space-y-4 mb-10 text-left">
-                <li className="flex items-center gap-2"><span className="text-black">✓</span> Full WhatsApp Suite</li>
-                <li className="flex items-center gap-2"><span className="text-black">✓</span> Unlimited Lendly</li>
-                <li className="flex items-center gap-2"><span className="text-black">✓</span> Advanced Dashboards</li>
-                <li className="flex items-center gap-2"><span className="text-black">✓</span> Priority Support</li>
-              </ul>
-              <button className="w-full py-4 bg-black text-white rounded-2xl hover:bg-black/80">Start Growth Plan</button>
-            </div>
-
-            <div className="bg-[#1A1A18] p-10 rounded-3xl border border-white/10 hover:border-lime-400/30 transition-all">
-              <h3 className="text-2xl font-bold mb-2">Enterprise</h3>
-              <p className="text-5xl font-bold mb-8">Custom</p>
-              <ul className="space-y-4 mb-10 text-left text-gray-400">
-                <li className="flex items-center gap-2"><span className="text-lime-400">✓</span> Everything in Growth</li>
-                <li className="flex items-center gap-2"><span className="text-lime-400">✓</span> Custom AI Training</li>
-                <li className="flex items-center gap-2"><span className="text-lime-400">✓</span> Dedicated Manager</li>
-              </ul>
-              <button className="w-full py-4 border border-white/30 rounded-2xl hover:bg-white/5">Contact Sales</button>
-            </div>
+            {[
+              { icon: "📱", title: "WhatsApp Automation", desc: "Full business automation directly inside WhatsApp — leads, support, payments & tracking." },
+              { icon: "🧠", title: "Lendly AI Assistant", desc: "Your intelligent co-pilot for operations, customer service, and decision making." },
+              { icon: "📊", title: "Smart Dashboards", desc: "Real-time visibility into your business performance and opportunities." }
+            ].map((item, i) => (
+              <div key={i} className="bg-[#111111] p-12 rounded-3xl hover:-translate-y-4 transition-all duration-700 border border-white/5 hover:border-lime-400/30 group">
+                <div className="text-7xl mb-10 group-hover:scale-110 transition duration-700">{item.icon}</div>
+                <h3 className="text-3xl font-display font-bold mb-4">{item.title}</h3>
+                <p className="text-gray-400 leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-black py-16 px-6 border-t border-white/10">
-        <div className="max-w-7xl mx-auto text-center text-gray-400">
-          <p>© 2026 Easy Branding AI. All rights reserved.</p>
-          <p className="mt-3 text-lime-400">Built with Organic Intelligence</p>
+      <footer className="bg-black py-20 px-6 border-t border-white/5">
+        <div className="max-w-7xl mx-auto text-center">
+          <p className="text-3xl font-display mb-3">Easy Branding AI</p>
+          <p className="text-lime-400 text-lg">Organic Intelligence • Grown for African Businesses</p>
+          <p className="text-gray-500 mt-10">© 2026 • All rights reserved</p>
         </div>
       </footer>
 
-      {/* Lendly Chat Modal */}
+      {/* Floating Orb */}
+      <button 
+        onClick={() => setIsChatOpen(true)}
+        className="fixed bottom-10 right-10 w-20 h-20 bg-gradient-to-br from-lime-400 to-emerald-400 rounded-full flex items-center justify-center text-4xl shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 z-50 ring-4 ring-lime-400/30"
+      >
+        🌿
+      </button>
+
+      {/* Chat Modal */}
       {isChatOpen && (
         <div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4">
           <div className="bg-[#111111] w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
             <div className="p-6 border-b border-white/10 flex justify-between bg-[#1A1A18]">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-lime-400 flex items-center justify-center text-black font-bold">L</div>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-lime-300 to-teal-400 flex items-center justify-center text-3xl">🌿</div>
                 <div>
-                  <div className="font-semibold">Lendly</div>
-                  <div className="text-xs text-lime-400">Online • AI Assistant</div>
+                  <div className="font-display text-xl font-semibold">Lendly</div>
+                  <div className="text-xs text-lime-400">Living Intelligence</div>
                 </div>
               </div>
-              <button onClick={() => setIsChatOpen(false)} className="text-3xl text-gray-400 hover:text-white">✕</button>
+              <button onClick={() => setIsChatOpen(false)} className="text-4xl text-gray-400 hover:text-white">✕</button>
             </div>
 
-            <div className="h-[420px] p-6 overflow-y-auto bg-[#0A0A0A] space-y-4">
+            <div className="h-[460px] p-8 overflow-y-auto bg-[#0A0A0A] space-y-6">
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] rounded-3xl px-6 py-4 ${msg.type === 'user' ? 'bg-lime-400 text-black' : 'bg-[#1F1F1F]'}`}>
+                  <div className={`max-w-[85%] rounded-3xl px-7 py-5 ${msg.type === 'user' ? 'bg-lime-400 text-black' : 'bg-[#1F1F1F]'}`}>
                     {msg.text}
                   </div>
                 </div>
               ))}
               {isTyping && (
                 <div className="flex">
-                  <div className="bg-[#1F1F1F] rounded-3xl px-6 py-4 flex gap-1.5">
+                  <div className="bg-[#1F1F1F] rounded-3xl px-7 py-5 flex gap-2">
                     <div className="w-2 h-2 bg-lime-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
                     <div className="w-2 h-2 bg-lime-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
                     <div className="w-2 h-2 bg-lime-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
@@ -186,17 +144,17 @@ function App() {
               <div ref={bottomRef} />
             </div>
 
-            <div className="p-5 border-t border-white/10 bg-[#111111]">
+            <div className="p-6 border-t border-white/10 bg-[#111111]">
               <div className="flex gap-3">
                 <input 
                   type="text" 
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                  placeholder="Ask Lendly anything..." 
-                  className="flex-1 bg-[#1F1F1F] border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-lime-400"
+                  placeholder="Speak your thoughts..." 
+                  className="flex-1 bg-[#1F1F1F] border border-white/10 rounded-3xl px-7 py-6 focus:outline-none focus:border-lime-400 text-lg"
                 />
-                <button onClick={sendMessage} className="px-10 bg-lime-400 hover:bg-lime-300 text-black rounded-2xl font-medium transition">Send</button>
+                <button onClick={sendMessage} className="px-12 bg-lime-400 hover:bg-lime-300 text-black rounded-3xl font-medium transition">Send</button>
               </div>
             </div>
           </div>
