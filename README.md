@@ -1,16 +1,82 @@
-# React + Vite
+# Easy Branding AI
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**AI-Powered WhatsApp Automation for African Businesses**
 
-Currently, two official plugins are available:
+A modern operational platform that helps South African SMEs capture leads, automate customer conversations, qualify prospects, and scale their business through WhatsApp.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## ✨ Key Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Real WhatsApp messaging via Twilio
+- Live lead management dashboard
+- Conversation workspace with status tracking
+- Automated qualification flows
+- Role-based access (User + Admin)
+- Secure JWT authentication
+- Clean, organic dark UI design
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🛠 Tech Stack
+
+- **Frontend**: React 18 + Vite + React Router
+- **Styling**: Custom organic theme (lime & emerald accents)
+- **API Client**: Axios with interceptors
+- **Backend**: Node.js / Express (separate repo)
+- **Database**: MongoDB Atlas
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# Clone the repo
+git clone https://github.com/Creations11/Easybranding.git
+cd Easybranding
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+📍 Environment Variables
+Create a .env file in the root:
+envVITE_API_URL=https://equilibro-elite-loan-api.onrender.com/api
+
+📁 Project Structure
+textsrc/
+├── api.js                    # Shared Axios setup + interceptors
+├── components/
+│   ├── Nav.jsx
+│   └── ChatModal.jsx
+├── pages/
+│   ├── Home.jsx
+│   ├── Login.jsx
+│   ├── Register.jsx
+│   ├── Dashboard.jsx
+│   └── AdminDashboard.jsx
+└── App.jsx
+
+🔑 Main Routes
+
+/ — Homepage with Free Trial CTA
+/login — User login
+/register — Create account
+/dashboard — Operations Center (Leads + Conversations)
+/admin — Admin panel (protected)
+
+
+🎯 Business Plans
+
+14-Day Free Trial — Full access
+WhatsApp Only — R399/month
+Growth Plan — R799/month (Advanced automation)
+Enterprise — Custom pricing & support
+
+
+🔗 Backend Repository
+equilibro-elite-loan-api
+
+Built for African businesses • Focused on operational reliability
