@@ -1,58 +1,72 @@
+// src/pages/Register.jsx
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import api from '../api';
 
-const colors = { lime: '#a3e635', text: '#f5f5f0', muted: '#a1a1aa', card: '#121210' };
+const colors = {
+  bg: '#050505', card: '#121210', lime: '#a3e635',
+  text: '#f5f5f0', muted: '#a1a1aa', border: 'rgba(163,230,53,0.22)',
+};
 
 export default function Register() {
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [email,    setEmail]    = useState('');
+  const [phone,    setPhone]    = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState('');
+  const [pending,  setPending]  = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-
+    setLoading(true); setError('');
     try {
-      const res = await api.post('/auth/register', { fullName, email, phone, password });
-      localStorage.setItem('eb_token', res.data.data.token);
-      localStorage.setItem('eb_user', JSON.stringify(res.data.data.user));
-      navigate('/dashboard');
+      await api.post('/auth/register', { fullName, email, phone, password });
+      setPending(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
+  // ── Pending approval screen ───────────────────────────────
+  if (pending) {
+    return (
+      <div style={{ minHeight: '100vh', background: colors.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+        <div style={{ background: colors.card, padding: '60px 40px', borderRadius: '24px', width: '100%', maxWidth: '480px', border: `1px solid ${colors.border}`, textAlign: 'center' }}>
+          <div style={{ fontSize: '64px', marginBottom: '24px' }}>🌿</div>
+          <h2 style={{ fontSize: '28px', fontWeight: '800', marginBottom: '16px', color: colors.lime }}>Application Received</h2>
+          <p style={{ color: colors.muted, fontSize: '16px', lineHeight: '1.6', marginBottom: '32px' }}>
+            Thank you for registering. Your account is currently <strong style={{ color: colors.text }}>pending approval</strong>.
+            <br /><br />
+            An administrator will review your application and grant access shortly.
+          </p>
+          <div style={{ background: 'rgba(163,230,53,0.08)', border: `1px solid ${colors.border}`, borderRadius: '16px', padding: '20px', marginBottom: '32px' }}>
+            <p style={{ color: colors.muted, fontSize: '14px' }}>Registered as:</p>
+            <p style={{ color: colors.text, fontWeight: '600', marginTop: '4px' }}>{fullName}</p>
+            <p style={{ color: colors.muted, fontSize: '14px', marginTop: '2px' }}>{email}</p>
+          </div>
+          <Link to="/login" style={{ color: colors.lime, fontSize: '14px' }}>← Back to Sign In</Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ minHeight: '100vh', background: '#050505', color: colors.text, paddingTop: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ width: '100%', maxWidth: '440px', background: colors.card, padding: '40px', borderRadius: '24px', border: `1px solid rgba(163,230,53,0.2)` }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '32px' }}>Create Your Account</h2>
-
-        {error && <p style={{ color: '#ef4444', textAlign: 'center', marginBottom: '20px' }}>{error}</p>}
-
+    <div style={{ minHeight: '100vh', background: colors.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <div style={{ background: colors.card, padding: '60px 40px', borderRadius: '24px', width: '100%', maxWidth: '420px', border: `1px solid ${colors.border}` }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '8px' }}>Create Account</h2>
+        <p style={{ textAlign: 'center', color: colors.muted, fontSize: '14px', marginBottom: '36px' }}>Registration requires admin approval</p>
+        {error && <p style={{ color: '#f87171', textAlign: 'center', marginBottom: '16px' }}>{error}</p>}
         <form onSubmit={handleSubmit}>
-          <input type="text" placeholder="Full Name" value={fullName} onChange={e => setFullName(e.target.value)} required style={{ width: '100%', padding: '16px', marginBottom: '16px', background: '#1C1C19', border: '1px solid rgba(163,230,53,0.3)', borderRadius: '12px', color: colors.text }} />
-          <input type="email" placeholder="Business Email" value={email} onChange={e => setEmail(e.target.value)} required style={{ width: '100%', padding: '16px', marginBottom: '16px', background: '#1C1C19', border: '1px solid rgba(163,230,53,0.3)', borderRadius: '12px', color: colors.text }} />
-          <input type="tel" placeholder="Phone Number" value={phone} onChange={e => setPhone(e.target.value)} required style={{ width: '100%', padding: '16px', marginBottom: '16px', background: '#1C1C19', border: '1px solid rgba(163,230,53,0.3)', borderRadius: '12px', color: colors.text }} />
-          <input type="password" placeholder="Create Password" value={password} onChange={e => setPassword(e.target.value)} required style={{ width: '100%', padding: '16px', marginBottom: '32px', background: '#1C1C19', border: '1px solid rgba(163,230,53,0.3)', borderRadius: '12px', color: colors.text }} />
-
+          <input type="text"     value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Full Name"      style={{ width: '100%', padding: '16px', marginBottom: '16px', borderRadius: '16px', background: '#1C1C19', border: `1px solid ${colors.border}`, color: colors.text }} required />
+          <input type="email"    value={email}    onChange={e => setEmail(e.target.value)}    placeholder="Email"          style={{ width: '100%', padding: '16px', marginBottom: '16px', borderRadius: '16px', background: '#1C1C19', border: `1px solid ${colors.border}`, color: colors.text }} required />
+          <input type="tel"      value={phone}    onChange={e => setPhone(e.target.value)}    placeholder="Phone Number"   style={{ width: '100%', padding: '16px', marginBottom: '16px', borderRadius: '16px', background: '#1C1C19', border: `1px solid ${colors.border}`, color: colors.text }} required />
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password"       style={{ width: '100%', padding: '16px', marginBottom: '32px', borderRadius: '16px', background: '#1C1C19', border: `1px solid ${colors.border}`, color: colors.text }} required />
           <button type="submit" disabled={loading} style={{ width: '100%', padding: '16px', background: colors.lime, color: '#050505', border: 'none', borderRadius: '999px', fontWeight: '700' }}>
-            {loading ? 'Creating Account...' : 'Create Account'}
+            {loading ? 'Submitting...' : 'Request Access'}
           </button>
         </form>
-
-        <p style={{ textAlign: 'center', marginTop: '24px', color: colors.muted }}>
-          Already have an account? <Link to="/login" style={{ color: colors.lime }}>Sign In</Link>
-        </p>
-
-        <button onClick={() => window.history.back()} style={{ marginTop: '32px', color: colors.muted, background: 'none', border: 'none', cursor: 'pointer' }}>← Back to Home</button>
+        <p style={{ textAlign: 'center', marginTop: '24px', color: colors.muted }}>Already have an account? <Link to="/login" style={{ color: colors.lime }}>Sign In</Link></p>
       </div>
     </div>
   );
