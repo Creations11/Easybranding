@@ -100,8 +100,9 @@ export default function AgentDashboard() {
   const [timeline,     setTimeline]     = useState([]);
   const [viewings,     setViewings]     = useState([]);
   const [queue,        setQueue]        = useState(null);
+  const [alerts,       setAlerts]       = useState([]);
   const [message,      setMessage]      = useState('');
-  const [tab,          setTab]          = useState('leads');   // leads | viewings | queue
+  const [tab,          setTab]          = useState('leads');   // leads | viewings | queue | alerts
   const [loading,      setLoading]      = useState(true);
   const [loadingChat,  setLoadingChat]  = useState(false);
   const [sending,      setSending]      = useState(false);
@@ -115,16 +116,18 @@ export default function AgentDashboard() {
 
   const loadData = async () => {
     try {
-      const [ovRes, leadsRes, viewRes, queueRes] = await Promise.all([
+      const [ovRes, leadsRes, viewRes, queueRes, alertRes] = await Promise.all([
         api.get('/agent/overview'),
         api.get('/agent/leads'),
         api.get('/agent/viewings'),
         api.get('/agent/takeover-queue'),
+        api.get('/admin-ops/alerts'),
       ]);
       setOverview(ovRes.data.data?.overview);
       setLeads(leadsRes.data.data?.leads || []);
       setViewings(viewRes.data.data?.viewings || []);
       setQueue(queueRes.data.data);
+      setAlerts(alertRes.data.data?.alerts || []);
     } catch (err) {
       console.error('Failed to load agent data', err);
     } finally { setLoading(false); }
@@ -223,14 +226,19 @@ export default function AgentDashboard() {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', borderBottom: `1px solid ${colors.borderDim}`, paddingBottom: '0' }}>
-          {['leads', 'viewings', 'queue'].map(t => (
+          {['leads', 'viewings', 'queue', 'alerts'].map(t => (
             <button key={t} onClick={() => setTab(t)} style={{
               padding: '12px 24px', background: 'none', border: 'none',
               borderBottom: tab === t ? `2px solid ${colors.lime}` : '2px solid transparent',
               color: tab === t ? colors.lime : colors.muted,
               cursor: 'pointer', fontSize: '15px', fontWeight: tab === t ? '600' : '400',
               textTransform: 'capitalize', marginBottom: '-1px',
-            }}>{t === 'queue' ? 'Takeover Queue' : t.charAt(0).toUpperCase() + t.slice(1)}</button>
+            }}>
+              {t === 'queue' ? 'Takeover Queue' : t.charAt(0).toUpperCase() + t.slice(1)}
+              {t === 'alerts' && alerts.length > 0 && (
+                <span style={{ marginLeft: '6px', background: colors.red, color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '999px' }}>{alerts.length}</span>
+              )}
+            </button>
           ))}
         </div>
 
@@ -330,8 +338,10 @@ export default function AgentDashboard() {
                     ) : timeline.map((msg, i) => (
                       <div key={i} style={{ alignSelf: msg.direction === 'outbound' ? 'flex-end' : 'flex-start', maxWidth: '75%' }}>
                         {msg.system ? (
-                          <div style={{ textAlign: 'center', width: '100%', alignSelf: 'center' }}>
-                            <span style={{ fontSize: '11px', color: colors.muted, background: colors.borderDim, padding: '4px 12px', borderRadius: '999px' }}>{msg.body.replace('[SYSTEM] ', '')}</span>
+                          <div style={{ alignSelf: 'center', width: '100%', textAlign: 'center', margin: '4px 0' }}>
+                            <span style={{ fontSize: '11px', color: colors.muted, background: 'rgba(255,255,255,0.05)', padding: '4px 14px', borderRadius: '999px', display: 'inline-block' }}>
+                              {msg.body.replace('[SYSTEM] ', '')}
+                            </span>
                           </div>
                         ) : (
                           <>
@@ -444,6 +454,48 @@ export default function AgentDashboard() {
         )}
 
       </div>
+
+        {/* ── Alerts Tab ─────────────────────────────────── */}
+        {tab === 'alerts' && (
+          <div>
+            <h2 style={{ marginBottom: '24px', fontSize: '22px' }}>
+              Alerts
+              {alerts.length > 0 && (
+                <span style={{ marginLeft: '10px', background: colors.red, color: '#fff', fontSize: '12px', padding: '3px 10px', borderRadius: '999px' }}>{alerts.length}</span>
+              )}
+            </h2>
+            {alerts.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '80px 0', color: colors.muted }}>
+                <p style={{ fontSize: '40px', marginBottom: '16px' }}>✅</p>
+                <p>No alerts. All conversations are active.</p>
+              </div>
+            ) : alerts.map((alert, i) => (
+              <div key={i} style={{
+                background: colors.card,
+                border: `1px solid ${alert.severity === 'high' ? colors.red : colors.amber}44`,
+                borderRadius: '14px', padding: '18px 24px', marginBottom: '10px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                <div>
+                  <strong>{alert.lead.name !== 'Unknown' ? alert.lead.name : alert.lead.phone}</strong>
+                  <p style={{ color: colors.muted, fontSize: '13px', marginTop: '4px' }}>{alert.message}</p>
+                  <p style={{ color: colors.muted, fontSize: '12px', marginTop: '2px' }}>
+                    Last active: {new Date(alert.lead.lastMessageAt).toLocaleString('en-ZA')}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                  <span style={{
+                    fontSize: '12px', padding: '4px 12px', borderRadius: '999px',
+                    background: alert.severity === 'high' ? `${colors.red}22` : `${colors.amber}22`,
+                    color: alert.severity === 'high' ? colors.red : colors.amber,
+                    fontWeight: '600', textTransform: 'uppercase',
+                  }}>{alert.severity}</span>
+                  <span style={{ fontSize: '11px', color: colors.muted }}>{alert.type}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
       {/* Viewing Modal */}
       {viewingModal && (
