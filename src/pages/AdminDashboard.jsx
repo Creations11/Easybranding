@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
 import SuperAdminPanel from '../components/SuperAdminPanel';
+import LeadDetailModal from '../components/LeadDetailModal';
 
 const colors = {
   lime:      '#a3e635',
@@ -261,6 +262,7 @@ export default function AdminDashboard() {
   const [assignModal,         setAssignModal]         = useState(null);
   const [clientModal,         setClientModal]         = useState(null);
   const [approveModal,        setApproveModal]        = useState(null);
+  const [leadDetailId,        setLeadDetailId]        = useState(null);
   const [loading,             setLoading]             = useState(true);
   const [error,               setError]               = useState('');
   const [tab, setTab] = useState('overview');
@@ -401,7 +403,7 @@ export default function AdminDashboard() {
             <h2 style={{ marginBottom: '20px', fontSize: '20px' }}>Active Conversations ({activeConversations.length})</h2>
             {activeConversations.length === 0 ? <p style={{ color: colors.muted, textAlign: 'center', padding: '60px 0' }}>No active conversations.</p>
             : activeConversations.map(lead => (
-              <div key={lead._id} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '14px', padding: '16px 20px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '14px', padding: '16px 20px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                 <div><strong>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong><p style={{ color: colors.muted, fontSize: '13px' }}>{lead.phone}</p><p style={{ color: colors.muted, fontSize: '12px' }}>Stage {lead.stageNumber}/{lead.totalStages} · {lead.minutesSinceLastMessage}m ago</p></div>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                   <span style={{ fontSize: '12px', padding: '4px 12px', borderRadius: '999px', background: `${colors.cyan}22`, color: colors.cyan }}>{lead.workflowStatus?.replace(/_/g, ' ')}</span>
@@ -418,7 +420,7 @@ export default function AdminDashboard() {
             <h2 style={{ marginBottom: '20px', fontSize: '20px' }}>Qualified Leads ({qualifiedLeads.length})</h2>
             {qualifiedLeads.length === 0 ? <p style={{ color: colors.muted, textAlign: 'center', padding: '60px 0' }}>No qualified leads yet.</p>
             : qualifiedLeads.map(lead => (
-              <div key={lead._id} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '14px', padding: '18px 24px', marginBottom: '10px' }}>
+              <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '14px', padding: '18px 24px', marginBottom: '10px', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
                     <strong style={{ fontSize: '16px' }}>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
@@ -576,6 +578,7 @@ export default function AdminDashboard() {
       {assignModal  && <AssignModal  lead={assignModal}   agents={agents}   onClose={() => setAssignModal(null)}  onAssigned={() => { setAssignModal(null);  loadData(); }} />}
       {clientModal  && <ClientModal  client={clientModal._id ? clientModal : null} onClose={() => setClientModal(null)}  onSave={handleClientSave} />}
       {approveModal && <ApproveModal user={approveModal}  tenants={tenants} onClose={() => setApproveModal(null)} onApproved={() => { setApproveModal(null); loadData(); }} />}
+      {leadDetailId && <LeadDetailModal leadId={leadDetailId} onClose={() => setLeadDetailId(null)} onUpdate={loadData} />}
     </div>
   );
 }
