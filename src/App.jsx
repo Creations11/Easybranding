@@ -11,37 +11,41 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import AgentDashboard from './pages/AgentDashboard';
+import PendingApproval from './pages/PendingApproval';
 
-function ProtectedRoute({ children, requiredRole = null }) {
+// ── Get current user from localStorage ───────────────────────
+const getUser = () => {
+  try { return JSON.parse(localStorage.getItem('eb_user') || '{}'); }
+  catch { return {}; }
+};
+
+// ── Redirect logged-in users away from public pages ──────────
+function PublicRoute({ children }) {
   const token = localStorage.getItem('eb_token');
-  const user = (() => {
-    try { return JSON.parse(localStorage.getItem('eb_user') || '{}'); }
-    catch { return {}; }
-  })();
+  const user  = getUser();
+  if (!token) return children;
+  // Role-based redirect
+  if (['super_admin', 'admin'].includes(user.role)) return <Navigate to="/admin"     replace />;
+  if (user.role === 'agent')                         return <Navigate to="/agent"     replace />;
+  if (user.role === 'borrower')                      return <Navigate to="/pending"   replace />;
+  return <Navigate to="/dashboard" replace />;
+}
+
+// ── Protect routes — redirect if not logged in ───────────────
+function ProtectedRoute({ children, allowedRoles = null }) {
+  const token = localStorage.getItem('eb_token');
+  const user  = getUser();
 
   if (!token) return <Navigate to="/login" replace />;
 
-  if (requiredRole) {
-    const allowed = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
-    if (!allowed.includes(user.role)) return <Navigate to="/dashboard" replace />;
-  }
-
-  return children;
-}
-
-// Redirect logged-in users away from public pages
-function PublicRoute({ children }) {
-  const token = localStorage.getItem('eb_token');
-  const user = (() => {
-    try { return JSON.parse(localStorage.getItem('eb_user') || '{}'); }
-    catch { return {}; }
-  })();
-
-  if (token) {
-    // Redirect to appropriate dashboard based on role
-    if (['admin', 'super_admin'].includes(user.role)) return <Navigate to="/admin" replace />;
-    if (user.role === 'agent') return <Navigate to="/agent" replace />;
-    return <Navigate to="/dashboard" replace />;
+  if (allowedRoles) {
+    if (!allowedRoles.includes(user.role)) {
+      // Redirect to correct home for their role
+      if (['super_admin', 'admin'].includes(user.role)) return <Navigate to="/admin"   replace />;
+      if (user.role === 'agent')                         return <Navigate to="/agent"   replace />;
+      if (user.role === 'borrower')                      return <Navigate to="/pending" replace />;
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return children;
@@ -54,15 +58,41 @@ export default function App() {
     <Router>
       <Nav onChatOpen={() => setChatOpen(true)} />
       <Routes>
-        {/* Public routes — redirect if logged in */}
+        {/* ── Public ── */}
         <Route path="/"         element={<PublicRoute><Home /></PublicRoute>} />
         <Route path="/login"    element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
-        {/* Protected routes */}
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/admin"     element={<ProtectedRoute requiredRole={["admin", "super_admin"]}><AdminDashboard /></ProtectedRoute>} />
-        <Route path="/agent"     element={<ProtectedRoute requiredRole={["agent", "admin", "super_admin"]}><AgentDashboard /></ProtectedRoute>} />
+        {/* ── Borrower / pending ── */}
+        <Route path="/pending" element={
+          <ProtectedRoute allowedRoles={['borrower']}>
+            <PendingApproval />
+          </ProtectedRoute>
+        } />
+
+        {/* ── Operations Center — admin + super_admin only ── */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute allowedRoles={['super_admin', 'admin']}>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+
+        {/* ── Agent workspace — agent + admin + super_admin ── */}
+        <Route path="/agent" element={
+          <ProtectedRoute allowedRoles={['agent', 'admin', 'super_admin']}>
+            <AgentDashboard />
+          </ProtectedRoute>
+        } />
+
+        {/* ── Admin control center — admin + super_admin ── */}
+        <Route path="/admin" element={
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        } />
+
+        {/* ── Catch all ── */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <ChatModal isOpen={chatOpen} onClose={() => setChatOpen(false)} />
     </Router>

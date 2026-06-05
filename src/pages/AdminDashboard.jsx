@@ -1,6 +1,7 @@
 // src/pages/AdminDashboard.jsx
 import { useState, useEffect } from 'react';
 import api from '../api';
+import SuperAdminPanel from '../components/SuperAdminPanel';
 
 const colors = {
   lime:      '#a3e635',
@@ -262,7 +263,11 @@ export default function AdminDashboard() {
   const [approveModal,        setApproveModal]        = useState(null);
   const [loading,             setLoading]             = useState(true);
   const [error,               setError]               = useState('');
-  const [tab,                 setTab]                 = useState('overview');
+  const [tab, setTab] = useState('overview');
+  const isSuperAdmin = (() => {
+    try { return JSON.parse(localStorage.getItem('eb_user') || '{}').role === 'super_admin'; }
+    catch { return false; }
+  })();
   const [clientSearch,        setClientSearch]        = useState('');
   const [clientFilter,        setClientFilter]        = useState('all');
 
@@ -327,7 +332,7 @@ export default function AdminDashboard() {
   if (loading) return <div style={{ padding: '140px', textAlign: 'center', color: colors.muted }}>Loading Admin Operations Center...</div>;
   if (error)   return <div style={{ padding: '140px', color: colors.red }}>{error}</div>;
 
-  const tabs = ['overview', 'active', 'qualified', 'rejected', 'alerts', 'clients', 'users'];
+  const tabs = ['overview', 'active', 'qualified', 'rejected', 'alerts', 'clients', 'users', ...(isSuperAdmin ? ['platform'] : [])];
 
   return (
     <div style={{ minHeight: '100vh', background: '#050505', color: colors.text, padding: '100px 40px 80px' }}>
@@ -562,6 +567,9 @@ export default function AdminDashboard() {
             ))}
           </div>
         )}
+
+        {/* ── Platform — super_admin only ─────────────────────── */}
+        {tab === 'platform' && isSuperAdmin && <SuperAdminPanel />}
 
       </div>
 
