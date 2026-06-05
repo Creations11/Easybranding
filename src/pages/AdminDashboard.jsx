@@ -259,6 +259,9 @@ export default function AdminDashboard() {
   const [pendingUsers,        setPendingUsers]        = useState([]);
   const [allUsers,            setAllUsers]            = useState([]);
   const [tenants,             setTenants]             = useState([]);
+  const [stages,              setStages]              = useState([]);
+  const [recentMessages,      setRecentMessages]      = useState([]);
+  const [viewingRequests,     setViewingRequests]     = useState([]);
   const [assignModal,         setAssignModal]         = useState(null);
   const [clientModal,         setClientModal]         = useState(null);
   const [approveModal,        setApproveModal]        = useState(null);
@@ -275,7 +278,7 @@ export default function AdminDashboard() {
 
   const loadData = async () => {
     try {
-      const [ovRes, activeRes, qualRes, rejRes, alertRes, agentRes, clientRes, statsRes, pendingRes, usersRes] = await Promise.all([
+      const [ovRes, activeRes, qualRes, rejRes, alertRes, agentRes, clientRes, statsRes, pendingRes, usersRes, stagesRes, messagesRes, viewingsRes] = await Promise.all([
         api.get('/admin-ops/overview'),
         api.get('/admin-ops/conversations/active'),
         api.get('/admin-ops/leads/qualified'),
@@ -286,6 +289,9 @@ export default function AdminDashboard() {
         api.get('/tenants/stats'),
         api.get('/users/pending'),
         api.get('/users'),
+        api.get('/admin-ops/stages'),
+        api.get('/admin-ops/messages/recent'),
+        api.get('/admin-ops/viewings'),
       ]);
       setOverview(ovRes.data.data?.overview);
       setActiveConversations(activeRes.data.data?.leads || []);
@@ -298,6 +304,9 @@ export default function AdminDashboard() {
       setPendingUsers(pendingRes.data.data?.users || []);
       setAllUsers(usersRes.data.data?.users || []);
       setTenants(clientRes.data.data?.tenants || []);
+      setStages(stagesRes.data.data?.stages || []);
+      setRecentMessages(messagesRes.data.data?.messages || []);
+      setViewingRequests(viewingsRes.data.data?.viewings || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load admin data');
     } finally { setLoading(false); }
@@ -334,7 +343,7 @@ export default function AdminDashboard() {
   if (loading) return <div style={{ padding: '140px', textAlign: 'center', color: colors.muted }}>Loading Admin Operations Center...</div>;
   if (error)   return <div style={{ padding: '140px', color: colors.red }}>{error}</div>;
 
-  const tabs = ['overview', 'active', 'qualified', 'rejected', 'alerts', 'clients', 'users', ...(isSuperAdmin ? ['platform'] : [])];
+  const tabs = ['overview', 'active', 'qualified', 'rejected', 'funnel', 'viewings', 'messages', 'alerts', 'clients', 'users', ...(isSuperAdmin ? ['platform'] : [])];
 
   return (
     <div style={{ minHeight: '100vh', background: '#050505', color: colors.text, padding: '100px 40px 80px' }}>
@@ -452,6 +461,86 @@ export default function AdminDashboard() {
               <div key={lead._id} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '14px', padding: '16px 20px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div><strong>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong><p style={{ color: colors.muted, fontSize: '13px' }}>{lead.phone}</p></div>
                 <span style={{ fontSize: '12px', padding: '4px 12px', borderRadius: '999px', background: `${colors.red}22`, color: colors.red }}>{lead.rejectionReason}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Stage Funnel ───────────────────────────────────── */}
+        {tab === 'funnel' && (
+          <div>
+            <h2 style={{ marginBottom: '20px', fontSize: '20px' }}>Pipeline Funnel</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {stages.map((stage, i) => (
+                <div key={i} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '12px', padding: '14px 18px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '14px', fontWeight: '600' }}>{stage.label}</span>
+                    <span style={{ fontSize: '13px', color: colors.muted }}>{stage.count} leads · {stage.percentage}%</span>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '999px', height: '6px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${stage.percentage}%`, background: stage.stage === 'qualified' ? '#a3e635' : stage.stage === 'not_qualified' ? '#f87171' : '#22d3ee', borderRadius: '999px', transition: 'width 0.5s ease' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Viewings ───────────────────────────────────────── */}
+        {tab === 'viewings' && (
+          <div>
+            <h2 style={{ marginBottom: '20px', fontSize: '20px' }}>Viewing Requests ({viewingRequests.length})</h2>
+            {viewingRequests.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px 0', color: colors.muted }}>
+                <p style={{ fontSize: '40px', marginBottom: '16px' }}>📅</p>
+                <p>No viewing requests yet.</p>
+              </div>
+            ) : viewingRequests.map(v => (
+              <div key={v._id} onClick={() => setLeadDetailId(v._id)} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '14px', padding: '18px 24px', marginBottom: '10px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <strong style={{ fontSize: '15px' }}>{v.name !== 'Unknown' ? v.name : v.phone}</strong>
+                  <p style={{ color: colors.muted, fontSize: '13px', marginTop: '2px' }}>{v.phone}</p>
+                  {v.propertyAddress && <p style={{ color: colors.muted, fontSize: '12px' }}>📍 {v.propertyAddress}</p>}
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  {v.viewingScheduledAt ? (
+                    <>
+                      <p style={{ color: '#a3e635', fontWeight: '700' }}>{new Date(v.viewingScheduledAt).toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' })}</p>
+                      <p style={{ color: colors.muted, fontSize: '12px' }}>{new Date(v.viewingScheduledAt).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}</p>
+                    </>
+                  ) : (
+                    <span style={{ fontSize: '12px', color: '#fbbf24' }}>Pending schedule</span>
+                  )}
+                  <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(52,211,153,0.15)', color: '#34d399', display: 'block', marginTop: '4px' }}>
+                    {v.viewingStatus || 'requested'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Recent Messages ────────────────────────────────── */}
+        {tab === 'messages' && (
+          <div>
+            <h2 style={{ marginBottom: '20px', fontSize: '20px' }}>Recent Messages ({recentMessages.length})</h2>
+            {recentMessages.length === 0 ? (
+              <p style={{ color: colors.muted, textAlign: 'center', padding: '60px 0' }}>No messages yet.</p>
+            ) : recentMessages.map((msg, i) => (
+              <div key={i} onClick={() => setLeadDetailId(msg.leadId)} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '12px', padding: '14px 18px', marginBottom: '8px', cursor: 'pointer', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: msg.direction === 'inbound' ? 'rgba(34,211,238,0.15)' : 'rgba(163,230,53,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>
+                  {msg.direction === 'inbound' ? '📱' : '🤖'}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <strong style={{ fontSize: '13px' }}>{msg.name !== 'Unknown' ? msg.name : msg.phone}</strong>
+                    <span style={{ fontSize: '11px', color: colors.muted }}>{new Date(msg.timestamp).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <p style={{ color: colors.muted, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.body}</p>
+                </div>
+                <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '999px', background: msg.direction === 'inbound' ? 'rgba(34,211,238,0.15)' : 'rgba(163,230,53,0.15)', color: msg.direction === 'inbound' ? '#22d3ee' : '#a3e635', flexShrink: 0 }}>
+                  {msg.direction}
+                </span>
               </div>
             ))}
           </div>
