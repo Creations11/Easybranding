@@ -695,7 +695,7 @@ export default function AdminDashboard() {
         )}
 
         {/* ── Clients ────────────────────────────────────────── */}
-        {tab === 'clients' && (
+        {tab === 'clients' && isSuperAdmin && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <h2 style={{ fontSize: '20px' }}>Client Management ({clients.length})</h2>
@@ -703,7 +703,12 @@ export default function AdminDashboard() {
             </div>
             {clientStats && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
-                {[{ label: 'Total', value: clientStats.total || 0 }, { label: 'Active', value: clientStats.active || 0, color: colors.lime }, { label: 'Trial', value: clientStats.trial || 0, color: colors.amber }, { label: 'MRR', value: `R${(clientStats.mrr || 0).toLocaleString()}`, color: colors.emerald }].map(s => (
+                {[
+                  { label: 'Total',  value: clientStats.total  || 0 },
+                  { label: 'Active', value: clientStats.active || 0, color: colors.lime },
+                  { label: 'Trial',  value: clientStats.trial  || 0, color: colors.amber },
+                  { label: 'MRR',    value: `R${(clientStats.mrr || 0).toLocaleString()}`, color: colors.emerald },
+                ].map(s => (
                   <div key={s.label} style={{ background: colors.card, border: `1px solid ${colors.border}`, borderRadius: '12px', padding: '16px 20px' }}>
                     <p style={{ color: colors.muted, fontSize: '11px', marginBottom: '6px', textTransform: 'uppercase' }}>{s.label}</p>
                     <p style={{ fontSize: '28px', fontWeight: '800', color: s.color || colors.text }}>{s.value}</p>
@@ -720,35 +725,59 @@ export default function AdminDashboard() {
             {filteredClients.length === 0
               ? <div style={{ textAlign: 'center', padding: '60px 0', color: colors.muted }}><p style={{ fontSize: '40px', marginBottom: '16px' }}>🌿</p><p>{clientSearch ? 'No clients match your search' : 'No clients yet — add your first one'}</p></div>
               : filteredClients.map(client => (
-                <div key={client._id} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '14px', padding: '18px 24px', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-                      <strong style={{ fontSize: '16px' }}>{client.businessName}</strong>
-                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: `${STATUS_COLORS[client.status]}22`, color: STATUS_COLORS[client.status], fontWeight: '600' }}>{client.status}</span>
-                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: `${PLAN_COLORS[client.plan]}22`, color: PLAN_COLORS[client.plan] }}>{client.plan}</span>
+                <div key={client._id} style={{ background: colors.card, border: `1px solid ${!client.whatsappNumber ? colors.amber + '44' : colors.borderDim}`, borderRadius: '14px', padding: '18px 24px', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                        <strong style={{ fontSize: '16px' }}>{client.businessName}</strong>
+                        <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: `${STATUS_COLORS[client.status]}22`, color: STATUS_COLORS[client.status], fontWeight: '600' }}>{client.status}</span>
+                        <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: `${PLAN_COLORS[client.plan]}22`, color: PLAN_COLORS[client.plan] }}>{client.plan}</span>
+                        {!client.whatsappNumber && (
+                          <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: `${colors.amber}22`, color: colors.amber, fontWeight: '600' }}>⚠️ No WhatsApp number</span>
+                        )}
+                        {client.inviteToken && client.inviteExpiresAt && (
+                          <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: `${colors.cyan}18`, color: colors.cyan }}>
+                            🔗 Invite expires {new Date(client.inviteExpiresAt).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })}
+                          </span>
+                        )}
+                      </div>
+                      <p style={{ color: colors.muted, fontSize: '13px' }}>
+                        {client.contactEmail}
+                        {client.industry ? ` · ${client.industry}` : ''}
+                        {client.whatsappNumber ? ` · ${client.whatsappNumber}` : ''}
+                        {` · ${client.workflowType || 'full'} workflow`}
+                      </p>
                     </div>
-                    <p style={{ color: colors.muted, fontSize: '13px' }}>{client.contactEmail}{client.industry ? ` · ${client.industry}` : ''}{client.whatsappNumber ? ` · ${client.whatsappNumber}` : ' · No WhatsApp assigned'}</p>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px', marginLeft: '16px', alignItems: 'center' }}>
-                    <div style={{ textAlign: 'center', padding: '6px 14px', background: 'rgba(163,230,53,0.08)', borderRadius: '8px' }}>
-                      <p style={{ color: colors.lime, fontWeight: '700', fontSize: '16px' }}>{client.totalLeads || 0}</p>
-                      <p style={{ color: colors.muted, fontSize: '10px' }}>Leads</p>
+                    <div style={{ display: 'flex', gap: '8px', marginLeft: '16px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                      <div style={{ textAlign: 'center', padding: '6px 14px', background: 'rgba(163,230,53,0.08)', borderRadius: '8px' }}>
+                        <p style={{ color: colors.lime, fontWeight: '700', fontSize: '16px' }}>{client.totalLeads || 0}</p>
+                        <p style={{ color: colors.muted, fontSize: '10px' }}>Leads</p>
+                      </div>
+                      <div style={{ textAlign: 'center', padding: '6px 14px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px' }}>
+                        <p style={{ color: colors.text, fontWeight: '700', fontSize: '16px' }}>R{client.monthlyFee}</p>
+                        <p style={{ color: colors.muted, fontSize: '10px' }}>/mo</p>
+                      </div>
+                      {/* Quick suspend/activate toggle */}
+                      <button onClick={async () => {
+                        const newStatus = client.status === 'suspended' ? 'active' : 'suspended';
+                        try {
+                          await api.put(`/tenants/${client._id}`, { status: newStatus });
+                          loadData();
+                        } catch (err) { alert('Failed to update status'); }
+                      }} style={{ padding: '8px 14px', background: client.status === 'suspended' ? `${colors.lime}22` : `${colors.amber}22`, color: client.status === 'suspended' ? colors.lime : colors.amber, border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
+                        {client.status === 'suspended' ? '▶ Activate' : '⏸ Suspend'}
+                      </button>
+                      <button onClick={() => setClientModal(client)} style={{ padding: '8px 14px', background: `${colors.lime}22`, color: colors.lime, border: `1px solid ${colors.border}`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>Edit</button>
+                      <button onClick={async () => {
+                        try {
+                          const res = await api.post(`/invites/${client._id}/generate`);
+                          setInviteUrl(res.data.data?.inviteUrl || '');
+                          setInviteModal(client);
+                          loadData();
+                        } catch (err) { alert('Failed to generate invite link'); }
+                      }} style={{ padding: '8px 14px', background: `${colors.cyan}22`, color: colors.cyan, border: `1px solid ${colors.cyan}33`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>🔗 Invite</button>
+                      <button onClick={() => handleDeleteClient(client)} style={{ padding: '8px 14px', background: `${colors.red}22`, color: colors.red, border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>Delete</button>
                     </div>
-                    <div style={{ textAlign: 'center', padding: '6px 14px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px' }}>
-                      <p style={{ color: colors.text, fontWeight: '700', fontSize: '16px' }}>R{client.monthlyFee}</p>
-                      <p style={{ color: colors.muted, fontSize: '10px' }}>/mo</p>
-                    </div>
-                    <button onClick={() => setClientModal(client)} style={{ padding: '8px 14px', background: `${colors.lime}22`, color: colors.lime, border: `1px solid ${colors.border}`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>Edit</button>
-                    <button onClick={async () => {
-                      try {
-                        const res = await api.post(`/invites/${client._id}/generate`);
-                        setInviteUrl(res.data.data?.inviteUrl || '');
-                        setInviteModal(client);
-                      } catch (err) {
-                        alert('Failed to generate invite link');
-                      }
-                    }} style={{ padding: '8px 14px', background: `${colors.cyan}22`, color: colors.cyan, border: `1px solid ${colors.cyan}33`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>🔗 Invite</button>
-                    <button onClick={() => handleDeleteClient(client)} style={{ padding: '8px 14px', background: `${colors.red}22`, color: colors.red, border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>Delete</button>
                   </div>
                 </div>
               ))}
@@ -801,23 +830,31 @@ export default function AdminDashboard() {
                         <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: user.approved ? `${colors.lime}22` : `${colors.amber}22`, color: user.approved ? colors.lime : colors.amber }}>
                           {user.approved ? '✅ Approved' : '⏳ Pending'}
                         </span>
-                        <select
-                          defaultValue={user.role}
-                          onChange={async (e) => {
-                            try {
-                              await api.patch(`/users/${user._id}/role`, { role: e.target.value, tenantId: user.tenantId });
-                              loadData();
-                            } catch (err) {
-                              alert(err.response?.data?.message || 'Failed to update role');
-                            }
-                          }}
-                          style={{ padding: '4px 10px', background: `${colors.cyan}18`, border: `1px solid ${colors.cyan}33`, color: colors.cyan, borderRadius: '8px', fontSize: '12px', cursor: 'pointer', outline: 'none' }}
-                        >
-                          <option value="borrower">borrower</option>
-                          <option value="agent">agent</option>
-                          <option value="admin">admin</option>
-                          {isSuperAdmin && <option value="super_admin">super_admin</option>}
-                        </select>
+                        {/* Protect super_admin accounts — show badge, no dropdown */}
+                        {user.role === 'super_admin' || user._id === currentUser.id ? (
+                          <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: `${colors.cyan}22`, color: colors.cyan, fontWeight: '600' }}>
+                            {user.role} {user._id === currentUser.id ? '(you)' : '🔒'}
+                          </span>
+                        ) : (
+                          <select
+                            defaultValue={user.role}
+                            onChange={async (e) => {
+                              try {
+                                await api.patch(`/users/${user._id}/role`, { role: e.target.value });
+                                loadData();
+                              } catch (err) {
+                                alert(err.response?.data?.message || 'Failed to update role');
+                                e.target.value = user.role;
+                              }
+                            }}
+                            style={{ padding: '4px 10px', background: `${colors.cyan}18`, border: `1px solid ${colors.cyan}33`, color: colors.cyan, borderRadius: '8px', fontSize: '12px', cursor: 'pointer', outline: 'none' }}
+                          >
+                            <option value="borrower">borrower</option>
+                            <option value="agent">agent</option>
+                            <option value="admin">admin</option>
+                            {isSuperAdmin && <option value="super_admin">super_admin</option>}
+                          </select>
+                        )}
                       </div>
                     </div>
                   ))}
