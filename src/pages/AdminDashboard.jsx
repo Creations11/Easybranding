@@ -65,9 +65,11 @@ function AssignModal({ lead, agents, onClose, onAssigned }) {
 // ── Approve Modal ─────────────────────────────────────────────
 function ApproveModal({ user, tenants, onClose, onApproved }) {
   const [role,     setRole]     = useState('agent');
-  const [tenantId, setTenantId] = useState('');
+  const [tenantId, setTenantId] = useState(user.tenantId || '');
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState('');
+
+  const PLAN_COLORS = { starter: '#7A9E6E', growth: '#B8F040', enterprise: '#C4873A' };
 
   const handleApprove = async () => {
     setSaving(true);
@@ -86,24 +88,46 @@ function ApproveModal({ user, tenants, onClose, onApproved }) {
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
       <div style={{ width: '100%', maxWidth: '460px', background: colors.surface, borderRadius: '24px', border: `1px solid ${colors.border}`, padding: '32px' }}>
         <h3 style={{ color: colors.lime, marginBottom: '8px' }}>Approve User</h3>
-        <p style={{ color: colors.muted, fontSize: '14px', marginBottom: '24px' }}>
-          {user.fullName} · {user.email}
+        <p style={{ color: colors.muted, fontSize: '14px', marginBottom: '4px' }}>{user.fullName} · {user.email}</p>
+        <p style={{ color: colors.muted, fontSize: '12px', marginBottom: user.requestedPlan ? '12px' : '24px' }}>
+          Registered {new Date(user.createdAt).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}
         </p>
+
+        {/* Show requested plan prominently */}
+        {user.requestedPlan && (
+          <div style={{ background: `${PLAN_COLORS[user.requestedPlan] || colors.lime}12`, border: `1px solid ${PLAN_COLORS[user.requestedPlan] || colors.lime}33`, borderRadius: '12px', padding: '12px 16px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <p style={{ color: colors.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>Requested plan</p>
+              <p style={{ color: PLAN_COLORS[user.requestedPlan] || colors.lime, fontWeight: '700', fontSize: '15px', textTransform: 'capitalize' }}>{user.requestedPlan}</p>
+            </div>
+            <p style={{ color: PLAN_COLORS[user.requestedPlan] || colors.lime, fontSize: '14px', fontWeight: '600' }}>
+              {user.requestedPlan === 'starter' ? 'R950/mo' : user.requestedPlan === 'growth' ? 'R2,450/mo' : 'Custom'}
+            </p>
+          </div>
+        )}
+
         {error && <p style={{ color: colors.red, fontSize: '14px', marginBottom: '12px' }}>{error}</p>}
 
         <p style={{ color: colors.muted, fontSize: '12px', marginBottom: '6px' }}>Assign Role</p>
         <select value={role} onChange={e => setRole(e.target.value)}
-          style={{ width: '100%', padding: '13px', borderRadius: '12px', background: '#1C1C19', border: `1px solid ${colors.borderDim}`, color: colors.text, fontSize: '14px', marginBottom: '16px' }}>
+          style={{ width: '100%', padding: '13px', borderRadius: '12px', background: '#1C1C19', border: `1px solid ${colors.borderDim}`, color: colors.text, fontSize: '14px', marginBottom: '16px', outline: 'none' }}>
           <option value="agent">Agent</option>
           <option value="admin">Admin</option>
-          <option value="borrower">Borrower</option>
+          <option value="borrower">Borrower (pending)</option>
         </select>
 
-        <p style={{ color: colors.muted, fontSize: '12px', marginBottom: '6px' }}>Assign to Client (optional)</p>
+        <p style={{ color: colors.muted, fontSize: '12px', marginBottom: '6px' }}>
+          Assign to Client
+          {user.tenantId && <span style={{ color: colors.lime, marginLeft: '8px' }}>· Pre-filled from invite link</span>}
+        </p>
         <select value={tenantId} onChange={e => setTenantId(e.target.value)}
-          style={{ width: '100%', padding: '13px', borderRadius: '12px', background: '#1C1C19', border: `1px solid ${colors.borderDim}`, color: colors.text, fontSize: '14px', marginBottom: '24px' }}>
+          style={{ width: '100%', padding: '13px', borderRadius: '12px', background: '#1C1C19', border: `1px solid ${colors.borderDim}`, color: colors.text, fontSize: '14px', marginBottom: '24px', outline: 'none' }}>
           <option value="">Platform level (no tenant)</option>
-          {tenants.map(t => <option key={t._id} value={t._id}>{t.businessName}</option>)}
+          {tenants.map(t => (
+            <option key={t._id} value={t._id}>
+              {t.businessName} ({t.plan} · {t.status})
+            </option>
+          ))}
         </select>
 
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
@@ -800,7 +824,14 @@ export default function AdminDashboard() {
                     <div>
                       <strong style={{ fontSize: '16px' }}>{user.fullName}</strong>
                       <p style={{ color: colors.muted, fontSize: '13px', marginTop: '2px' }}>{user.email} · {user.phone}</p>
-                      <p style={{ color: colors.muted, fontSize: '12px', marginTop: '2px' }}>Registered {new Date(user.createdAt).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                      <p style={{ color: colors.muted, fontSize: '12px', marginTop: '2px' }}>
+                        Registered {new Date(user.createdAt).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {user.requestedPlan && (
+                          <span style={{ marginLeft: '8px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(184,240,64,0.12)', color: '#B8F040', fontWeight: '600', fontSize: '11px', textTransform: 'capitalize' }}>
+                            {user.requestedPlan} plan
+                          </span>
+                        )}
+                      </p>
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button onClick={() => setApproveModal(user)} style={{ padding: '10px 20px', background: `${colors.lime}22`, color: colors.lime, border: `1px solid ${colors.border}`, borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }}>✅ Approve</button>

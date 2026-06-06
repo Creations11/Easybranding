@@ -338,7 +338,7 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-                <Link to="/register" className={plan.highlight ? 'btn-lime' : 'btn-ghost'} style={{
+                <Link to={`/register${plan.price === 'Custom' ? '' : `?plan=${plan.name.toLowerCase()}`}`} className={plan.highlight ? 'btn-lime' : 'btn-ghost'} style={{
                   display: 'block', textAlign: 'center', padding: '13px',
                   background: plan.highlight ? t.lime : 'rgba(255,255,255,0.05)',
                   color: plan.highlight ? t.bg : t.text,

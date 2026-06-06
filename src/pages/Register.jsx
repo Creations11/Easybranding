@@ -12,6 +12,13 @@ const t = {
 export default function Register() {
   const [searchParams]  = useSearchParams();
   const inviteToken     = searchParams.get('invite');
+  const selectedPlan    = searchParams.get('plan') || null;
+
+  const PLAN_LABELS = {
+    starter:    { label: 'Starter', price: 'R950/mo',   color: '#7A9E6E' },
+    growth:     { label: 'Growth',  price: 'R2,450/mo', color: '#B8F040' },
+    enterprise: { label: 'Enterprise', price: 'Custom', color: '#C4873A' },
+  };
 
   const [fullName,     setFullName]     = useState('');
   const [email,        setEmail]        = useState('');
@@ -50,6 +57,7 @@ export default function Register() {
       const res = await api.post('/auth/register', {
         fullName, email, phone, password,
         inviteToken: inviteToken || undefined,
+        plan: selectedPlan || undefined,
       });
       setTenantName(res.data.data?.tenantName || tenantName);
       setPending(true);
@@ -170,9 +178,20 @@ export default function Register() {
         <h1 style={{ fontSize: '26px', fontWeight: '800', marginBottom: '6px', letterSpacing: '-0.01em' }}>
           {inviteToken && tenantName ? `Join ${tenantName}` : 'Request access'}
         </h1>
-        <p style={{ color: t.muted, fontSize: '14px', marginBottom: '28px' }}>
+        <p style={{ color: t.muted, fontSize: '14px', marginBottom: selectedPlan ? '16px' : '28px' }}>
           {inviteToken && inviteValid ? `You've been invited to ${tenantName}` : 'Create your account — approval required'}
         </p>
+
+        {/* Plan badge */}
+        {selectedPlan && PLAN_LABELS[selectedPlan] && (
+          <div style={{ background: `${PLAN_LABELS[selectedPlan].color}12`, border: `1px solid ${PLAN_LABELS[selectedPlan].color}33`, borderRadius: '10px', padding: '10px 14px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <p style={{ color: t.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>Selected plan</p>
+              <p style={{ color: PLAN_LABELS[selectedPlan].color, fontWeight: '700', fontSize: '15px' }}>{PLAN_LABELS[selectedPlan].label}</p>
+            </div>
+            <p style={{ color: PLAN_LABELS[selectedPlan].color, fontWeight: '700', fontSize: '16px' }}>{PLAN_LABELS[selectedPlan].price}</p>
+          </div>
+        )}
 
         {inviteChecking && <p style={{ color: t.muted, fontSize: '13px', marginBottom: '16px' }}>Validating invite link...</p>}
 
