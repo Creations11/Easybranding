@@ -250,7 +250,25 @@ export default function AgentDashboard() {
             <div style={{ background: colors.card, borderRadius: '24px', padding: '20px', border: `1px solid ${colors.border}` }}>
               <h3 style={{ marginBottom: '16px', fontSize: '16px' }}>My Leads ({leads.length})</h3>
               {leads.length === 0 ? (
-                <p style={{ color: colors.muted, textAlign: 'center', padding: '40px 0', fontSize: '14px' }}>No leads assigned yet.</p>
+                <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                  <p style={{ color: colors.muted, fontSize: '14px', marginBottom: '16px' }}>No leads assigned yet.</p>
+                  <button
+                    onClick={async () => {
+                      try {
+                        // Get all unassigned qualified leads and self-assign first one
+                        const res = await api.get('/leads?status=qualified');
+                        const unassigned = (res.data.data?.leads || []).find(l => !l.assignedAgentId);
+                        if (!unassigned) { alert('No unassigned leads available.'); return; }
+                        await api.post(`/agent/leads/${unassigned._id}/assign`, { agentName: user.fullName });
+                        loadData();
+                      } catch (err) {
+                        alert(err.response?.data?.message || 'Could not self-assign lead');
+                      }
+                    }}
+                    style={{ padding: '10px 20px', background: `${colors.lime}22`, color: colors.lime, border: `1px solid ${colors.border}`, borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
+                    + Claim an unassigned lead
+                  </button>
+                </div>
               ) : leads.map(lead => (
                 <div key={lead._id} onClick={() => { setSelectedLead(lead); setActionMsg(''); }}
                   style={{ padding: '14px', marginBottom: '8px', background: selectedLead?._id === lead._id ? '#1C1C19' : '#0F0F0D', borderRadius: '14px', cursor: 'pointer', border: selectedLead?._id === lead._id ? `2px solid ${colors.lime}` : `1px solid ${colors.borderDim}` }}>

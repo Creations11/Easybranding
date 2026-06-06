@@ -801,7 +801,23 @@ export default function AdminDashboard() {
                         <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: user.approved ? `${colors.lime}22` : `${colors.amber}22`, color: user.approved ? colors.lime : colors.amber }}>
                           {user.approved ? '✅ Approved' : '⏳ Pending'}
                         </span>
-                        <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: `${colors.cyan}22`, color: colors.cyan }}>{user.role}</span>
+                        <select
+                          defaultValue={user.role}
+                          onChange={async (e) => {
+                            try {
+                              await api.patch(`/users/${user._id}/role`, { role: e.target.value, tenantId: user.tenantId });
+                              loadData();
+                            } catch (err) {
+                              alert(err.response?.data?.message || 'Failed to update role');
+                            }
+                          }}
+                          style={{ padding: '4px 10px', background: `${colors.cyan}18`, border: `1px solid ${colors.cyan}33`, color: colors.cyan, borderRadius: '8px', fontSize: '12px', cursor: 'pointer', outline: 'none' }}
+                        >
+                          <option value="borrower">borrower</option>
+                          <option value="agent">agent</option>
+                          <option value="admin">admin</option>
+                          {isSuperAdmin && <option value="super_admin">super_admin</option>}
+                        </select>
                       </div>
                     </div>
                   ))}

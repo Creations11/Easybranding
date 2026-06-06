@@ -111,7 +111,11 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
   const doAction = async (action, payload = {}, successMsg) => {
     setActionLoading(action); setActionMsg('');
     try {
-      await api.post(`/admin-ops/leads/${leadId}/${action}`, payload);
+      // Force release uses takeover route not admin-ops
+      const url = action === 'force-release'
+        ? `/takeover/${leadId}/force-release`
+        : `/admin-ops/leads/${leadId}/${action}`;
+      await api.post(url, payload);
       setActionMsg(`✅ ${successMsg}`);
       await load();
       if (onUpdate) onUpdate();
@@ -193,6 +197,13 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
             )}
             {lead?.viewingRequested && (
               <span style={{ fontSize: '12px', padding: '8px 14px', background: `${t.emerald}18`, color: t.emerald, borderRadius: '8px' }}>✅ Viewing Scheduled</span>
+            )}
+            {isTakenOver && (
+              <button onClick={() => doAction('force-release', { reason: 'Admin force release' }, 'Takeover force released')}
+                disabled={actionLoading === 'force-release'}
+                style={{ padding: '8px 16px', background: `${t.amber}18`, color: t.amber, border: `1px solid ${t.amber}33`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px', opacity: actionLoading === 'force-release' ? 0.6 : 1 }}>
+                {actionLoading === 'force-release' ? 'Releasing...' : '⚡ Force Release'}
+              </button>
             )}
             <button onClick={() => doAction('close', { reason: 'Closed by admin' }, 'Lead closed')} disabled={actionLoading === 'close'}
               style={{ padding: '8px 16px', background: `${t.red}18`, color: t.red, border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', opacity: actionLoading === 'close' ? 0.6 : 1 }}>
