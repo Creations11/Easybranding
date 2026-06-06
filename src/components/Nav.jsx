@@ -50,7 +50,7 @@ export default function Nav({ onChatOpen }) {
 
           {/* Nav links */}
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            {token && ['super_admin', 'admin'].includes(user.role) && (
+            {token && ['super_admin'].includes(user.role) && (
               <Link to="/dashboard" style={{ padding: '8px 16px', color: t.muted, textDecoration: 'none', fontSize: '14px', borderRadius: '8px' }}>
                 Dashboard
               </Link>

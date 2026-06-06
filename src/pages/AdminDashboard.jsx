@@ -386,10 +386,15 @@ export default function AdminDashboard() {
   const [loading,             setLoading]             = useState(true);
   const [error,               setError]               = useState('');
   const [tab, setTab] = useState('overview');
-  const isSuperAdmin = (() => {
-    try { return JSON.parse(localStorage.getItem('eb_user') || '{}').role === 'super_admin'; }
-    catch { return false; }
+
+  const currentUser = (() => {
+    try { return JSON.parse(localStorage.getItem('eb_user') || '{}'); }
+    catch { return {}; }
   })();
+  const isSuperAdmin = currentUser.role === 'super_admin';
+  const isAdmin      = currentUser.role === 'admin';
+  const userTenantId = currentUser.tenantId || null;
+
   const [clientSearch,        setClientSearch]        = useState('');
   const [clientFilter,        setClientFilter]        = useState('all');
 
@@ -460,31 +465,40 @@ export default function AdminDashboard() {
   if (loading) return <div style={{ padding: '140px', textAlign: 'center', color: colors.muted }}>Loading Admin Operations Center...</div>;
   if (error)   return <div style={{ padding: '140px', color: colors.red }}>{error}</div>;
 
-  const tabs = ['overview', 'active', 'qualified', 'rejected', 'funnel', 'viewings', 'messages', 'alerts', 'clients', 'users', ...(isSuperAdmin ? ['platform'] : [])];
+  const tabs = [
+    'overview', 'active', 'qualified', 'rejected',
+    'funnel', 'viewings', 'messages', 'alerts',
+    ...(isSuperAdmin ? ['clients', 'users', 'platform'] : []),
+    ...(isAdmin ? ['users'] : []),
+  ];
 
   return (
     <div style={{ minHeight: '100vh', background: '#050505', color: colors.text, padding: '100px 40px 80px' }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
 
         <div style={{ marginBottom: '40px' }}>
-          <h1 style={{ fontSize: '48px', fontWeight: '900', marginBottom: '8px' }}>Admin Control Center</h1>
-          <p style={{ color: colors.muted, fontSize: '20px' }}>Real-time Platform Operations & Oversight</p>
+          <h1 style={{ fontSize: '48px', fontWeight: '900', marginBottom: '8px' }}>
+            {isSuperAdmin ? 'Admin Control Center' : 'Operations Dashboard'}
+          </h1>
+          <p style={{ color: colors.muted, fontSize: '20px' }}>
+            {isSuperAdmin ? 'Real-time Platform Operations & Oversight' : 'Your agency\'s live WhatsApp pipeline'}
+          </p>
         </div>
 
         {/* Stats */}
         {overview && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '32px' }}>
             {[
-              { label: 'Total Leads',  value: overview.totalLeads,          color: colors.text },
-              { label: 'Active',       value: overview.activeConversations, color: colors.cyan },
-              { label: 'Qualified',    value: overview.qualifiedLeads,      color: colors.lime },
-              { label: 'Rejected',     value: overview.rejectedLeads,       color: colors.red },
-              { label: 'Today',        value: overview.todayLeads,          color: colors.amber },
-              { label: 'Qual. Rate',   value: `${overview.qualificationRate}%`, color: colors.emerald },
-              { label: 'Clients',      value: clients.length,               color: colors.cyan },
-              { label: 'Monthly Rev',  value: `R${(clientStats?.mrr || 0).toLocaleString()}`, color: colors.lime },
-              { label: 'Pending Users', value: pendingUsers.length,         color: pendingUsers.length > 0 ? colors.amber : colors.muted },
-            ].map(s => (
+              { label: 'Total Leads',   value: overview.totalLeads,          color: colors.text,    show: true },
+              { label: 'Active',        value: overview.activeConversations, color: colors.cyan,    show: true },
+              { label: 'Qualified',     value: overview.qualifiedLeads,      color: colors.lime,    show: true },
+              { label: 'Rejected',      value: overview.rejectedLeads,       color: colors.red,     show: true },
+              { label: 'Today',         value: overview.todayLeads,          color: colors.amber,   show: true },
+              { label: 'Qual. Rate',    value: `${overview.qualificationRate}%`, color: colors.emerald, show: true },
+              { label: 'Clients',       value: clients.length,               color: colors.cyan,    show: isSuperAdmin },
+              { label: 'Monthly Rev',   value: `R${(clientStats?.mrr || 0).toLocaleString()}`, color: colors.lime, show: isSuperAdmin },
+              { label: 'Pending Users', value: pendingUsers.length,          color: pendingUsers.length > 0 ? colors.amber : colors.muted, show: true },
+            ].filter(s => s.show).map(s => (
               <div key={s.label} style={{ background: colors.card, border: `1px solid ${colors.border}`, borderRadius: '14px', padding: '16px 18px' }}>
                 <p style={{ color: colors.muted, fontSize: '11px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</p>
                 <p style={{ fontSize: '28px', fontWeight: '800', color: s.color, lineHeight: 1 }}>{s.value}</p>
@@ -733,7 +747,7 @@ export default function AdminDashboard() {
         {/* ── Users ──────────────────────────────────────────── */}
         {tab === 'users' && (
           <div>
-            {/* Pending approvals */}
+            {/* Pending approvals — filter by tenant for admin */}
             <div style={{ marginBottom: '40px' }}>
               <h2 style={{ fontSize: '20px', marginBottom: '16px' }}>
                 Pending Approvals
@@ -756,23 +770,39 @@ export default function AdminDashboard() {
                 ))}
             </div>
 
-            {/* All users */}
-            <h2 style={{ fontSize: '20px', marginBottom: '16px' }}>All Users ({allUsers.length})</h2>
-            {allUsers.map(user => (
-              <div key={user._id} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '14px', padding: '16px 24px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* All users — admin sees only their tenant's users */}
+            {(() => {
+              const visibleUsers = isSuperAdmin
+                ? allUsers
+                : allUsers.filter(u => u.tenantId === userTenantId);
+              return (
                 <div>
-                  <strong>{user.fullName}</strong>
-                  <p style={{ color: colors.muted, fontSize: '13px', marginTop: '2px' }}>{user.email}</p>
+                  <h2 style={{ fontSize: '20px', marginBottom: '16px' }}>
+                    {isSuperAdmin ? `All Users (${allUsers.length})` : `Your Team (${visibleUsers.length})`}
+                  </h2>
+                  {visibleUsers.map(user => (
+                    <div key={user._id} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '14px', padding: '16px 24px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <strong>{user.fullName}</strong>
+                        <p style={{ color: colors.muted, fontSize: '13px', marginTop: '2px' }}>{user.email}</p>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: user.approved ? `${colors.lime}22` : `${colors.amber}22`, color: user.approved ? colors.lime : colors.amber }}>
+                          {user.approved ? '✅ Approved' : '⏳ Pending'}
+                        </span>
+                        <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: `${colors.cyan}22`, color: colors.cyan }}>{user.role}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {visibleUsers.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: colors.muted }}>
+                      <p style={{ fontSize: '32px', marginBottom: '12px' }}>👥</p>
+                      <p>No team members yet.</p>
+                    </div>
+                  )}
                 </div>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: user.approved ? `${colors.lime}22` : `${colors.amber}22`, color: user.approved ? colors.lime : colors.amber }}>
-                    {user.approved ? '✅ Approved' : '⏳ Pending'}
-                  </span>
-                  <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: `${colors.cyan}22`, color: colors.cyan }}>{user.role}</span>
-                  {user.tenantId && <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: `${colors.emerald}22`, color: colors.emerald }}>Tenant</span>}
-                </div>
-              </div>
-            ))}
+              );
+            })()}
           </div>
         )}
 
