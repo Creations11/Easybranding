@@ -20,9 +20,9 @@ export default function Nav({ onChatOpen }) {
     catch { return {}; }
   })();
 
-  const isAdmin      = ['admin', 'super_admin'].includes(user.role);
-  const isSuperAdmin = user.role === 'super_admin';
-  const isAgent      = ['agent', 'admin', 'super_admin'].includes(user.role);
+  const isSuperAdmin = ['super_admin', 'eb_manager'].includes(user.role);
+  const isAdmin      = user.role === 'admin';
+  const isAgent      = ['agent', 'admin', 'super_admin', 'eb_agent', 'eb_manager'].includes(user.role);
 
   const handleSignOut = () => {
     localStorage.removeItem('eb_token');
@@ -33,18 +33,18 @@ export default function Nav({ onChatOpen }) {
   const NavLinks = ({ mobile = false }) => (
     <>
       {token && isSuperAdmin && (
-        <Link to="/dashboard" onClick={() => setMenuOpen(false)} style={{ padding: mobile ? '14px 0' : '8px 16px', color: t.muted, textDecoration: 'none', fontSize: mobile ? '16px' : '14px', display: 'block', borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' }}>
+        <Link to="/superadmin" onClick={() => setMenuOpen(false)} style={{ padding: mobile ? '14px 0' : '8px 16px', color: t.lime, fontWeight: '600', textDecoration: 'none', fontSize: mobile ? '16px' : '14px', display: 'block', borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' }}>
           Dashboard
-        </Link>
-      )}
-      {token && isAgent && (
-        <Link to="/agent" onClick={() => setMenuOpen(false)} style={{ padding: mobile ? '14px 0' : '8px 16px', color: t.emerald, fontWeight: '600', textDecoration: 'none', fontSize: mobile ? '16px' : '14px', display: 'block', borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' }}>
-          Agent
         </Link>
       )}
       {token && isAdmin && (
         <Link to="/admin" onClick={() => setMenuOpen(false)} style={{ padding: mobile ? '14px 0' : '8px 16px', color: t.cyan, fontWeight: '600', textDecoration: 'none', fontSize: mobile ? '16px' : '14px', display: 'block', borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' }}>
           Admin
+        </Link>
+      )}
+      {token && isAgent && !isSuperAdmin && (
+        <Link to="/agent" onClick={() => setMenuOpen(false)} style={{ padding: mobile ? '14px 0' : '8px 16px', color: t.emerald, fontWeight: '600', textDecoration: 'none', fontSize: mobile ? '16px' : '14px', display: 'block', borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' }}>
+          Agent
         </Link>
       )}
       {token ? (

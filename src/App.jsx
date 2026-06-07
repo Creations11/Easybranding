@@ -5,15 +5,15 @@ import { useState } from 'react';
 import Nav from './components/Nav';
 import ChatModal from './components/ChatModal';
 
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import AdminDashboard from './pages/AdminDashboard';
-import AgentDashboard from './pages/AgentDashboard';
-import PendingApproval from './pages/PendingApproval';
+import Home               from './pages/Home';
+import Login              from './pages/Login';
+import Register           from './pages/Register';
+import Dashboard          from './pages/Dashboard';
+import AdminDashboard     from './pages/AdminDashboard';
+import AgentDashboard     from './pages/AgentDashboard';
+import PendingApproval    from './pages/PendingApproval';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
 
-// ── Get current user from localStorage ───────────────────────
 const getUser = () => {
   try { return JSON.parse(localStorage.getItem('eb_user') || '{}'); }
   catch { return {}; }
@@ -24,28 +24,26 @@ function PublicRoute({ children }) {
   const token = localStorage.getItem('eb_token');
   const user  = getUser();
   if (!token) return children;
-  // Role-based redirect
-  if (['super_admin', 'admin'].includes(user.role)) return <Navigate to="/admin"     replace />;
-  if (user.role === 'agent')                         return <Navigate to="/agent"     replace />;
-  if (user.role === 'borrower')                      return <Navigate to="/pending"   replace />;
+  if (['super_admin', 'eb_manager'].includes(user.role)) return <Navigate to="/superadmin" replace />;
+  if (user.role === 'admin')                              return <Navigate to="/admin"      replace />;
+  if (['agent', 'eb_agent'].includes(user.role))         return <Navigate to="/agent"      replace />;
+  if (user.role === 'borrower')                          return <Navigate to="/pending"    replace />;
   return <Navigate to="/dashboard" replace />;
 }
 
-// ── Protect routes — redirect if not logged in ───────────────
+// ── Protect routes ────────────────────────────────────────────
 function ProtectedRoute({ children, allowedRoles = null }) {
   const token = localStorage.getItem('eb_token');
   const user  = getUser();
 
   if (!token) return <Navigate to="/login" replace />;
 
-  if (allowedRoles) {
-    if (!allowedRoles.includes(user.role)) {
-      // Redirect to correct home for their role
-      if (['super_admin', 'admin'].includes(user.role)) return <Navigate to="/admin"   replace />;
-      if (user.role === 'agent')                         return <Navigate to="/agent"   replace />;
-      if (user.role === 'borrower')                      return <Navigate to="/pending" replace />;
-      return <Navigate to="/dashboard" replace />;
-    }
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    if (['super_admin', 'eb_manager'].includes(user.role)) return <Navigate to="/superadmin" replace />;
+    if (user.role === 'admin')                              return <Navigate to="/admin"      replace />;
+    if (['agent', 'eb_agent'].includes(user.role))         return <Navigate to="/agent"      replace />;
+    if (user.role === 'borrower')                          return <Navigate to="/pending"    replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;
@@ -63,30 +61,37 @@ export default function App() {
         <Route path="/login"    element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
-        {/* ── Borrower / pending ── */}
+        {/* ── Pending ── */}
         <Route path="/pending" element={
           <ProtectedRoute allowedRoles={['borrower']}>
             <PendingApproval />
           </ProtectedRoute>
         } />
 
-        {/* ── Operations Center — admin + super_admin only ── */}
+        {/* ── Super Admin + EB Manager ── */}
+        <Route path="/superadmin" element={
+          <ProtectedRoute allowedRoles={['super_admin', 'eb_manager']}>
+            <SuperAdminDashboard />
+          </ProtectedRoute>
+        } />
+
+        {/* ── Operations Center ── */}
         <Route path="/dashboard" element={
-          <ProtectedRoute allowedRoles={['super_admin', 'admin']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'admin', 'eb_manager']}>
             <Dashboard />
           </ProtectedRoute>
         } />
 
-        {/* ── Agent workspace — agent + admin + super_admin ── */}
+        {/* ── Agent workspace ── */}
         <Route path="/agent" element={
-          <ProtectedRoute allowedRoles={['agent', 'admin', 'super_admin']}>
+          <ProtectedRoute allowedRoles={['agent', 'admin', 'super_admin', 'eb_agent', 'eb_manager']}>
             <AgentDashboard />
           </ProtectedRoute>
         } />
 
-        {/* ── Admin control center — admin + super_admin ── */}
+        {/* ── Admin — tenant admins only ── */}
         <Route path="/admin" element={
-          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+          <ProtectedRoute allowedRoles={['admin']}>
             <AdminDashboard />
           </ProtectedRoute>
         } />
