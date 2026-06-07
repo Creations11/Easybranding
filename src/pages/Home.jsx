@@ -107,6 +107,23 @@ export default function Home() {
         .btn-lime:hover { box-shadow: 0 8px 28px rgba(184,240,64,0.3); background: #C8FF50 !important; }
         .btn-ghost { transition: background 0.2s ease, border-color 0.2s ease; }
         .btn-ghost:hover { background: rgba(184,240,64,0.06) !important; }
+        @media (max-width: 768px) {
+          .hero-grid { grid-template-columns: 1fr !important; gap: 40px !important; padding: 80px 20px 40px !important; }
+          .hero-grid > div:last-child { display: none !important; }
+          .how-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+          .how-grid > div { border-radius: 16px !important; }
+          .how-arrow { display: none !important; }
+          .features-grid { grid-template-columns: 1fr !important; }
+          .preview-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+          .pricing-grid { grid-template-columns: 1fr !important; }
+          .footer-inner { flex-direction: column !important; text-align: center !important; gap: 16px !important; }
+          .section-pad { padding: 60px 20px !important; }
+          .hero-section { padding: 80px 20px 40px !important; min-height: auto !important; }
+          .trust-bar { padding: 16px 20px !important; }
+          .cta-section { padding: 60px 20px !important; }
+          .nav-pad { padding: 0 16px !important; }
+        }
+
       `}</style>
 
       {/* ── NAV ─────────────────────────────────────────────── */}
@@ -132,11 +149,11 @@ export default function Home() {
       </nav>
 
       {/* ── HERO ─────────────────────────────────────────────── */}
-      <section style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', padding: '100px 40px 80px', position: 'relative' }}>
+      <section className="hero-section" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', padding: '100px 40px 80px', position: 'relative' }}>
         <div style={{ position: 'absolute', top: '20%', right: '8%', width: '420px', height: '420px', background: 'radial-gradient(ellipse, rgba(74,103,65,0.12) 0%, transparent 70%)', pointerEvents: 'none', borderRadius: '50%' }} />
         <div style={{ position: 'absolute', bottom: '15%', left: '2%', width: '320px', height: '320px', background: 'radial-gradient(ellipse, rgba(184,240,64,0.04) 0%, transparent 70%)', pointerEvents: 'none', borderRadius: '50%' }} />
 
-        <div style={{ maxWidth: '1280px', margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '60px', alignItems: 'center' }}>
+        <div className="hero-grid" style={{ maxWidth: '1280px', margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '60px', alignItems: 'center' }}>
           <div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(74,103,65,0.18)', border: '1px solid rgba(74,103,65,0.35)', borderRadius: '999px', padding: '6px 16px', marginBottom: '36px' }}>
               <span style={{ width: '6px', height: '6px', background: t.lime, borderRadius: '50%', display: 'inline-block' }} />
@@ -184,7 +201,7 @@ export default function Home() {
       </section>
 
       {/* ── TRUST BAR ────────────────────────────────────────── */}
-      <div style={{ background: t.surface, padding: '18px 40px', borderTop: `1px solid ${t.border}`, borderBottom: `1px solid ${t.border}` }}>
+      <div className="trust-bar" style={{ background: t.surface, padding: '18px 40px', borderTop: `1px solid ${t.border}`, borderBottom: `1px solid ${t.border}` }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
           <div style={{ display: 'flex', gap: '4px' }}>
             {[...Array(5)].map((_, i) => <span key={i} style={{ color: t.earth, fontSize: '14px' }}>★</span>)}
@@ -194,7 +211,7 @@ export default function Home() {
       </div>
 
       {/* ── HOW IT WORKS ─────────────────────────────────────── */}
-      <section style={{ padding: '120px 40px' }}>
+      <section className="section-pad" style={{ padding: '120px 40px' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '72px' }}>
             <p style={{ color: t.sage, fontSize: '11px', fontWeight: '700', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '14px' }}>How it works</p>
@@ -203,7 +220,7 @@ export default function Home() {
             </h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '2px' }}>
+          <div className="how-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '2px' }}>
             {steps.map((step, i) => (
               <div key={i} className="card-hover" style={{
                 background: t.card, padding: '36px 24px',
@@ -216,7 +233,7 @@ export default function Home() {
                 <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>{step.title}</h3>
                 <p style={{ color: t.muted, fontSize: '14px', lineHeight: '1.6' }}>{step.desc}</p>
                 {i < 3 && (
-                  <div style={{ position: 'absolute', right: '-12px', top: '50%', transform: 'translateY(-50%)', width: '24px', height: '24px', background: t.lime, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: t.bg, fontWeight: '800', zIndex: 1 }}>→</div>
+                  <div className="how-arrow" style={{ position: 'absolute', right: '-12px', top: '50%', transform: 'translateY(-50%)', width: '24px', height: '24px', background: t.lime, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: t.bg, fontWeight: '800', zIndex: 1 }}>→</div>
                 )}
               </div>
             ))}
@@ -225,7 +242,7 @@ export default function Home() {
       </section>
 
       {/* ── FEATURES ─────────────────────────────────────────── */}
-      <section style={{ padding: '100px 40px', background: t.surface }}>
+      <section className="section-pad" style={{ padding: '100px 40px', background: t.surface }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
             <p style={{ color: t.sage, fontSize: '11px', fontWeight: '700', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '14px' }}>Platform features</p>
@@ -233,7 +250,7 @@ export default function Home() {
               Everything your agency needs.<br /><span style={{ color: t.earth, fontStyle: 'italic' }}>Nothing it doesn't.</span>
             </h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
+          <div className="features-grid" className="pricing-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
             {features.map((f, i) => (
               <div key={i} className="card-hover" style={{ background: t.card, padding: '28px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
                 <div style={{ width: '44px', height: '44px', background: 'rgba(184,240,64,0.07)', border: `1px solid ${t.border}`, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', marginBottom: '16px' }}>{f.icon}</div>
@@ -246,9 +263,9 @@ export default function Home() {
       </section>
 
       {/* ── DASHBOARD PREVIEW ────────────────────────────────── */}
-      <section style={{ padding: '120px 40px' }}>
+      <section className="section-pad" style={{ padding: '120px 40px' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '80px', alignItems: 'center' }}>
+          <div className="preview-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '80px', alignItems: 'center' }}>
             <div>
               <p style={{ color: t.sage, fontSize: '11px', fontWeight: '700', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '14px' }}>Operations dashboard</p>
               <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(30px, 3.5vw, 48px)', fontWeight: '900', letterSpacing: '-0.02em', marginBottom: '18px', lineHeight: '1.1' }}>
@@ -301,7 +318,7 @@ export default function Home() {
       </section>
 
       {/* ── PRICING ──────────────────────────────────────────── */}
-      <section style={{ padding: '100px 40px', background: t.surface }} id="pricing">
+      <section className="section-pad" className="section-pad" style={{ padding: '100px 40px', background: t.surface }} id="pricing">
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
             <p style={{ color: t.sage, fontSize: '11px', fontWeight: '700', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '14px' }}>Pricing</p>
@@ -310,7 +327,7 @@ export default function Home() {
             </h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
+          <div className="features-grid" className="pricing-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
             {[
               { name: 'Starter',    price: 'R950',   period: '/mo', highlight: false, features: ['1 WhatsApp number', 'Automated qualification', 'Lead dashboard', 'Up to 3 agents', 'Email support'] },
               { name: 'Growth',     price: 'R2,450', period: '/mo', highlight: true,  features: ['2 WhatsApp numbers', 'Custom workflow messages', 'Full agent workspace', 'Viewing scheduling', 'Priority support', 'Up to 10 agents'] },
@@ -354,7 +371,7 @@ export default function Home() {
       </section>
 
       {/* ── CTA ──────────────────────────────────────────────── */}
-      <section style={{ padding: '120px 40px', position: 'relative', overflow: 'hidden' }}>
+      <section className="cta-section" style={{ padding: '120px 40px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 50%, rgba(74,103,65,0.1) 0%, transparent 65%)', pointerEvents: 'none' }} />
         <div style={{ maxWidth: '700px', margin: '0 auto', textAlign: 'center', position: 'relative' }}>
           <div style={{ fontSize: '56px', marginBottom: '28px' }}>🌿</div>
@@ -377,7 +394,7 @@ export default function Home() {
 
       {/* ── FOOTER ───────────────────────────────────────────── */}
       <footer style={{ padding: '28px 40px', borderTop: `1px solid ${t.border}` }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        <div className="footer-inner" style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '16px' }}>🌿</span>
             <span style={{ fontWeight: '700', color: t.lime, fontSize: '15px' }}>Easy Branding AI</span>

@@ -51,10 +51,17 @@ export default function Login() {
 
   return (
     <div style={{ minHeight: '100vh', background: t.bg, display: 'flex', fontFamily: "'Outfit', sans-serif" }}>
+      
+      <style>{`
+        @media (max-width: 768px) {
+          .login-left-panel { display: none !important; }
+          .login-right-panel { width: 100% !important; padding: 80px 24px 40px !important; }
+        }
+      `}</style>
       <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Fraunces:ital,wght@0,700;0,900;1,700;1,900&display=swap" rel="stylesheet" />
 
       {/* Left panel — brand */}
-      <div style={{ flex: 1, background: t.card, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '60px', borderRight: `1px solid ${t.border}`, position: 'relative', overflow: 'hidden' }}>
+      <div className="login-left-panel" style={{ flex: 1, background: t.card, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '60px', borderRight: `1px solid ${t.border}`, position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '20%', left: '10%', width: '300px', height: '300px', background: 'radial-gradient(ellipse, rgba(74,103,65,0.15) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: '10%', right: '5%', width: '200px', height: '200px', background: 'radial-gradient(ellipse, rgba(184,240,64,0.06) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }} />
 
@@ -83,7 +90,7 @@ export default function Login() {
       </div>
 
       {/* Right panel — form */}
-      <div style={{ width: '480px', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '60px 48px' }}>
+      <div className="login-right-panel" style={{ width: '480px', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '60px 48px' }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', marginBottom: '48px' }}>
           <span style={{ fontSize: '18px' }}>🌿</span>
           <span style={{ fontSize: '16px', fontWeight: '700', color: t.text }}>Easy Branding <span style={{ color: t.lime }}>AI</span></span>

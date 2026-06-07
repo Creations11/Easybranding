@@ -207,7 +207,7 @@ export default function AgentDashboard() {
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
           <div>
-            <h1 style={{ fontSize: '44px', fontWeight: '900', marginBottom: '6px' }}>Agent Workspace</h1>
+            <h1 style={{ fontSize: 'clamp(24px, 6vw, 44px)', fontWeight: '900', marginBottom: '6px' }}>Agent Workspace</h1>
             <p style={{ color: colors.muted, fontSize: '18px' }}>Welcome, {user.fullName || 'Agent'}</p>
           </div>
           <button onClick={() => navigate('/')} style={{ color: colors.muted, background: 'none', border: 'none', cursor: 'pointer' }}>← Home</button>

@@ -80,7 +80,14 @@ export default function Register() {
   if (pending) {
     return (
       <div style={{ minHeight: '100vh', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: "'Outfit', sans-serif" }}>
-        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Fraunces:ital,wght@0,700;0,900;1,900&display=swap" rel="stylesheet" />
+        
+      <style>{`
+        @media (max-width: 768px) {
+          .register-left-panel { display: none !important; }
+          .register-right-panel { width: 100% !important; padding: 80px 24px 40px !important; }
+        }
+      `}</style>
+      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Fraunces:ital,wght@0,700;0,900;1,900&display=swap" rel="stylesheet" />
         <div style={{ maxWidth: '480px', width: '100%', textAlign: 'center' }}>
           <div style={{ fontSize: '64px', marginBottom: '24px' }}>🌱</div>
           <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '32px', fontWeight: '900', marginBottom: '14px', color: t.lime }}>
@@ -117,10 +124,17 @@ export default function Register() {
 
   return (
     <div style={{ minHeight: '100vh', background: t.bg, display: 'flex', fontFamily: "'Outfit', sans-serif" }}>
+      
+      <style>{`
+        @media (max-width: 768px) {
+          .register-left-panel { display: none !important; }
+          .register-right-panel { width: 100% !important; padding: 80px 24px 40px !important; }
+        }
+      `}</style>
       <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Fraunces:ital,wght@0,700;0,900;1,700;1,900&display=swap" rel="stylesheet" />
 
       {/* Left panel */}
-      <div style={{ flex: 1, background: t.card, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '60px', borderRight: `1px solid ${t.border}`, position: 'relative', overflow: 'hidden' }}>
+      <div className="register-left-panel" style={{ flex: 1, background: t.card, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '60px', borderRight: `1px solid ${t.border}`, position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '15%', right: '5%', width: '280px', height: '280px', background: 'radial-gradient(ellipse, rgba(196,135,58,0.1) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }} />
         <div style={{ position: 'relative', textAlign: 'center', maxWidth: '360px' }}>
 
@@ -169,7 +183,7 @@ export default function Register() {
       </div>
 
       {/* Right panel — form */}
-      <div style={{ width: '480px', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '60px 48px' }}>
+      <div className="register-right-panel" style={{ width: '480px', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '60px 48px' }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', marginBottom: '40px' }}>
           <span style={{ fontSize: '18px' }}>🌿</span>
           <span style={{ fontSize: '16px', fontWeight: '700', color: t.text }}>Easy Branding <span style={{ color: t.lime }}>AI</span></span>

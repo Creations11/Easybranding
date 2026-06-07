@@ -4,6 +4,21 @@ import api from '../api';
 import SuperAdminPanel from '../components/SuperAdminPanel';
 import LeadDetailModal from '../components/LeadDetailModal';
 
+
+// Mobile responsive styles
+const mobileStyles = `
+  @media (max-width: 768px) {
+    .admin-header h1 { font-size: 28px !important; }
+    .admin-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    .admin-tabs { overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .admin-tabs::-webkit-scrollbar { display: none; }
+    .admin-content { padding: 16px !important; }
+    .admin-lead-row { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+    .admin-lead-actions { width: 100% !important; flex-wrap: wrap !important; }
+  }
+`;
+
+
 const colors = {
   lime:      '#a3e635',
   emerald:   '#34d399',
@@ -503,7 +518,7 @@ export default function AdminDashboard() {
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
 
         <div style={{ marginBottom: '40px' }}>
-          <h1 style={{ fontSize: '48px', fontWeight: '900', marginBottom: '8px' }}>
+          <h1 style={{ fontSize: 'clamp(24px, 5vw, 48px)', fontWeight: '900', marginBottom: '8px' }}>
             {isSuperAdmin ? 'Admin Control Center' : 'Operations Dashboard'}
           </h1>
           <p style={{ color: colors.muted, fontSize: '20px' }}>
@@ -513,7 +528,7 @@ export default function AdminDashboard() {
 
         {/* Stats */}
         {overview && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '32px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '24px' }}>
             {[
               { label: 'Total Leads',   value: overview.totalLeads,          color: colors.text,    show: true },
               { label: 'Active',        value: overview.activeConversations, color: colors.cyan,    show: true },
@@ -586,10 +601,22 @@ export default function AdminDashboard() {
             <h2 style={{ marginBottom: '20px', fontSize: '20px' }}>Qualified Leads ({qualifiedLeads.length})</h2>
             {qualifiedLeads.length === 0 ? <p style={{ color: colors.muted, textAlign: 'center', padding: '60px 0' }}>No qualified leads yet.</p>
             : qualifiedLeads.map(lead => (
-              <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '14px', padding: '18px 24px', marginBottom: '10px', cursor: 'pointer' }}>
+              <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} style={{ background: colors.card, border: `1px solid ${lead.aiSummary?.urgency === 'high' ? colors.lime + '44' : colors.borderDim}`, borderRadius: '14px', padding: '18px 24px', marginBottom: '10px', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <strong style={{ fontSize: '16px' }}>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                      <strong style={{ fontSize: '16px' }}>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
+                      {/* AI Score Badge */}
+                      {lead.aiSummary?.score && (
+                        <span style={{
+                          fontSize: '12px', padding: '3px 10px', borderRadius: '999px', fontWeight: '700',
+                          background: lead.aiSummary.score >= 8 ? `${colors.lime}22` : lead.aiSummary.score >= 5 ? `${colors.amber}22` : `${colors.muted}22`,
+                          color: lead.aiSummary.score >= 8 ? colors.lime : lead.aiSummary.score >= 5 ? colors.amber : colors.muted,
+                        }}>
+                          🤖 {lead.aiSummary.score}/10 · {lead.aiSummary.scoreLabel}
+                        </span>
+                      )}
+                    </div>
                     <p style={{ color: colors.muted, fontSize: '13px', marginTop: '2px' }}>{lead.phone}</p>
                     <div style={{ marginTop: '8px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                       {lead.propertyInterest && <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: `${colors.cyan}22`, color: colors.cyan }}>{lead.propertyInterest}</span>}
@@ -597,11 +624,31 @@ export default function AdminDashboard() {
                       {lead.moveInDate       && <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: `${colors.amber}22`, color: colors.amber }}>{lead.moveInDate}</span>}
                       {lead.monthlyIncome    && <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: `${colors.emerald}22`, color: colors.emerald }}>R{lead.monthlyIncome} income</span>}
                     </div>
-                    {lead.assignedAgent && <p style={{ color: colors.emerald, fontSize: '12px', marginTop: '6px' }}>✅ Assigned to {lead.assignedAgent}</p>}
+
+                    {/* AI Summary */}
+                    {lead.aiSummary?.summary && (
+                      <div style={{ marginTop: '12px', background: 'rgba(184,240,64,0.04)', border: `1px solid ${colors.border}`, borderRadius: '10px', padding: '12px 14px' }}>
+                        <p style={{ color: colors.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>🤖 AI Analysis</p>
+                        <p style={{ color: colors.text, fontSize: '13px', lineHeight: '1.6', marginBottom: '8px' }}>{lead.aiSummary.summary}</p>
+                        {lead.aiSummary.recommendedAction && (
+                          <p style={{ color: colors.lime, fontSize: '12px', fontWeight: '600' }}>→ {lead.aiSummary.recommendedAction}</p>
+                        )}
+                        {lead.aiSummary.redFlags?.length > 0 && (
+                          <div style={{ marginTop: '6px' }}>
+                            {lead.aiSummary.redFlags.map((flag, i) => (
+                              <p key={i} style={{ color: colors.amber, fontSize: '12px' }}>⚠️ {flag}</p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {lead.assignedAgent && <p style={{ color: colors.emerald, fontSize: '12px', marginTop: '8px' }}>✅ Assigned to {lead.assignedAgent}</p>}
                   </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    {!lead.assignedAgent && <button onClick={() => setAssignModal(lead)} style={{ padding: '8px 16px', background: `${colors.lime}22`, color: colors.lime, border: `1px solid ${colors.border}`, borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>Assign Agent</button>}
-                    {lead.viewingRequested ? <span style={{ fontSize: '12px', padding: '8px 14px', borderRadius: '10px', background: `${colors.emerald}22`, color: colors.emerald }}>📅 Viewing Set</span> : <span style={{ fontSize: '12px', padding: '8px 14px', borderRadius: '10px', background: `${colors.amber}22`, color: colors.amber }}>No Viewing</span>}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginLeft: '16px' }}>
+                    {!lead.assignedAgent && <button onClick={e => { e.stopPropagation(); setAssignModal(lead); }} style={{ padding: '8px 16px', background: `${colors.lime}22`, color: colors.lime, border: `1px solid ${colors.border}`, borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>Assign Agent</button>}
+                    {lead.viewingRequested
+                      ? <span style={{ fontSize: '12px', padding: '8px 14px', borderRadius: '10px', background: `${colors.emerald}22`, color: colors.emerald, textAlign: 'center' }}>📅 Viewing Set</span>
+                      : <span style={{ fontSize: '12px', padding: '8px 14px', borderRadius: '10px', background: `${colors.amber}22`, color: colors.amber, textAlign: 'center' }}>No Viewing</span>}
                   </div>
                 </div>
               </div>

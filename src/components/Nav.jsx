@@ -1,4 +1,5 @@
-// src/components/Nav.jsx
+// src/components/Nav.jsx — Mobile responsive with hamburger menu
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 const t = {
@@ -8,18 +9,20 @@ const t = {
   text:    '#EEF0E8',
   muted:   '#8A9080',
   border:  'rgba(184,240,64,0.15)',
+  bg:      'rgba(8,10,6,0.97)',
 };
 
 export default function Nav({ onChatOpen }) {
-  const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
   const token = localStorage.getItem('eb_token');
   const user = (() => {
     try { return JSON.parse(localStorage.getItem('eb_user') || '{}'); }
     catch { return {}; }
   })();
 
-  const isAdmin = ["admin", "super_admin"].includes(user.role);
-  const isAgent = ["agent", "admin", "super_admin"].includes(user.role);
+  const isAdmin      = ['admin', 'super_admin'].includes(user.role);
+  const isSuperAdmin = user.role === 'super_admin';
+  const isAgent      = ['agent', 'admin', 'super_admin'].includes(user.role);
 
   const handleSignOut = () => {
     localStorage.removeItem('eb_token');
@@ -27,77 +30,92 @@ export default function Nav({ onChatOpen }) {
     window.location.href = '/';
   };
 
+  const NavLinks = ({ mobile = false }) => (
+    <>
+      {token && isSuperAdmin && (
+        <Link to="/dashboard" onClick={() => setMenuOpen(false)} style={{ padding: mobile ? '14px 0' : '8px 16px', color: t.muted, textDecoration: 'none', fontSize: mobile ? '16px' : '14px', display: 'block', borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' }}>
+          Dashboard
+        </Link>
+      )}
+      {token && isAgent && (
+        <Link to="/agent" onClick={() => setMenuOpen(false)} style={{ padding: mobile ? '14px 0' : '8px 16px', color: t.emerald, fontWeight: '600', textDecoration: 'none', fontSize: mobile ? '16px' : '14px', display: 'block', borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' }}>
+          Agent
+        </Link>
+      )}
+      {token && isAdmin && (
+        <Link to="/admin" onClick={() => setMenuOpen(false)} style={{ padding: mobile ? '14px 0' : '8px 16px', color: t.cyan, fontWeight: '600', textDecoration: 'none', fontSize: mobile ? '16px' : '14px', display: 'block', borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' }}>
+          Admin
+        </Link>
+      )}
+      {token ? (
+        <button onClick={handleSignOut} style={{ padding: mobile ? '14px 0' : '8px 18px', background: 'none', border: mobile ? 'none' : '1px solid rgba(255,255,255,0.1)', color: t.muted, borderRadius: mobile ? '0' : '8px', cursor: 'pointer', fontSize: mobile ? '16px' : '14px', fontFamily: "'Outfit', sans-serif", textAlign: 'left', width: mobile ? '100%' : 'auto' }}>
+          Sign Out
+        </button>
+      ) : (
+        <>
+          <Link to="/login" onClick={() => setMenuOpen(false)} style={{ padding: mobile ? '14px 0' : '8px 18px', background: 'transparent', border: mobile ? 'none' : '1px solid rgba(255,255,255,0.1)', color: t.muted, borderRadius: mobile ? '0' : '8px', textDecoration: 'none', fontSize: mobile ? '16px' : '14px', display: 'block', borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' }}>
+            Sign In
+          </Link>
+          <Link to="/register" onClick={() => setMenuOpen(false)} style={{ padding: mobile ? '16px 0' : '8px 18px', background: mobile ? t.lime : t.lime, color: '#080A06', borderRadius: mobile ? '12px' : '8px', textDecoration: 'none', fontSize: mobile ? '16px' : '14px', fontWeight: '700', display: 'block', textAlign: mobile ? 'center' : 'left', marginTop: mobile ? '8px' : '0' }}>
+            Get Started
+          </Link>
+        </>
+      )}
+    </>
+  );
+
   return (
     <>
-      <nav style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-        background: 'rgba(8,10,6,0.95)',
-        backdropFilter: 'blur(16px)',
-        padding: '0 40px', height: '68px',
-        display: 'flex', alignItems: 'center',
-        borderBottom: `1px solid ${t.border}`,
-        fontFamily: "'Outfit', sans-serif",
-      }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .nav-desktop { display: none !important; }
+          .nav-hamburger { display: flex !important; }
+        }
+        @media (min-width: 769px) {
+          .nav-desktop { display: flex !important; }
+          .nav-hamburger { display: none !important; }
+          .nav-mobile-menu { display: none !important; }
+        }
+      `}</style>
+
+      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: t.bg, backdropFilter: 'blur(16px)', padding: '0 20px', height: '64px', display: 'flex', alignItems: 'center', borderBottom: `1px solid ${t.border}`, fontFamily: "'Outfit', sans-serif" }}>
+        <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
 
           {/* Logo */}
-          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
             <span style={{ fontSize: '20px' }}>🌿</span>
-            <span style={{ fontSize: '17px', fontWeight: '700', color: t.text }}>
+            <span style={{ fontSize: '16px', fontWeight: '700', color: t.text, whiteSpace: 'nowrap' }}>
               Easy Branding <span style={{ color: t.lime }}>AI</span>
             </span>
           </Link>
 
-          {/* Nav links */}
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            {token && ['super_admin'].includes(user.role) && (
-              <Link to="/dashboard" style={{ padding: '8px 16px', color: t.muted, textDecoration: 'none', fontSize: '14px', borderRadius: '8px' }}>
-                Dashboard
-              </Link>
-            )}
-            {token && isAgent && (
-              <Link to="/agent" style={{ padding: '8px 16px', color: t.emerald, fontWeight: '600', textDecoration: 'none', fontSize: '14px', borderRadius: '8px' }}>
-                Agent
-              </Link>
-            )}
-            {token && isAdmin && (
-              <Link to="/admin" style={{ padding: '8px 16px', color: t.cyan, fontWeight: '600', textDecoration: 'none', fontSize: '14px', borderRadius: '8px' }}>
-                Admin
-              </Link>
-            )}
-            {token ? (
-              <button
-                onClick={handleSignOut}
-                style={{ padding: '8px 18px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: t.muted, borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontFamily: "'Outfit', sans-serif" }}>
-                Sign Out
-              </button>
-            ) : (
-              <>
-                <Link to="/login" style={{ padding: '8px 18px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: t.muted, borderRadius: '8px', textDecoration: 'none', fontSize: '14px' }}>
-                  Sign In
-                </Link>
-                <Link to="/register" style={{ padding: '8px 18px', background: t.lime, color: '#080A06', borderRadius: '8px', textDecoration: 'none', fontSize: '14px', fontWeight: '700' }}>
-                  Get Started
-                </Link>
-              </>
-            )}
+          {/* Desktop links */}
+          <div className="nav-desktop" style={{ gap: '6px', alignItems: 'center' }}>
+            <NavLinks />
           </div>
+
+          {/* Hamburger */}
+          <button
+            className="nav-hamburger"
+            onClick={() => setMenuOpen(!menuOpen)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', display: 'none', flexDirection: 'column', gap: '5px' }}>
+            <span style={{ display: 'block', width: '22px', height: '2px', background: menuOpen ? t.lime : t.text, transition: 'all 0.2s', transform: menuOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none' }} />
+            <span style={{ display: 'block', width: '22px', height: '2px', background: menuOpen ? t.lime : t.text, transition: 'all 0.2s', opacity: menuOpen ? 0 : 1 }} />
+            <span style={{ display: 'block', width: '22px', height: '2px', background: menuOpen ? t.lime : t.text, transition: 'all 0.2s', transform: menuOpen ? 'rotate(-45deg) translate(5px, -5px)' : 'none' }} />
+          </button>
         </div>
       </nav>
 
+      {/* Mobile menu dropdown */}
+      {menuOpen && (
+        <div className="nav-mobile-menu" style={{ position: 'fixed', top: '64px', left: 0, right: 0, background: t.bg, borderBottom: `1px solid ${t.border}`, zIndex: 99, padding: '8px 24px 24px', fontFamily: "'Outfit', sans-serif" }}>
+          <NavLinks mobile />
+        </div>
+      )}
+
       {/* Floating action button */}
-      {token && (
-        <button
-          onClick={onChatOpen}
-          style={{
-            position: 'fixed', bottom: '28px', right: '28px',
-            width: '56px', height: '56px', borderRadius: '50%',
-            background: `linear-gradient(135deg, ${t.lime}, #4A6741)`,
-            border: 'none', fontSize: '24px',
-            boxShadow: `0 8px 32px rgba(184,240,64,0.3)`,
-            zIndex: 150, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
+      {token && onChatOpen && (
+        <button onClick={onChatOpen} style={{ position: 'fixed', bottom: '24px', right: '20px', width: '52px', height: '52px', borderRadius: '50%', background: `linear-gradient(135deg, ${t.lime}, #4A6741)`, border: 'none', fontSize: '22px', boxShadow: `0 8px 24px rgba(184,240,64,0.3)`, zIndex: 150, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           🌿
         </button>
       )}

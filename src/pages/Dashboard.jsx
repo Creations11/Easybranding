@@ -30,6 +30,15 @@ const STATUS_COLORS = {
   closed:                    '#a1a1aa',
 };
 
+
+const dashMobileStyle = `
+  @media (max-width: 768px) {
+    .dash-grid { grid-template-columns: 1fr !important; }
+    .dash-conv-panel { display: none; }
+    .dash-conv-panel.active { display: block !important; }
+  }
+`;
+
 export default function Dashboard() {
   const [leads,        setLeads]        = useState([]);
   const [selectedLead, setSelectedLead] = useState(null);
@@ -131,13 +140,13 @@ export default function Dashboard() {
   const isTakenOver = selectedLead?.workflowStatus === 'taken_over';
 
   return (
-    <div style={{ minHeight: '100vh', background: '#050505', color: colors.text, padding: '100px 40px 80px' }}>
+    <div style={{ minHeight: '100vh', background: '#050505', color: colors.text, padding: 'clamp(80px, 10vw, 100px) clamp(16px, 4vw, 40px) 40px' }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
           <div>
-            <h1 style={{ fontSize: '48px', fontWeight: '900' }}>Operations Center</h1>
+            <h1 style={{ fontSize: 'clamp(24px, 6vw, 48px)', fontWeight: '900' }}>Operations Center</h1>
             <p style={{ color: colors.muted, fontSize: '20px' }}>Live WhatsApp Leads & Conversations</p>
           </div>
           <button onClick={() => navigate('/')} style={{ color: colors.muted, background: 'none', border: 'none', cursor: 'pointer' }}>← Home</button>
@@ -146,7 +155,7 @@ export default function Dashboard() {
         {loadingLeads && <p style={{ color: colors.muted }}>Loading leads...</p>}
         {error && <p style={{ color: colors.red }}>{error}</p>}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 360px) 1fr', gap: '16px' }}>
 
           {/* ── Leads List ─────────────────────────────────── */}
           <div style={{ background: colors.card, borderRadius: '24px', padding: '24px', border: `1px solid ${colors.border}`, height: 'fit-content' }}>
