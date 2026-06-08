@@ -145,7 +145,7 @@ function ProspectingPanel({ currentUser }) {
       const contacts = bulkText.trim().split('\n').map(line => {
         const parts = line.split(',').map(p => p.trim());
         return { phone: parts[0], name: parts[1] || 'Unknown', agencyName: parts[2] || null };
-      }).filter(c => c.phone);
+      }).filter(contact => contact.phone);
       const res = await api.post('/prospecting/bulk', { contacts });
       const { added, skipped } = res.data.data?.results || {};
       setBulkText('');
@@ -333,7 +333,14 @@ function ProspectingPanel({ currentUser }) {
             {currentTemplate && (
               <div style={{ background: c.surface, border: `1px solid ${c.borderDim}`, borderRadius: '12px', padding: '16px' }}>
                 <p style={{ color: c.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Preview</p>
-                <p style={{ color: c.text, fontSize: '13px', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{currentTemplate.preview({ name: varName || '[Name]', agency: varAgency || '[Agency]' })}</p>
+                <p style={{ color: c.text, fontSize: '13px', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                  {typeof currentTemplate.preview === 'function'
+                    ? currentTemplate.preview({ name: varName || '[Name]', agency: varAgency || '[Agency]' })
+                    : (currentTemplate.preview || '')
+                        .replace(/\[Name\]/g, varName || '[Name]')
+                        .replace(/\[Agency\]/g, varAgency || '[Agency]')
+                  }
+                </p>
               </div>
             )}
           </div>
@@ -343,16 +350,35 @@ function ProspectingPanel({ currentUser }) {
             <div style={{ background: c.card, border: `1px solid ${c.borderDim}`, borderRadius: '14px', padding: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: '700' }}>
-                  {selectedIds.length > 0 ? `${selectedIds.length} selected` : 'No contacts selected'}
+                  {selectedIds.length > 0 ? `${selectedIds.length} selected` : 'Select contacts'}
                 </h3>
                 <button onClick={handleSelectAll} style={{ padding: '6px 14px', background: `${c.lime}22`, color: c.lime, border: `1px solid ${c.border}`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit' }}>
-                  {selectedIds.length === prospects.filter(p => p.status === 'pending').length ? 'Deselect All' : 'Select All Pending'}
+                  {selectedIds.length === prospects.filter(p => p.status === 'pending').length && prospects.filter(p => p.status === 'pending').length > 0 ? 'Deselect All' : 'Select All Pending'}
                 </button>
               </div>
-              <p style={{ color: c.muted, fontSize: '13px', marginBottom: '20px' }}>
-                Go to the Contact List tab to select individual contacts, or use Select All Pending above.
+
+              {/* Inline contact list with checkboxes */}
+              <div style={{ maxHeight: '240px', overflowY: 'auto', marginBottom: '16px', borderRadius: '10px', border: `1px solid ${c.borderDim}` }}>
+                {prospects.filter(p => p.status === 'pending').length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: c.muted, fontSize: '13px' }}>
+                    No pending contacts. Add contacts first.
+                  </div>
+                ) : prospects.filter(p => p.status === 'pending').map(p => (
+                  <div key={p._id} onClick={() => setSelectedIds(prev => prev.includes(p._id) ? prev.filter(id => id !== p._id) : [...prev, p._id])}
+                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderBottom: `1px solid ${c.borderDim}`, cursor: 'pointer', background: selectedIds.includes(p._id) ? `${c.lime}08` : 'transparent' }}>
+                    <input type="checkbox" checked={selectedIds.includes(p._id)} onChange={() => {}} style={{ cursor: 'pointer', accentColor: c.lime }} />
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: '13px', fontWeight: '600', color: c.text }}>{p.name !== 'Unknown' ? p.name : p.phone}</p>
+                      <p style={{ fontSize: '11px', color: c.muted }}>{p.phone}{p.agencyName ? ` · ${p.agencyName}` : ''}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <p style={{ color: c.muted, fontSize: '12px', marginBottom: '16px' }}>
+                Pending: <span style={{ color: c.lime, fontWeight: '700' }}>{prospects.filter(p => p.status === 'pending').length}</span>
+                {selectedIds.length > 0 && <span style={{ color: c.lime, marginLeft: '8px' }}>· {selectedIds.length} selected</span>}
               </p>
-              <p style={{ color: c.muted, fontSize: '12px', marginBottom: '8px' }}>Pending contacts: <span style={{ color: c.lime, fontWeight: '700' }}>{prospects.filter(p => p.status === 'pending').length}</span></p>
 
               <button onClick={handleSend} disabled={sending || !selectedIds.length || !selectedTemplate} style={{
                 width: '100%', padding: '15px',
@@ -362,13 +388,16 @@ function ProspectingPanel({ currentUser }) {
                 cursor: selectedIds.length && selectedTemplate ? 'pointer' : 'not-allowed',
                 fontFamily: 'inherit', marginBottom: '12px',
               }}>
-                {sending ? '⏳ Sending...' : `📤 Send to ${selectedIds.length} contacts`}
+                {sending ? '⏳ Sending...' : selectedIds.length ? `📤 Send to ${selectedIds.length} contacts` : '📤 Select contacts above'}
               </button>
 
               {sendResult && (
                 <div style={{ background: `${c.lime}08`, border: `1px solid ${c.border}`, borderRadius: '10px', padding: '14px' }}>
                   <p style={{ color: c.lime, fontWeight: '700', marginBottom: '6px' }}>✅ Sent {sendResult.sent} messages</p>
                   {sendResult.failed > 0 && <p style={{ color: c.red, fontSize: '13px' }}>❌ {sendResult.failed} failed</p>}
+                  {sendResult.errors?.length > 0 && sendResult.errors.map((e, i) => (
+                    <p key={i} style={{ color: c.red, fontSize: '11px', marginTop: '4px' }}>• {e.error}</p>
+                  ))}
                 </div>
               )}
             </div>
