@@ -1051,6 +1051,15 @@ export default function SuperAdminDashboard() {
       {/* ── Modals ─────────────────────────────────────────── */}
       {leadDetailId && <LeadDetailModal leadId={leadDetailId} onClose={() => setLeadDetailId(null)} onUpdate={loadData} />}
 
+      {/* Client modal */}
+      {clientModal !== null && (
+        <ClientModal
+          tenant={clientModal}
+          onClose={() => setClientModal(null)}
+          onSaved={() => { setClientModal(null); loadData(); }}
+        />
+      )}
+
       {/* Invite modal */}
       {inviteModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
@@ -1074,6 +1083,146 @@ export default function SuperAdminDashboard() {
           <ApproveModal user={approveModal} tenants={tenants} onClose={() => setApproveModal(null)} onApproved={() => { setApproveModal(null); loadData(); }} />
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Client Modal component ────────────────────────────────────
+function ClientModal({ tenant, onClose, onSaved }) {
+  const isNew = !tenant?._id;
+  const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState('');
+  const [form,   setForm]   = useState({
+    businessName:   tenant?.businessName   || '',
+    brandName:      tenant?.brandName      || '',
+    contactEmail:   tenant?.contactEmail   || '',
+    whatsappNumber: tenant?.whatsappNumber || '',
+    plan:           tenant?.plan           || 'starter',
+    status:         tenant?.status         || 'trial',
+    workflowType:   tenant?.workflowType   || 'basic',
+    monthlyFee:     tenant?.monthlyFee     || 950,
+    qualificationRules: {
+      minimumBudget:   tenant?.qualificationRules?.minimumBudget   || 500,
+      maximumBudget:   tenant?.qualificationRules?.maximumBudget   || 50000,
+      allowUnemployed: tenant?.qualificationRules?.allowUnemployed ?? true,
+      incomeMultiplier: tenant?.qualificationRules?.incomeMultiplier || 3,
+    },
+  });
+
+  const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
+  const setRule = (field, value) => setForm(prev => ({
+    ...prev,
+    qualificationRules: { ...prev.qualificationRules, [field]: value },
+  }));
+
+  const iStyle = { width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${c.borderDim}`, borderRadius: '10px', color: c.text, fontSize: '14px', outline: 'none', fontFamily: 'inherit', marginBottom: '14px' };
+  const labelStyle = { color: c.muted, fontSize: '12px', marginBottom: '6px', display: 'block' };
+
+  const handleSave = async () => {
+    if (!form.businessName) { setError('Business name is required'); return; }
+    if (!form.contactEmail)  { setError('Contact email is required'); return; }
+    setSaving(true); setError('');
+    try {
+      if (isNew) {
+        await api.post('/tenants', form);
+      } else {
+        await api.put(`/tenants/${tenant._id}`, form);
+      }
+      onSaved();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save client');
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px', overflowY: 'auto' }}>
+      <div style={{ width: '100%', maxWidth: '560px', background: c.surface, borderRadius: '24px', border: `1px solid ${c.border}`, padding: '32px', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: '900', color: c.lime }}>
+            {isNew ? '+ Add Client' : `Edit — ${tenant.businessName}`}
+          </h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: c.muted, cursor: 'pointer', fontSize: '20px' }}>×</button>
+        </div>
+
+        {error && <div style={{ background: `${c.red}18`, border: `1px solid ${c.red}33`, borderRadius: '10px', padding: '12px 16px', color: c.red, fontSize: '14px', marginBottom: '16px' }}>{error}</div>}
+
+        {/* Business details */}
+        <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginBottom: '12px' }}>Business Details</p>
+        <label style={labelStyle}>Business Name *</label>
+        <input value={form.businessName} onChange={e => set('businessName', e.target.value)} placeholder="ABC Rentals" style={iStyle} />
+        <label style={labelStyle}>Brand Name</label>
+        <input value={form.brandName} onChange={e => set('brandName', e.target.value)} placeholder="ABC Rentals (displayed to renters)" style={iStyle} />
+        <label style={labelStyle}>Contact Email *</label>
+        <input value={form.contactEmail} onChange={e => set('contactEmail', e.target.value)} placeholder="admin@abcrentals.co.za" style={iStyle} />
+        <label style={labelStyle}>WhatsApp Number</label>
+        <input value={form.whatsappNumber} onChange={e => set('whatsappNumber', e.target.value)} placeholder="whatsapp:+27821234567" style={iStyle} />
+
+        {/* Plan & Status */}
+        <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginBottom: '12px', marginTop: '8px' }}>Plan & Status</p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div>
+            <label style={labelStyle}>Plan</label>
+            <select value={form.plan} onChange={e => {
+              set('plan', e.target.value);
+              set('monthlyFee', e.target.value === 'starter' ? 950 : e.target.value === 'growth' ? 2450 : 0);
+            }} style={{ ...iStyle, marginBottom: 0 }}>
+              <option value="starter">Starter — R950/mo</option>
+              <option value="growth">Growth — R2,450/mo</option>
+              <option value="enterprise">Enterprise — Custom</option>
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>Status</label>
+            <select value={form.status} onChange={e => set('status', e.target.value)} style={{ ...iStyle, marginBottom: 0 }}>
+              <option value="trial">Trial</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Workflow */}
+        <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '12px' }}>Workflow</p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div>
+            <label style={labelStyle}>Workflow Type</label>
+            <select value={form.workflowType} onChange={e => set('workflowType', e.target.value)} style={{ ...iStyle, marginBottom: 0 }}>
+              <option value="basic">Basic (4 questions — no income check)</option>
+              <option value="full">Full (6 questions — income check)</option>
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>Monthly Fee (R)</label>
+            <input type="number" value={form.monthlyFee} onChange={e => set('monthlyFee', Number(e.target.value))} style={{ ...iStyle, marginBottom: 0 }} />
+          </div>
+        </div>
+
+        {/* Qualification rules */}
+        <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '12px' }}>Qualification Rules</p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div>
+            <label style={labelStyle}>Min Budget (R)</label>
+            <input type="number" value={form.qualificationRules.minimumBudget} onChange={e => setRule('minimumBudget', Number(e.target.value))} style={{ ...iStyle, marginBottom: 0 }} />
+          </div>
+          <div>
+            <label style={labelStyle}>Max Budget (R)</label>
+            <input type="number" value={form.qualificationRules.maximumBudget} onChange={e => setRule('maximumBudget', Number(e.target.value))} style={{ ...iStyle, marginBottom: 0 }} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '14px', marginBottom: '8px' }}>
+          <input type="checkbox" id="allowUnemployed" checked={form.qualificationRules.allowUnemployed} onChange={e => setRule('allowUnemployed', e.target.checked)} style={{ cursor: 'pointer', accentColor: c.lime, width: '16px', height: '16px' }} />
+          <label htmlFor="allowUnemployed" style={{ color: c.text, fontSize: '14px', cursor: 'pointer' }}>Allow unemployed applicants</label>
+        </div>
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
+          <button onClick={onClose} style={{ padding: '12px 24px', background: 'transparent', border: `1px solid ${c.borderDim}`, color: c.muted, borderRadius: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+          <button onClick={handleSave} disabled={saving} style={{ padding: '12px 28px', background: c.lime, color: '#050505', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, fontFamily: 'inherit' }}>
+            {saving ? 'Saving...' : isNew ? 'Add Client' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
