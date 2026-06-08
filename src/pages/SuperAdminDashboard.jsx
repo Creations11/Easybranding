@@ -685,9 +685,12 @@ export default function SuperAdminDashboard() {
                     {/* Recent activity */}
                     <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: c.muted }}>Recent Activity</h3>
                     {activeLeads.slice(0, 5).map(lead => (
-                      <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} className="card-hover" style={{ background: c.card, border: `1px solid ${c.borderDim}`, borderRadius: '12px', padding: '14px 18px', marginBottom: '8px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} className="card-hover" style={{ background: c.card, border: `1px solid ${lead.isProspect ? c.lime + '33' : c.borderDim}`, borderRadius: '12px', padding: '14px 18px', marginBottom: '8px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                          <strong>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <strong>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
+                            {lead.isProspect && <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '999px', background: `${c.lime}22`, color: c.lime, fontWeight: '700' }}>🎯 Prospect</span>}
+                          </div>
                           <p style={{ color: c.muted, fontSize: '12px', marginTop: '2px' }}>{lead.phone}</p>
                         </div>
                         <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '999px', background: `${STATUS_COLOR[lead.workflowStatus] || c.muted}18`, color: STATUS_COLOR[lead.workflowStatus] || c.muted }}>{lead.workflowStatus?.replace(/_/g, ' ')}</span>
@@ -703,13 +706,20 @@ export default function SuperAdminDashboard() {
                     {activeLeads.length === 0
                       ? <div style={{ textAlign: 'center', padding: '60px 0', color: c.muted }}><p style={{ fontSize: '40px', marginBottom: '16px' }}>💬</p><p>No active conversations.</p></div>
                       : activeLeads.map(lead => (
-                        <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} className="card-hover" style={{ background: c.card, border: `1px solid ${c.borderDim}`, borderRadius: '14px', padding: '16px 20px', marginBottom: '10px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} className="card-hover" style={{ background: c.card, border: `1px solid ${lead.isProspect ? c.lime + '44' : c.borderDim}`, borderRadius: '14px', padding: '16px 20px', marginBottom: '10px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div>
-                            <strong>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                              <strong>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
+                              {lead.isProspect && (
+                                <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: `${c.lime}22`, color: c.lime, fontWeight: '700' }}>
+                                  🎯 {lead.prospectOutcome?.replace(/_/g, ' ') || 'Prospect'}
+                                </span>
+                              )}
+                            </div>
                             <p style={{ color: c.muted, fontSize: '13px', marginTop: '2px' }}>{lead.phone}</p>
-                            <p style={{ color: c.muted, fontSize: '12px', marginTop: '2px' }}>Stage: <span style={{ color: c.cyan }}>{lead.workflowStatus?.replace(/_/g, ' ')}</span></p>
+                            <p style={{ color: c.muted, fontSize: '12px', marginTop: '2px' }}>Stage: <span style={{ color: lead.isProspect ? c.lime : c.cyan }}>{lead.isProspect ? '👤 Agent takeover' : lead.workflowStatus?.replace(/_/g, ' ')}</span></p>
                           </div>
-                          <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '999px', background: `${c.cyan}18`, color: c.cyan }}>Active</span>
+                          <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '999px', background: lead.isProspect ? `${c.lime}18` : `${c.cyan}18`, color: lead.isProspect ? c.lime : c.cyan }}>{lead.isProspect ? 'Prospect' : 'Active'}</span>
                         </div>
                       ))
                     }
