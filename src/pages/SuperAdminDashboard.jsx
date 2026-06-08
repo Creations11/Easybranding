@@ -170,20 +170,24 @@ function ProspectingPanel({ currentUser }) {
   const handleSend = async () => {
     if (!selectedIds.length) { setMsg('❌ Select at least one contact'); return; }
     if (!selectedTemplate)   { setMsg('❌ Select a template'); return; }
-    setSending(true); setSendResult(null);
+    setSending(true); setSendResult(null); setMsg('');
     try {
       const res = await api.post('/prospecting/send', {
         prospectIds: selectedIds,
         templateKey: selectedTemplate,
-        variables:   { name: varName, agency: varAgency },
+        variables:   { name: varName || '', agency: varAgency || '' },
       });
-      setSendResult(res.data.data?.results);
+      const results = res.data.data?.results || { sent: 0, failed: 0 };
+      setSendResult(results);
       setSelectedIds([]);
-      setMsg(`✅ Sent ${res.data.data?.results?.sent} messages`);
-      setTimeout(() => setMsg(''), 4000);
+      setMsg(`✅ Sent ${results.sent} messages${results.failed > 0 ? `, ${results.failed} failed` : ''}`);
+      setTimeout(() => setMsg(''), 5000);
       loadData();
-    } catch (err) { setMsg(`❌ ${err.response?.data?.message || 'Send failed'}`); }
-    finally { setSending(false); }
+    } catch (err) {
+      const errMsg = err.response?.data?.message || err.message || 'Send failed';
+      setMsg(`❌ ${errMsg}`);
+      setSendResult(null);
+    } finally { setSending(false); }
   };
 
   const handleSelectAll = () => {
@@ -201,6 +205,8 @@ function ProspectingPanel({ currentUser }) {
     replied: c.lime, not_interested: c.red, no_reply: c.muted,
     converted: c.lime, demo_booked: c.earth,
   };
+
+  if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: c.muted }}>Loading prospecting data...</div>;
 
   return (
     <div>
@@ -530,7 +536,7 @@ export default function SuperAdminDashboard() {
         minHeight: '100vh', background: c.sidebar,
         borderRight: `1px solid ${c.borderDim}`,
         display: 'flex', flexDirection: 'column',
-        position: 'fixed', top: 0, left: 0, bottom: 0,
+        position: 'fixed', top: '64px', left: 0, bottom: 0,
         zIndex: 50, transition: 'width 0.2s ease',
         overflowY: 'auto', overflowX: 'hidden',
       }}>
@@ -587,7 +593,7 @@ export default function SuperAdminDashboard() {
       </div>
 
       {/* ── MAIN CONTENT ─────────────────────────────────── */}
-      <div className="main-content" style={{ marginLeft: sidebarOpen ? '220px' : '64px', flex: 1, padding: '32px', transition: 'margin-left 0.2s ease', minHeight: '100vh' }}>
+      <div className="main-content" style={{ marginLeft: sidebarOpen ? '220px' : '64px', flex: 1, padding: '32px', paddingTop: '96px', transition: 'margin-left 0.2s ease', minHeight: '100vh' }}>
 
         {loading && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
