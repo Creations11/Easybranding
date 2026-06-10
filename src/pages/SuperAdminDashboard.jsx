@@ -115,10 +115,13 @@ function ProspectingPanel({ currentUser }) {
         api.get('/prospecting/templates'),
       ]);
       const allProspects = pRes.data.data?.prospects || [];
-      // For eb_agent — filter to their own assigned prospects
+      // For eb_agent — show contacts they added OR are assigned to them
       const isAgent = currentUser?.role === 'eb_agent';
       const myProspects = isAgent
-        ? allProspects.filter(p => p.assignedTo?.toString() === currentUser?.id?.toString())
+        ? allProspects.filter(p =>
+            p.assignedTo?.toString() === currentUser?.id?.toString() ||
+            p.createdBy?.toString()  === currentUser?.id?.toString()
+          )
         : allProspects;
       setProspects(myProspects);
       setStats(pRes.data.data?.stats);
