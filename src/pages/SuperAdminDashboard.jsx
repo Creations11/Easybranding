@@ -114,7 +114,13 @@ function ProspectingPanel({ currentUser }) {
         api.get('/prospecting'),
         api.get('/prospecting/templates'),
       ]);
-      setProspects(pRes.data.data?.prospects || []);
+      const allProspects = pRes.data.data?.prospects || [];
+      // For eb_agent — filter to their own assigned prospects
+      const isAgent = currentUser?.role === 'eb_agent';
+      const myProspects = isAgent
+        ? allProspects.filter(p => p.assignedTo?.toString() === currentUser?.id?.toString())
+        : allProspects;
+      setProspects(myProspects);
       setStats(pRes.data.data?.stats);
       setTemplates(tRes.data.data?.templates || []);
       if (!selectedTemplate && tRes.data.data?.templates?.length) {
@@ -212,12 +218,16 @@ function ProspectingPanel({ currentUser }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: '900', marginBottom: '4px' }}>Prospecting</h1>
+          <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: '900', marginBottom: '4px' }}>
+            {currentUser?.role === 'eb_agent' ? 'My Prospecting' : 'Prospecting'}
+          </h1>
           <p style={{ color: c.muted, fontSize: '15px' }}>Send approved WhatsApp templates to rental agencies</p>
         </div>
-        <button onClick={handleSync} disabled={syncing} style={{ padding: '10px 20px', background: `${c.cyan}22`, color: c.cyan, border: `1px solid ${c.cyan}33`, borderRadius: '10px', cursor: syncing ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: '600', fontFamily: 'inherit', opacity: syncing ? 0.7 : 1 }}>
-          {syncing ? '⏳ Syncing...' : '🔄 Sync Google Sheets'}
-        </button>
+        {currentUser?.role !== 'eb_agent' && (
+          <button onClick={handleSync} disabled={syncing} style={{ padding: '10px 20px', background: `${c.cyan}22`, color: c.cyan, border: `1px solid ${c.cyan}33`, borderRadius: '10px', cursor: syncing ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: '600', fontFamily: 'inherit', opacity: syncing ? 0.7 : 1 }}>
+            {syncing ? '⏳ Syncing...' : '🔄 Sync Google Sheets'}
+          </button>
+        )}
       </div>
 
       {/* Stats */}
@@ -243,7 +253,7 @@ function ProspectingPanel({ currentUser }) {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '4px', borderBottom: `1px solid ${c.borderDim}`, marginBottom: '24px' }}>
-        {['contacts', 'add', 'send'].map(t => (
+        {['contacts', 'add', ...(currentUser?.role !== 'eb_agent' ? [] : []), 'send'].map(t => (
           <button key={t} onClick={() => setActiveTab(t)} style={{ padding: '10px 16px', background: 'none', border: 'none', borderBottom: activeTab === t ? `2px solid ${c.lime}` : '2px solid transparent', color: activeTab === t ? c.lime : c.muted, cursor: 'pointer', fontSize: '13px', fontWeight: activeTab === t ? '600' : '400', marginBottom: '-1px', textTransform: 'capitalize', fontFamily: 'inherit' }}>{t === 'add' ? 'Add Contacts' : t === 'send' ? 'Send Messages' : 'Contact List'}</button>
         ))}
       </div>
@@ -286,7 +296,7 @@ function ProspectingPanel({ currentUser }) {
 
       {/* ── Add Contacts ───────────────────────── */}
       {activeTab === 'add' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: currentUser?.role === 'eb_agent' ? '1fr' : '1fr 1fr', gap: '20px' }}>
           {/* Single contact */}
           <div style={{ background: c.card, border: `1px solid ${c.borderDim}`, borderRadius: '14px', padding: '24px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: c.lime }}>➕ Single Contact</h3>
@@ -298,7 +308,8 @@ function ProspectingPanel({ currentUser }) {
             </button>
           </div>
 
-          {/* Bulk paste */}
+          {/* Bulk paste — admin/manager only */}
+          {currentUser?.role !== 'eb_agent' && (
           <div style={{ background: c.card, border: `1px solid ${c.borderDim}`, borderRadius: '14px', padding: '24px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '8px', color: c.cyan }}>📋 Paste List</h3>
             <p style={{ color: c.muted, fontSize: '12px', marginBottom: '12px' }}>One per line: +27821234567, Name, Agency</p>
@@ -307,6 +318,7 @@ function ProspectingPanel({ currentUser }) {
               {bulkLoading ? 'Adding...' : 'Add All Contacts'}
             </button>
           </div>
+          )}
         </div>
       )}
 
@@ -451,6 +463,15 @@ export default function SuperAdminDashboard() {
   const loadData = async () => {
     setLoading(true);
     try {
+      const isAgent = user.role === 'eb_agent';
+
+      if (isAgent) {
+        // eb_agent only needs prospecting data — loaded by ProspectingPanel
+        setPendingUsers([]);
+        setLoading(false);
+        return;
+      }
+
       const [ovRes, activeRes, qualRes, rejRes, stagesRes, viewRes, msgRes, alertRes, tenantRes, statsRes, usersRes, pendingRes, agentRes] = await Promise.all([
         api.get('/admin-ops/overview'),
         api.get('/admin-ops/conversations/active'),
@@ -940,7 +961,25 @@ export default function SuperAdminDashboard() {
             {/* PROSPECTING SECTION */}
             {/* ══════════════════════════════════════════════ */}
             {section === 'prospecting' && (
-              <ProspectingPanel currentUser={user} />
+              <div>
+                {isEBAgent && (
+                  <div style={{ marginBottom: '28px' }}>
+                    <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: '900', marginBottom: '4px' }}>
+                      Hey {user.fullName?.split(' ')[0] || 'Agent'} 👋
+                    </h1>
+                    <p style={{ color: c.muted, fontSize: '15px' }}>Your prospecting dashboard — contact agencies and track your pipeline.</p>
+
+                    {/* Agent quick stats */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginTop: '20px' }}>
+                      <StatCard label="My Contacts"  value="—" icon="📋" color={c.text} />
+                      <StatCard label="Sent Today"   value="—" icon="📤" color={c.cyan} />
+                      <StatCard label="Replies"      value="—" icon="💬" color={c.lime} />
+                      <StatCard label="Demos Booked" value="—" icon="🎯" color={c.amber} />
+                    </div>
+                  </div>
+                )}
+                <ProspectingPanel currentUser={user} />
+              </div>
             )}
 
             {/* ══════════════════════════════════════════════ */}
