@@ -24,9 +24,9 @@ function PublicRoute({ children }) {
   const token = localStorage.getItem('eb_token');
   const user  = getUser();
   if (!token) return children;
-  if (['super_admin', 'eb_manager'].includes(user.role)) return <Navigate to="/superadmin" replace />;
+  if (['super_admin', 'eb_manager', 'eb_agent'].includes(user.role)) return <Navigate to="/superadmin" replace />;
   if (user.role === 'admin')                              return <Navigate to="/admin"      replace />;
-  if (['agent', 'eb_agent'].includes(user.role))         return <Navigate to="/agent"      replace />;
+  if (user.role === 'agent')                              return <Navigate to="/agent"      replace />;
   if (user.role === 'borrower')                          return <Navigate to="/pending"    replace />;
   return <Navigate to="/dashboard" replace />;
 }
@@ -39,9 +39,9 @@ function ProtectedRoute({ children, allowedRoles = null }) {
   if (!token) return <Navigate to="/login" replace />;
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    if (['super_admin', 'eb_manager'].includes(user.role)) return <Navigate to="/superadmin" replace />;
+    if (['super_admin', 'eb_manager', 'eb_agent'].includes(user.role)) return <Navigate to="/superadmin" replace />;
     if (user.role === 'admin')                              return <Navigate to="/admin"      replace />;
-    if (['agent', 'eb_agent'].includes(user.role))         return <Navigate to="/agent"      replace />;
+    if (user.role === 'agent')                              return <Navigate to="/agent"      replace />;
     if (user.role === 'borrower')                          return <Navigate to="/pending"    replace />;
     return <Navigate to="/dashboard" replace />;
   }
@@ -70,7 +70,7 @@ export default function App() {
 
         {/* ── Super Admin + EB Manager ── */}
         <Route path="/superadmin" element={
-          <ProtectedRoute allowedRoles={['super_admin', 'eb_manager']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'eb_manager', 'eb_agent']}>
             <SuperAdminDashboard />
           </ProtectedRoute>
         } />
