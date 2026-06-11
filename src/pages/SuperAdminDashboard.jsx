@@ -1635,6 +1635,12 @@ function ClientModal({ tenant, onClose, onSaved }) {
     workflowType:   tenant?.workflowType   || 'basic',
     monthlyFee:     tenant?.monthlyFee     || 950,
     aiEnabled:      tenant?.aiEnabled      ?? true,
+    industry:       tenant?.industry       || 'rental_agency',
+    customMessages: {
+      welcome:   tenant?.customMessages?.welcome   || '',
+      qualified: tenant?.customMessages?.qualified || '',
+      rejected:  tenant?.customMessages?.rejected  || '',
+    },
     qualificationRules: {
       minimumBudget:   tenant?.qualificationRules?.minimumBudget   || 500,
       maximumBudget:   tenant?.qualificationRules?.maximumBudget   || 50000,
@@ -1765,6 +1771,61 @@ function ClientModal({ tenant, onClose, onSaved }) {
               : 'Enterprise: All AI features (unlimited)'}
           </p>
         </div>
+
+        {/* Industry & Workflow */}
+        <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '12px' }}>Industry & Workflow</p>
+        <label style={labelStyle}>Industry / Business Type</label>
+        <select value={form.industry || 'rental_agency'} onChange={e => set('industry', e.target.value)} style={{ ...iStyle }}>
+          <option value="rental_agency">🏠 Rental Agency</option>
+          <option value="property_sales">🏡 Property Sales</option>
+          <option value="car_dealership">🚗 Car Dealership</option>
+          <option value="law_firm">⚖️ Law Firm</option>
+          <option value="medical">🏥 Medical Practice</option>
+          <option value="recruitment">💼 Recruitment Agency</option>
+          <option value="education">🎓 Education / Training</option>
+          <option value="order_taking">🛒 Order Taking</option>
+          <option value="appointment">📅 Appointment Booking</option>
+          <option value="custom">⚙️ Custom</option>
+        </select>
+
+        <p style={{ color: c.muted, fontSize: '12px', marginBottom: '14px' }}>
+          {form.industry === 'rental_agency'   && '6 questions — budget + employment rules'}
+          {form.industry === 'property_sales'  && '4 questions — budget rule'}
+          {form.industry === 'car_dealership'  && '4 questions — budget rule'}
+          {form.industry === 'law_firm'        && '3 questions — everyone qualifies'}
+          {form.industry === 'medical'         && '3 questions — everyone qualifies'}
+          {form.industry === 'recruitment'     && '4 questions — salary rule'}
+          {form.industry === 'education'       && '3 questions — everyone qualifies'}
+          {form.industry === 'order_taking'    && '3 questions — collect order details'}
+          {form.industry === 'appointment'     && '3 questions — collect booking details'}
+          {form.industry === 'custom'          && 'No questions — configure manually'}
+        </p>
+
+        {/* Custom messages */}
+        <p style={{ color: c.cyan, fontSize: '13px', fontWeight: '600', marginBottom: '10px' }}>
+          Custom Messages <span style={{ color: c.muted, fontWeight: '400' }}>— leave blank to use industry defaults</span>
+        </p>
+        <label style={labelStyle}>Welcome Message</label>
+        <textarea
+          value={form.customMessages?.welcome || ''}
+          onChange={e => set('customMessages', { ...form.customMessages, welcome: e.target.value })}
+          placeholder="Leave blank to use the default for your selected industry"
+          rows={2} style={{ ...iStyle, resize: 'vertical' }}
+        />
+        <label style={labelStyle}>Qualified Message — use {'{{name}}'}, {'{{brand}}'}, {'{{budget}}'}, {'{{movein}}'}</label>
+        <textarea
+          value={form.customMessages?.qualified || ''}
+          onChange={e => set('customMessages', { ...form.customMessages, qualified: e.target.value })}
+          placeholder="Leave blank to use the default for your selected industry"
+          rows={3} style={{ ...iStyle, resize: 'vertical' }}
+        />
+        <label style={labelStyle}>Rejected Message</label>
+        <textarea
+          value={form.customMessages?.rejected || ''}
+          onChange={e => set('customMessages', { ...form.customMessages, rejected: e.target.value })}
+          placeholder="Leave blank to use the default for your selected industry"
+          rows={2} style={{ ...iStyle, resize: 'vertical' }}
+        />
 
         {/* Actions */}
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
