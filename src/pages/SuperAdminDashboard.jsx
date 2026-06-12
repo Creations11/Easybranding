@@ -764,7 +764,23 @@ export default function SuperAdminDashboard() {
                     <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '20px' }}>Qualified Leads ({qualifiedLeads.length})</h2>
                     {qualifiedLeads.length === 0
                       ? <div style={{ textAlign: 'center', padding: '60px 0', color: c.muted }}><p style={{ fontSize: '40px', marginBottom: '16px' }}>✅</p><p>No qualified leads yet.</p></div>
-                      : qualifiedLeads.map(lead => (
+                      : qualifiedLeads.map(lead => {
+                        // Dynamic field labels based on tenant industry
+                        const industry = tenants.find(t => t._id === lead.tenantId)?.industry || 'rental_agency';
+                        const fieldLabels = {
+                          rental_agency:  { f1: 'Property',    f2: (v) => `R${v}/mo`,   f3: 'Move-in' },
+                          property_sales: { f1: 'Property',    f2: (v) => `R${Number(v)?.toLocaleString()}`, f3: 'Timeline' },
+                          car_dealership: { f1: 'Vehicle',     f2: (v) => `R${v}`,       f3: 'Timeline' },
+                          law_firm:       { f1: 'Matter',      f2: (v) => `Urgency: ${v}`, f3: 'Prior consult' },
+                          medical:        { f1: 'Appointment', f2: (v) => v,              f3: 'Preferred date' },
+                          recruitment:    { f1: 'Role',        f2: (v) => `R${v}/mo`,    f3: 'Available' },
+                          education:      { f1: 'Programme',   f2: (v) => v,              f3: 'Funding' },
+                          order_taking:   { f1: 'Order',       f2: (v) => `Qty: ${v}`,   f3: 'Delivery' },
+                          appointment:    { f1: 'Service',     f2: (v) => v,              f3: 'Date' },
+                          custom:         { f1: 'Field 1',     f2: (v) => v,              f3: 'Field 3' },
+                        }[industry] || { f1: 'Property', f2: (v) => `R${v}/mo`, f3: 'Move-in' };
+
+                        return (
                         <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} className="card-hover" style={{ background: c.card, border: `1px solid ${lead.aiSummary?.urgency === 'high' ? c.lime + '44' : c.borderDim}`, borderRadius: '14px', padding: '18px 24px', marginBottom: '10px', cursor: 'pointer' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div style={{ flex: 1 }}>
@@ -777,9 +793,9 @@ export default function SuperAdminDashboard() {
                                 )}
                               </div>
                               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
-                                {lead.propertyInterest && <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: `${c.cyan}22`, color: c.cyan }}>{lead.propertyInterest}</span>}
-                                {lead.monthlyBudget && <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: `${c.lime}22`, color: c.lime }}>R{lead.monthlyBudget}/mo</span>}
-                                {lead.moveInDate && <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: `${c.amber}22`, color: c.amber }}>{lead.moveInDate}</span>}
+                                {lead.propertyInterest && <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: `${c.cyan}22`, color: c.cyan }}>{fieldLabels.f1}: {lead.propertyInterest}</span>}
+                                {lead.monthlyBudget && <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: `${c.lime}22`, color: c.lime }}>{fieldLabels.f2(lead.monthlyBudget)}</span>}
+                                {lead.moveInDate && <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: `${c.amber}22`, color: c.amber }}>{fieldLabels.f3}: {lead.moveInDate}</span>}
                               </div>
                               {lead.aiSummary?.summary && (
                                 <div style={{ marginTop: '10px', background: 'rgba(184,240,64,0.04)', border: `1px solid ${c.border}`, borderRadius: '10px', padding: '10px 12px' }}>
@@ -791,12 +807,11 @@ export default function SuperAdminDashboard() {
                             </div>
                           </div>
                         </div>
-                      ))
+                        );
+                        })
                     }
                   </div>
                 )}
-
-                {/* Rejected */}
                 {opsTab === 'rejected' && (
                   <div>
                     <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '20px' }}>Rejected Leads ({rejectedLeads.length})</h2>
@@ -1696,6 +1711,8 @@ function ClientModal({ tenant, onClose, onSaved }) {
         <input value={form.contactEmail} onChange={e => set('contactEmail', e.target.value)} placeholder="admin@abcrentals.co.za" style={iStyle} />
         <label style={labelStyle}>WhatsApp Number</label>
         <input value={form.whatsappNumber} onChange={e => set('whatsappNumber', e.target.value)} placeholder="whatsapp:+27821234567" style={iStyle} />
+        <label style={labelStyle}>Owner Personal WhatsApp <span style={{ color:c.muted, fontWeight:'400' }}>— receives commands + daily summary (not the bot number)</span></label>
+        <input value={form.ownerPhone || ''} onChange={e => set('ownerPhone', e.target.value)} placeholder="+27831234567" style={iStyle} />
 
         {/* Plan & Status */}
         <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginBottom: '12px', marginTop: '8px' }}>Plan & Status</p>
