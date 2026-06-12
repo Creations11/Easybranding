@@ -1567,10 +1567,15 @@ function QuickPaymentPanel() {
     }
     setLoading(true);
     try {
+      // Get first tenant for super_admin context
+      const tenantsRes = await api.get('/tenants').catch(() => ({ data: { data: { tenants: [] } } }));
+      const firstTenant = tenantsRes.data.data?.tenants?.[0];
+
       const res = await api.post('/payments/quick', {
         amount:      Number(amount),
         note,
         sendToPhone: phone,
+        tenantId:    firstTenant?._id || null,
       });
       setResult(res.data.data);
     } catch (err) {
