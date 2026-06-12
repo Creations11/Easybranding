@@ -611,7 +611,7 @@ export default function Home() {
             <Link to="/contact"   style={{ color:t.muted, fontSize:'13px', textDecoration:'none' }}>Contact</Link>
             <Link to="/terms"         style={{ color:t.muted, fontSize:'13px', textDecoration:'none' }}>Terms of Use</Link>
             <Link to="/privacy"       style={{ color:t.muted, fontSize:'13px', textDecoration:'none' }}>Privacy Policy</Link>
-            <Link to="/refund"        style={{ color:t.muted, fontSize:'13px', textDecoration:'none' }}>Refund Policy</Link>
+            <Link to="/refund-policy"  style={{ color:t.muted, fontSize:'13px', textDecoration:'none' }}>Refund Policy</Link>
             <Link to="/login"         style={{ color:t.muted, fontSize:'13px', textDecoration:'none' }}>Sign In</Link>
             <Link to="/register"      style={{ color:t.lime,  fontSize:'13px', textDecoration:'none', fontWeight:'600' }}>Get Started</Link>
           </div>

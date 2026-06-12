@@ -6,6 +6,7 @@ import Nav from './components/Nav';
 import ChatModal from './components/ChatModal';
 
 import Home               from './pages/Home';
+import { TermsOfUse, PrivacyPolicy, RefundPolicy, ContactPage } from './pages/Legal';
 import Login              from './pages/Login';
 import Register           from './pages/Register';
 import Dashboard          from './pages/Dashboard';
@@ -58,8 +59,12 @@ export default function App() {
       <Routes>
         {/* ── Public ── */}
         <Route path="/"         element={<PublicRoute><Home /></PublicRoute>} />
-        <Route path="/login"    element={<PublicRoute><Login /></PublicRoute>} />
-        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+        <Route path="/login"          element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/register"       element={<PublicRoute><Register /></PublicRoute>} />
+        <Route path="/terms"          element={<TermsOfUse />} />
+        <Route path="/privacy"        element={<PrivacyPolicy />} />
+        <Route path="/refund-policy"  element={<RefundPolicy />} />
+        <Route path="/contact"        element={<ContactPage />} />
 
         {/* ── Pending ── */}
         <Route path="/pending" element={
