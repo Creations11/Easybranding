@@ -514,6 +514,27 @@ export default function SuperAdminDashboard() {
 
   useEffect(() => { loadData(); }, []);
 
+  // Auto-refresh every 30 seconds when tab is visible
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') loadData();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Refresh instantly when tab regains focus
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') loadData();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', loadData);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', loadData);
+    };
+  }, []);
+
   const handleSignOut = () => {
     localStorage.removeItem('eb_token');
     localStorage.removeItem('eb_user');
