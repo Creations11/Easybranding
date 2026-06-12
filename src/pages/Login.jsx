@@ -31,9 +31,12 @@ export default function Login() {
       const { token, user } = res.data.data;
       localStorage.setItem('eb_token', token);
       localStorage.setItem('eb_user', JSON.stringify(user));
-      if (['admin', 'super_admin'].includes(user.role)) navigate('/admin');
-      else if (user.role === 'agent') navigate('/agent');
-      else navigate('/dashboard');
+      // Force full page reload to clear any previous session state
+      if (['super_admin', 'eb_manager', 'eb_agent'].includes(user.role)) window.location.href = '/superadmin';
+      else if (user.role === 'admin')    window.location.href = '/admin';
+      else if (user.role === 'agent')    window.location.href = '/agent';
+      else if (user.role === 'borrower') window.location.href = '/pending';
+      else window.location.href = '/dashboard';
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
     } finally { setLoading(false); }

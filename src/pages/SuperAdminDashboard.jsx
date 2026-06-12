@@ -538,7 +538,7 @@ export default function SuperAdminDashboard() {
   const handleSignOut = () => {
     localStorage.removeItem('eb_token');
     localStorage.removeItem('eb_user');
-    window.location.href = '/';
+    window.location.href = '/login';
   };
 
   const handleSuspendToggle = async (tenant) => {
