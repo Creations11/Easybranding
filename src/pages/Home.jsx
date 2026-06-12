@@ -606,7 +606,7 @@ export default function Home() {
             <span style={{ fontSize:'18px' }}>🌿</span>
             <span style={{ fontSize:'14px', fontWeight:'700' }}>Easy Branding <span style={{ color:t.lime }}>AI</span></span>
           </div>
-          <p style={{ color:t.muted, fontSize:'13px' }}>© 2026 Easy Branding AI (Pty) Ltd · Registered in South Africa · POPIA Compliant</p>
+          <p style={{ color:t.muted, fontSize:'13px' }}>© 2026 Easy Branding AI (Pty) Ltd · Reg No. 2026/453740/07 · POPIA Compliant</p>
           <div style={{ display:'flex', gap:'20px', flexWrap:'wrap' }}>
             <Link to="/contact"   style={{ color:t.muted, fontSize:'13px', textDecoration:'none' }}>Contact</Link>
             <Link to="/terms"         style={{ color:t.muted, fontSize:'13px', textDecoration:'none' }}>Terms of Use</Link>

@@ -26,7 +26,7 @@ function LegalLayout({ title, subtitle, children }) {
         {children}
       </div>
       <footer style={{ borderTop:`1px solid ${t.dim}`, padding:'32px 24px', textAlign:'center' }}>
-        <p style={{ color:t.muted, fontSize:'13px', marginBottom:'12px' }}>© 2026 Easy Branding AI (Pty) Ltd · Registered in South Africa · POPIA Compliant</p>
+        <p style={{ color:t.muted, fontSize:'13px', marginBottom:'12px' }}>© 2026 Easy Branding AI (Pty) Ltd · Reg No. 2026/453740/07 · Registered in South Africa · POPIA Compliant</p>
         <div style={{ display:'flex', gap:'20px', justifyContent:'center', flexWrap:'wrap' }}>
           <Link to="/terms"    style={{ color:t.muted, fontSize:'13px', textDecoration:'none' }}>Terms of Use</Link>
           <Link to="/privacy"  style={{ color:t.muted, fontSize:'13px', textDecoration:'none' }}>Privacy Policy</Link>
@@ -52,7 +52,7 @@ function Section({ title, body }) {
 export function TermsOfUse() {
   return (
     <LegalLayout title="Terms of Use" subtitle="Last updated: 11 June 2026">
-      <Section title="1. Acceptance of Terms" body={`By accessing or using Easy Branding AI ("the Platform"), operated by Easy Branding AI (Pty) Ltd, you agree to be bound by these Terms of Use. If you do not agree, you may not use the Platform.\n\nThese terms constitute a binding legal agreement between you ("Client" or "User") and Easy Branding AI (Pty) Ltd ("we", "us", "our"), a company registered in South Africa.`}/>
+      <Section title="1. Acceptance of Terms" body={`By accessing or using Easy Branding AI ("the Platform"), operated by Easy Branding AI (Pty) Ltd (Registration No. 2026/453740/07), you agree to be bound by these Terms of Use. If you do not agree, you may not use the Platform.\n\nThese terms constitute a binding legal agreement between you ("Client" or "User") and Easy Branding AI (Pty) Ltd ("we", "us", "our"), a company registered in South Africa.`}/>
       <Section title="2. Description of Service" body={`Easy Branding AI provides a WhatsApp business automation platform that enables businesses to automate customer enquiries, qualify leads, manage sales pipelines, and collect payments via WhatsApp. The Platform includes:\n\n• WhatsApp chatbot automation and AI-powered lead scoring\n• A live management dashboard\n• Outbound prospecting tools\n• Document management via WhatsApp\n• Payment collection via Paystack\n• Team management tools`}/>
       <Section title="3. Account Registration" body={`To use the Platform you must register for an account and provide accurate, complete information. You are responsible for:\n\n• Maintaining the confidentiality of your login credentials\n• All activity that occurs under your account\n• Ensuring your team members comply with these terms\n\nWe reserve the right to suspend or terminate accounts that provide false information or violate these terms.`}/>
       <Section title="4. Subscription Plans and Billing" body={`The Platform is offered on a monthly subscription basis:\n\n• Starter: R950/month\n• Growth: R2,450/month\n• Enterprise: Custom pricing\n\nAll plans include a 30-day free trial. After the trial, your selected plan will be billed monthly via Paystack. We reserve the right to change pricing with 30 days written notice.`}/>
