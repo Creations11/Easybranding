@@ -1,6 +1,6 @@
 // src/App.jsx
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import Nav from './components/Nav';
 import ChatModal from './components/ChatModal';
@@ -20,15 +20,38 @@ const getUser = () => {
   catch { return {}; }
 };
 
+// ── Check if JWT token is expired ────────────────────────────
+const isTokenExpired = (token) => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp * 1000 < Date.now();
+  } catch {
+    return true; // If we can't parse it — treat as expired
+  }
+};
+
+// ── Clear session and redirect to login ──────────────────────
+const clearSession = () => {
+  localStorage.removeItem('eb_token');
+  localStorage.removeItem('eb_user');
+};
+
 // ── Redirect logged-in users away from public pages ──────────
 function PublicRoute({ children }) {
   const token = localStorage.getItem('eb_token');
   const user  = getUser();
+
+  // Clear expired token — don't redirect
+  if (token && isTokenExpired(token)) {
+    clearSession();
+    return children;
+  }
+
   if (!token) return children;
   if (['super_admin', 'eb_manager', 'eb_agent'].includes(user.role)) return <Navigate to="/superadmin" replace />;
-  if (user.role === 'admin')                              return <Navigate to="/admin"      replace />;
-  if (user.role === 'agent')                              return <Navigate to="/agent"      replace />;
-  if (user.role === 'borrower')                          return <Navigate to="/pending"    replace />;
+  if (user.role === 'admin')    return <Navigate to="/admin"    replace />;
+  if (user.role === 'agent')    return <Navigate to="/agent"    replace />;
+  if (user.role === 'borrower') return <Navigate to="/pending"  replace />;
   return <Navigate to="/dashboard" replace />;
 }
 
@@ -37,13 +60,17 @@ function ProtectedRoute({ children, allowedRoles = null }) {
   const token = localStorage.getItem('eb_token');
   const user  = getUser();
 
-  if (!token) return <Navigate to="/login" replace />;
+  // Expired token → clear and redirect to login
+  if (!token || isTokenExpired(token)) {
+    clearSession();
+    return <Navigate to="/login" replace />;
+  }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     if (['super_admin', 'eb_manager', 'eb_agent'].includes(user.role)) return <Navigate to="/superadmin" replace />;
-    if (user.role === 'admin')                              return <Navigate to="/admin"      replace />;
-    if (user.role === 'agent')                              return <Navigate to="/agent"      replace />;
-    if (user.role === 'borrower')                          return <Navigate to="/pending"    replace />;
+    if (user.role === 'admin')    return <Navigate to="/admin"    replace />;
+    if (user.role === 'agent')    return <Navigate to="/agent"    replace />;
+    if (user.role === 'borrower') return <Navigate to="/pending"  replace />;
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -52,6 +79,20 @@ function ProtectedRoute({ children, allowedRoles = null }) {
 
 export default function App() {
   const [chatOpen, setChatOpen] = useState(false);
+
+  // Check token expiry every 60 seconds — auto logout if expired
+  useEffect(() => {
+    const check = () => {
+      const token = localStorage.getItem('eb_token');
+      if (token && isTokenExpired(token)) {
+        clearSession();
+        window.location.href = '/login';
+      }
+    };
+    const interval = setInterval(check, 60000);
+    check(); // Check immediately on mount
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <Router>
