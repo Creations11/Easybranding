@@ -464,6 +464,27 @@ export default function SuperAdminDashboard() {
   const isSuperAdmin = user.role === 'super_admin';
 
   const loadData = async () => {
+    // Guard — don't fire API calls without a valid token
+    const token = localStorage.getItem('eb_token');
+    if (!token) {
+      window.location.href = '/login';
+      return;
+    }
+    // Check token expiry before making calls
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.exp * 1000 < Date.now()) {
+        localStorage.removeItem('eb_token');
+        localStorage.removeItem('eb_user');
+        window.location.href = '/login';
+        return;
+      }
+    } catch {
+      localStorage.removeItem('eb_token');
+      window.location.href = '/login';
+      return;
+    }
+
     setLoading(true);
     try {
       const isAgent = user.role === 'eb_agent';
@@ -517,7 +538,8 @@ export default function SuperAdminDashboard() {
   // Auto-refresh every 30 seconds when tab is visible
   useEffect(() => {
     const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') loadData();
+      const token = localStorage.getItem('eb_token');
+      if (token && document.visibilityState === 'visible') loadData();
     }, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -525,13 +547,12 @@ export default function SuperAdminDashboard() {
   // Refresh instantly when tab regains focus
   useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState === 'visible') loadData();
+      const token = localStorage.getItem('eb_token');
+      if (token && document.visibilityState === 'visible') loadData();
     };
     document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', loadData);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', loadData);
     };
   }, []);
 
