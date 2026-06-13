@@ -1767,6 +1767,8 @@ function ClientModal({ tenant, onClose, onSaved }) {
     monthlyFee:     tenant?.monthlyFee     || 950,
     aiEnabled:      tenant?.aiEnabled      ?? true,
     industry:       tenant?.industry       || 'rental_agency',
+    ownerPhone:     tenant?.ownerPhone     || '',
+    feeMode:        tenant?.paymentSettings?.convenienceFee?.type === 'gross_up' ? 'gross_up' : 'absorb',
     customMessages: {
       welcome:   tenant?.customMessages?.welcome   || '',
       qualified: tenant?.customMessages?.qualified || '',
@@ -1793,11 +1795,24 @@ function ClientModal({ tenant, onClose, onSaved }) {
     if (!form.businessName) { setError('Business name is required'); return; }
     if (!form.contactEmail)  { setError('Contact email is required'); return; }
     setSaving(true); setError('');
+
+    // Transform feeMode into paymentSettings structure
+    const payload = {
+      ...form,
+      paymentSettings: {
+        enabled: true,
+        convenienceFee: {
+          type:   form.feeMode === 'gross_up' ? 'gross_up' : 'absorb',
+          paidBy: form.feeMode === 'gross_up' ? 'customer' : 'business',
+        },
+      },
+    };
+
     try {
       if (isNew) {
-        await api.post('/tenants', form);
+        await api.post('/tenants', payload);
       } else {
-        await api.put(`/tenants/${tenant._id}`, form);
+        await api.put(`/tenants/${tenant._id}`, payload);
       }
       onSaved();
     } catch (err) {
@@ -1829,6 +1844,23 @@ function ClientModal({ tenant, onClose, onSaved }) {
         <input value={form.whatsappNumber} onChange={e => set('whatsappNumber', e.target.value)} placeholder="whatsapp:+27821234567" style={iStyle} />
         <label style={labelStyle}>Owner Personal WhatsApp <span style={{ color:c.muted, fontWeight:'400' }}>— receives commands + daily summary (not the bot number)</span></label>
         <input value={form.ownerPhone || ''} onChange={e => set('ownerPhone', e.target.value)} placeholder="+27831234567" style={iStyle} />
+
+        {/* Payment Fee Settings */}
+        <label style={labelStyle}>💳 Payment Processing Fee</label>
+        <p style={{ color:c.muted, fontSize:'12px', marginBottom:'8px' }}>Who covers the Paystack + platform fees on customer payments?</p>
+        <select
+          value={form.feeMode || 'absorb'}
+          onChange={e => set('feeMode', e.target.value)}
+          style={{ ...iStyle, cursor:'pointer' }}
+        >
+          <option value="absorb">Business absorbs — customer pays exact price, fees deducted from my total</option>
+          <option value="gross_up">Pass to customer — customer covers all fees, I receive the full clean amount</option>
+        </select>
+        <p style={{ color:c.lime, fontSize:'12px', marginTop:'4px', marginBottom:'4px' }}>
+          {form.feeMode === 'gross_up'
+            ? '✅ Example: You charge R500 → customer pays R521.83 → you receive R500 exact'
+            : '✅ Example: You charge R500 → customer pays R500 → you receive R478.50'}
+        </p>
 
         {/* Plan & Status */}
         <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginBottom: '12px', marginTop: '8px' }}>Plan & Status</p>
