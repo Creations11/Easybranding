@@ -110,10 +110,12 @@ function ProspectingPanel({ currentUser }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [pRes, tRes] = await Promise.all([
+      const [pSettled, tSettled] = await Promise.allSettled([
         api.get('/prospecting'),
         api.get('/prospecting/templates'),
       ]);
+      const pRes = pSettled.status === 'fulfilled' ? pSettled.value : { data: { data: {} } };
+      const tRes = tSettled.status === 'fulfilled' ? tSettled.value : { data: { data: {} } };
       const allProspects = pRes.data.data?.prospects || [];
       // For eb_agent — show contacts they added OR are assigned to them
       const isAgent = currentUser?.role === 'eb_agent';
@@ -496,38 +498,61 @@ export default function SuperAdminDashboard() {
         return;
       }
 
-      const [ovRes, activeRes, qualRes, rejRes, stagesRes, viewRes, msgRes, alertRes, tenantRes, statsRes, usersRes, pendingRes, agentRes] = await Promise.all([
-        api.get('/admin-ops/overview'),
-        api.get('/admin-ops/conversations/active'),
-        api.get('/admin-ops/leads/qualified'),
-        api.get('/admin-ops/leads/rejected'),
-        api.get('/admin-ops/stages'),
-        api.get('/admin-ops/viewings'),
-        api.get('/admin-ops/messages/recent'),
-        api.get('/admin-ops/alerts'),
-        api.get('/tenants'),
-        api.get('/tenants/stats'),
-        api.get('/users'),
-        api.get('/users/pending'),
-        api.get('/admin-ops/agents'),
-      ]);
-      setOverview(ovRes.data.data?.overview);
-      setActiveLeads(activeRes.data.data?.leads || []);
-      setQualifiedLeads(qualRes.data.data?.leads || []);
-      setRejectedLeads(rejRes.data.data?.leads || []);
-      setStages(stagesRes.data.data?.stages || []);
-      setViewings(viewRes.data.data?.viewings || []);
-      setMessages(msgRes.data.data?.messages || []);
-      setAlerts(alertRes.data.data?.alerts || []);
-      setTenants(tenantRes.data.data?.tenants || []);
-      setTenantStats(statsRes.data.data?.stats);
-      setAllUsers(usersRes.data.data?.users || []);
-      setPendingUsers(pendingRes.data.data?.users || []);
-      setAgents(agentRes.data.data?.agents || []);
+      const endpoints = [
+        '/admin-ops/overview',
+        '/admin-ops/conversations/active',
+        '/admin-ops/leads/qualified',
+        '/admin-ops/leads/rejected',
+        '/admin-ops/stages',
+        '/admin-ops/viewings',
+        '/admin-ops/messages/recent',
+        '/admin-ops/alerts',
+        '/tenants',
+        '/tenants/stats',
+        '/users',
+        '/users/pending',
+        '/admin-ops/agents',
+      ];
 
-      // Health check
-      const hRes = await fetch(`${import.meta.env.VITE_API_URL}/health`);
-      setHealth(await hRes.json());
+      // allSettled — one failed call won't break the whole dashboard
+      const results = await Promise.allSettled(endpoints.map(e => api.get(e)));
+      const val = (i, path) => {
+        const r = results[i];
+        if (r.status !== 'fulfilled') return undefined;
+        return path(r.value.data.data || {});
+      };
+
+      // If EVERY call failed, the token is bad — redirect to login
+      const allFailed = results.every(r => r.status === 'rejected');
+      if (allFailed) {
+        const firstErr = results[0].reason;
+        if (firstErr?.response?.status === 401) {
+          localStorage.removeItem('eb_token');
+          localStorage.removeItem('eb_user');
+          window.location.href = '/login';
+          return;
+        }
+      }
+
+      setOverview(val(0, d => d.overview));
+      setActiveLeads(val(1, d => d.leads) || []);
+      setQualifiedLeads(val(2, d => d.leads) || []);
+      setRejectedLeads(val(3, d => d.leads) || []);
+      setStages(val(4, d => d.stages) || []);
+      setViewings(val(5, d => d.viewings) || []);
+      setMessages(val(6, d => d.messages) || []);
+      setAlerts(val(7, d => d.alerts) || []);
+      setTenants(val(8, d => d.tenants) || []);
+      setTenantStats(val(9, d => d.stats));
+      setAllUsers(val(10, d => d.users) || []);
+      setPendingUsers(val(11, d => d.users) || []);
+      setAgents(val(12, d => d.agents) || []);
+
+      // Health check — never let this break the dashboard
+      try {
+        const hRes = await fetch(`${import.meta.env.VITE_API_URL}/health`);
+        setHealth(await hRes.json());
+      } catch { /* health is non-critical */ }
     } catch (err) {
       setError('Failed to load dashboard data');
     } finally { setLoading(false); }
@@ -540,7 +565,7 @@ export default function SuperAdminDashboard() {
     const interval = setInterval(() => {
       const token = localStorage.getItem('eb_token');
       if (token && document.visibilityState === 'visible') loadData();
-    }, 30000);
+    }, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -1368,10 +1393,12 @@ function EBTeamPanel({ isSuperAdmin, tenants, onReload }) {
   const loadTeam = async () => {
     setLoading(true);
     try {
-      const [usersRes, prospectsRes] = await Promise.all([
+      const [uSettled, pSettled] = await Promise.allSettled([
         api.get('/users'),
         api.get('/prospecting'),
       ]);
+      const usersRes     = uSettled.status === 'fulfilled' ? uSettled.value : { data: { data: {} } };
+      const prospectsRes = pSettled.status === 'fulfilled' ? pSettled.value : { data: { data: {} } };
       const allUsers = usersRes.data.data?.users || [];
       const ebTeam   = allUsers.filter(u => ['eb_agent', 'eb_manager', 'super_admin'].includes(u.role));
       setTeam(ebTeam);
