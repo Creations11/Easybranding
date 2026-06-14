@@ -959,7 +959,7 @@ export default function SuperAdminDashboard() {
                       ? <div style={{ textAlign: 'center', padding: '60px 0', color: c.muted }}><p style={{ fontSize: '40px', marginBottom: '16px' }}>✅</p><p>No qualified leads yet.</p></div>
                       : qualifiedLeads.map(lead => {
                         // Dynamic field labels based on tenant industry
-                        const industry = tenants.find(t => t._id === lead.tenantId)?.industry || 'rental_agency';
+                        const industry = tenants.find(t => t._id === lead.tenantId)?.industry || 'appointment';
                         const fieldLabels = {
                           rental_agency:  { f1: 'Property',    f2: (v) => `R${v}/mo`,   f3: 'Move-in' },
                           property_sales: { f1: 'Property',    f2: (v) => `R${Number(v)?.toLocaleString()}`, f3: 'Timeline' },
@@ -970,8 +970,10 @@ export default function SuperAdminDashboard() {
                           education:      { f1: 'Programme',   f2: (v) => v,              f3: 'Funding' },
                           order_taking:   { f1: 'Order',       f2: (v) => `Qty: ${v}`,   f3: 'Delivery' },
                           appointment:    { f1: 'Service',     f2: (v) => v,              f3: 'Date' },
-                          custom:         { f1: 'Field 1',     f2: (v) => v,              f3: 'Field 3' },
-                        }[industry] || { f1: 'Property', f2: (v) => `R${v}/mo`, f3: 'Move-in' };
+                          driving_school: { f1: 'Lessons',     f2: (v) => v,              f3: 'Start' },
+                          salon:          { f1: 'Service',     f2: (v) => v,              f3: 'When' },
+                          custom:         { f1: 'Enquiry',     f2: (v) => v,              f3: 'Detail' },
+                        }[industry] || { f1: 'Enquiry', f2: (v) => v, f3: 'Detail' };
 
                         return (
                         <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} className="card-hover" style={{ background: c.card, border: `1px solid ${lead.aiSummary?.urgency === 'high' ? c.lime + '44' : c.borderDim}`, borderRadius: '14px', padding: '18px 24px', marginBottom: '10px', cursor: 'pointer' }}>

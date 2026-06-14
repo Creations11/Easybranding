@@ -27,13 +27,13 @@ const t = {
 function LiveDemo() {
   const messages = [
     { dir: 'in',  text: 'Hi', delay: 0 },
-    { dir: 'out', text: 'Welcome to Alexandra Rentals 🏠\n\nReply with your full name to get started.', delay: 800 },
+    { dir: 'out', text: 'Welcome to Glow Hair Studio 💇\n\nReply with your full name to book your appointment.', delay: 800 },
     { dir: 'in',  text: 'Sipho Dube', delay: 2000 },
-    { dir: 'out', text: 'What type of property are you looking for?\n\nRoom · Backroom · Apartment · House', delay: 3000 },
-    { dir: 'in',  text: 'Backroom', delay: 4200 },
-    { dir: 'out', text: 'Monthly budget? (e.g. 2500)', delay: 5000 },
-    { dir: 'in',  text: 'R2500', delay: 6000 },
-    { dir: 'out', text: '✅ Great news, Sipho!\n\nYou qualify for our programme. 🏠\n\nAn agent will contact you within 24 hours.', delay: 7200, qualify: true },
+    { dir: 'out', text: 'What service would you like? ✨\n\nHaircut · Colour · Braids · Treatment', delay: 3000 },
+    { dir: 'in',  text: 'Haircut', delay: 4200 },
+    { dir: 'out', text: 'When would you like to come in? (e.g. Saturday morning)', delay: 5000 },
+    { dir: 'in',  text: 'Saturday 10am', delay: 6000 },
+    { dir: 'out', text: '✅ Booking received, Sipho! 💇\n\nWe\'ll confirm your slot within 2 hours. Can\'t wait to see you! ✨', delay: 7200, qualify: true },
   ];
 
   const [visible, setVisible] = useState(0);
@@ -57,7 +57,7 @@ function LiveDemo() {
       <div style={{ background: '#075e54', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: `linear-gradient(135deg, ${t.lime}, ${t.moss})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>🏠</div>
         <div>
-          <p style={{ color: '#fff', fontWeight: '600', fontSize: '13px', margin: 0 }}>Alexandra Rentals</p>
+          <p style={{ color: '#fff', fontWeight: '600', fontSize: '13px', margin: 0 }}>Glow Hair Studio</p>
           <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '11px', margin: 0 }}>● online</p>
         </div>
       </div>
@@ -216,11 +216,11 @@ export default function Home() {
                 </a>
               </div>
 
-              {/* Alexandra proof — CIO: social proof above fold */}
+              {/* Honest capability framing — not a fabricated client */}
               <div style={{ background:`${t.lime}08`, border:`1px solid ${t.lime}18`, borderRadius:'14px', padding:'16px 20px' }}>
-                <p style={{ color:t.muted, fontSize:'11px', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'8px' }}>Real result — Alexandra Rentals, Johannesburg</p>
+                <p style={{ color:t.muted, fontSize:'11px', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'8px' }}>What it does for your business</p>
                 <p style={{ color:t.text, fontSize:'15px', lineHeight:1.5 }}>
-                  <span style={{ color:t.lime, fontWeight:'700' }}>47 leads qualified</span> in their first month. <span style={{ color:t.lime, fontWeight:'700' }}>11 came in after midnight.</span> Zero were missed.
+                  Replies to <span style={{ color:t.lime, fontWeight:'700' }}>every enquiry instantly</span> — even <span style={{ color:t.lime, fontWeight:'700' }}>after midnight.</span> Never miss another customer.
                 </p>
               </div>
             </div>
@@ -442,23 +442,22 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── CUSTOMER SUCCESS — CIO recommendation ──────────────── */}
+      {/* ── HOW IT WORKS ───────────────────────────────────────── */}
       <section style={{ padding:'80px 24px', position:'relative', zIndex:1 }}>
         <div style={{ maxWidth:'800px', margin:'0 auto', textAlign:'center' }}>
-          <p style={{ color:t.lime, fontSize:'12px', fontWeight:'700', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:'40px' }}>Customer success</p>
+          <p style={{ color:t.lime, fontSize:'12px', fontWeight:'700', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:'40px' }}>How it works</p>
           <div style={{ background:t.card, border:`1px solid ${t.lime}22`, borderRadius:'24px', padding:'48px 40px', position:'relative' }}>
-            <span style={{ fontSize:'48px', color:`${t.lime}44`, fontFamily:'Georgia', position:'absolute', top:'24px', left:'32px', lineHeight:1 }}>"</span>
-            <p style={{ fontFamily:"'Fraunces', serif", fontSize:'clamp(18px, 3vw, 26px)', fontWeight:'700', lineHeight:1.5, marginBottom:'28px', fontStyle:'italic', color:t.text }}>
-              We woke up and the leads were already there. 47 qualified leads in our first month — 11 came in after midnight. We didn't miss a single one.
+            <p style={{ fontFamily:"'Fraunces', serif", fontSize:'clamp(18px, 3vw, 26px)', fontWeight:'700', lineHeight:1.5, marginBottom:'28px', color:t.text }}>
+              A customer messages your business at midnight. The bot replies instantly, qualifies them, and books them. You wake up to a lead that's ready — you didn't lift a finger.
             </p>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'12px' }}>
-              <div style={{ width:'44px', height:'44px', borderRadius:'50%', background:`linear-gradient(135deg, ${t.lime}, ${t.moss})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px' }}>🏠</div>
+              <div style={{ width:'44px', height:'44px', borderRadius:'50%', background:`linear-gradient(135deg, ${t.lime}, ${t.moss})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px' }}>🌿</div>
               <div style={{ textAlign:'left' }}>
-                <p style={{ fontWeight:'700', fontSize:'14px' }}>Alexandra Rentals</p>
-                <p style={{ color:t.muted, fontSize:'12px' }}>Johannesburg, South Africa · Rental Agency</p>
+                <p style={{ fontWeight:'700', fontSize:'14px' }}>Works while you sleep</p>
+                <p style={{ color:t.muted, fontSize:'12px' }}>24/7 · every message · never missed</p>
               </div>
               <div style={{ marginLeft:'auto', display:'flex', gap:'8px' }}>
-                <span style={{ background:`${t.lime}18`, color:t.lime, fontSize:'12px', padding:'4px 10px', borderRadius:'999px', fontWeight:'700' }}>47 leads</span>
+                <span style={{ background:`${t.lime}18`, color:t.lime, fontSize:'12px', padding:'4px 10px', borderRadius:'999px', fontWeight:'700' }}>24/7</span>
                 <span style={{ background:`${t.cyan}18`, color:t.cyan, fontSize:'12px', padding:'4px 10px', borderRadius:'999px', fontWeight:'700' }}>0 missed</span>
               </div>
             </div>
@@ -474,14 +473,14 @@ export default function Home() {
           <p style={{ color:t.muted, fontSize:'17px', marginBottom:'48px', maxWidth:'520px' }}>If customers message you on WhatsApp and your team can't keep up — Easy Branding AI was built for you.</p>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:'12px' }}>
             {[
-              { icon:'🏠', industry:'Rental Agencies',       use:'Qualify rental applicants' },
-              { icon:'🏡', industry:'Property Sales',        use:'Qualify property buyers' },
-              { icon:'🎵', industry:'Music & Entertainment', use:'Manage artist enquiries' },
-              { icon:'🎓', industry:'Education',             use:'Student admissions' },
+              { icon:'💇', industry:'Salons & Barbershops',  use:'Book appointments 24/7' },
+              { icon:'🚦', industry:'Driving Schools',        use:'Book lessons automatically' },
               { icon:'🚗', industry:'Car Dealerships',       use:'Qualify vehicle buyers' },
+              { icon:'🏥', industry:'Medical Practices',     use:'Patient appointment booking' },
               { icon:'⚖️', industry:'Law Firms',             use:'Client intake & screening' },
-              { icon:'🏥', industry:'Medical Practices',     use:'Patient appointment qualifying' },
+              { icon:'🎓', industry:'Education',             use:'Student admissions' },
               { icon:'💼', industry:'Recruitment',           use:'Pre-screen candidates' },
+              { icon:'🏠', industry:'Property & Rentals',     use:'Qualify buyers & tenants' },
             ].map((item, i) => (
               <div key={i} style={{ background:t.card, border:`1px solid ${t.dim}`, borderRadius:'12px', padding:'18px', display:'flex', gap:'12px', alignItems:'flex-start' }}>
                 <span style={{ fontSize:'22px', flexShrink:0 }}>{item.icon}</span>
@@ -564,7 +563,7 @@ export default function Home() {
             { q:'Do my customers need to download anything?', a:'No. They message your existing WhatsApp number exactly as they do today. Nothing changes on their side.' },
             { q:'Can I keep my existing WhatsApp number?', a:'Yes. We connect your existing business number to the platform. Your customers message the same number they already know.' },
             { q:'Does the bot replace my agents?', a:'No. The bot handles the repetitive qualification questions — freeing your agents to focus on closing deals. Agents can take over any conversation instantly from the dashboard.' },
-            { q:'What industries does it work for?', a:'Any business receiving high volumes of WhatsApp enquiries. Rental agencies, property sales, car dealerships, law firms, medical practices, schools, recruitment — if customers message you on WhatsApp, we can automate it.' },
+            { q:'What industries does it work for?', a:'Any business receiving WhatsApp enquiries. Salons, driving schools, car dealerships, medical practices, law firms, schools, recruitment, property — if customers message you on WhatsApp, we can automate it.' },
             { q:'Is my customer data safe and POPIA compliant?', a:'Yes. Each client is fully isolated on our platform. Your leads, conversations and data are never shared with other businesses. We handle all data in compliance with POPIA.' },
             { q:'How long does setup take?', a:'Most businesses are live within 15 minutes. We handle the technical setup. You configure your questions and messages in our simple dashboard.' },
           ].map((item, i) => (
