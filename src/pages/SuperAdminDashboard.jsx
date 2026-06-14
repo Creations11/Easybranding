@@ -327,10 +327,10 @@ function ProspectingPanel({ currentUser }) {
         </div>
       )}
 
-      {/* ── Send Messages ─────────────────────── */}
+      {/* ── Send Messages ─────────────────────── (Mobile optimized) */}
       {activeTab === 'send' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-          {/* Left — template + variables */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Left — template + variables (your original) */}
           <div>
             <div style={{ background: c.card, border: `1px solid ${c.borderDim}`, borderRadius: '14px', padding: '24px', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>Select Template</h3>
@@ -346,7 +346,7 @@ function ProspectingPanel({ currentUser }) {
               {currentTemplate?.variables.includes('agency') && <input value={varAgency} onChange={e => setVarAgency(e.target.value)} placeholder="Default agency name" style={iStyle} />}
             </div>
 
-            {/* Message preview */}
+            {/* Message preview (your original) */}
             {currentTemplate && (
               <div style={{ background: c.surface, border: `1px solid ${c.borderDim}`, borderRadius: '12px', padding: '16px' }}>
                 <p style={{ color: c.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Preview</p>
@@ -362,46 +362,47 @@ function ProspectingPanel({ currentUser }) {
             )}
           </div>
 
-          {/* Right — selected contacts + send */}
+          {/* Right — selected contacts + send (Mobile friendly) */}
           <div>
             <div style={{ background: c.card, border: `1px solid ${c.borderDim}`, borderRadius: '14px', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: '700' }}>
                   {selectedIds.length > 0 ? `${selectedIds.length} selected` : 'Select contacts'}
                 </h3>
-                <button onClick={handleSelectAll} style={{ padding: '6px 14px', background: `${c.lime}22`, color: c.lime, border: `1px solid ${c.border}`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit' }}>
+                <button onClick={handleSelectAll} style={{ padding: '8px 16px', background: `${c.lime}22`, color: c.lime, border: `1px solid ${c.border}`, borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>
                   {selectedIds.length === prospects.filter(p => p.status === 'pending').length && prospects.filter(p => p.status === 'pending').length > 0 ? 'Deselect All' : 'Select All Pending'}
                 </button>
               </div>
 
-              {/* Inline contact list with checkboxes */}
-              <div style={{ maxHeight: '240px', overflowY: 'auto', marginBottom: '16px', borderRadius: '10px', border: `1px solid ${c.borderDim}` }}>
+              {/* Scrollable contact list - better height for mobile */}
+              <div style={{ maxHeight: '48vh', overflowY: 'auto', marginBottom: '20px', borderRadius: '10px', border: `1px solid ${c.borderDim}` }} className="scroll-list">
                 {prospects.filter(p => p.status === 'pending').length === 0 ? (
                   <div style={{ padding: '24px', textAlign: 'center', color: c.muted, fontSize: '13px' }}>
                     No pending contacts. Add contacts first.
                   </div>
                 ) : prospects.filter(p => p.status === 'pending').map(p => (
                   <div key={p._id} onClick={() => setSelectedIds(prev => prev.includes(p._id) ? prev.filter(id => id !== p._id) : [...prev, p._id])}
-                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderBottom: `1px solid ${c.borderDim}`, cursor: 'pointer', background: selectedIds.includes(p._id) ? `${c.lime}08` : 'transparent' }}>
+                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', borderBottom: `1px solid ${c.borderDim}`, cursor: 'pointer', background: selectedIds.includes(p._id) ? `${c.lime}08` : 'transparent' }}>
                     <input type="checkbox" checked={selectedIds.includes(p._id)} onChange={() => {}} style={{ cursor: 'pointer', accentColor: c.lime }} />
                     <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: '13px', fontWeight: '600', color: c.text }}>{p.name !== 'Unknown' ? p.name : p.phone}</p>
-                      <p style={{ fontSize: '11px', color: c.muted }}>{p.phone}{p.agencyName ? ` · ${p.agencyName}` : ''}</p>
+                      <p style={{ fontSize: '14px', fontWeight: '600', color: c.text }}>{p.name !== 'Unknown' ? p.name : p.phone}</p>
+                      <p style={{ fontSize: '12px', color: c.muted }}>{p.phone}{p.agencyName ? ` · ${p.agencyName}` : ''}</p>
                     </div>
                   </div>
                 ))}
               </div>
 
-              <p style={{ color: c.muted, fontSize: '12px', marginBottom: '16px' }}>
+              <p style={{ color: c.muted, fontSize: '13px', marginBottom: '16px' }}>
                 Pending: <span style={{ color: c.lime, fontWeight: '700' }}>{prospects.filter(p => p.status === 'pending').length}</span>
                 {selectedIds.length > 0 && <span style={{ color: c.lime, marginLeft: '8px' }}>· {selectedIds.length} selected</span>}
               </p>
 
+              {/* Big, easy-to-tap send button */}
               <button onClick={handleSend} disabled={sending || !selectedIds.length || !selectedTemplate} style={{
-                width: '100%', padding: '15px',
+                width: '100%', padding: '16px', minHeight: '56px', fontSize: '16px',
                 background: selectedIds.length && selectedTemplate ? c.lime : `${c.lime}44`,
                 color: '#050505', border: 'none', borderRadius: '12px',
-                fontWeight: '700', fontSize: '15px',
+                fontWeight: '700',
                 cursor: selectedIds.length && selectedTemplate ? 'pointer' : 'not-allowed',
                 fontFamily: 'inherit', marginBottom: '12px',
               }}>
@@ -595,6 +596,24 @@ export default function SuperAdminDashboard() {
     } catch { alert('Failed to update status'); }
   };
 
+  // Take over a conversation — bot goes silent, you reply manually
+  const handleTakeover = async (e, leadId) => {
+    e.stopPropagation();
+    try {
+      await api.post(`/admin-ops/leads/${leadId}/takeover`);
+      loadData();
+    } catch (err) { alert(err.response?.data?.message || 'Takeover failed'); }
+  };
+
+  // Resume — bot takes back over
+  const handleResume = async (e, leadId) => {
+    e.stopPropagation();
+    try {
+      await api.post(`/admin-ops/leads/${leadId}/resume`);
+      loadData();
+    } catch (err) { alert(err.response?.data?.message || 'Resume failed'); }
+  };
+
   const handleDeleteClient = async (tenant) => {
     if (!window.confirm(`Delete ${tenant.businessName}? This cannot be undone.`)) return;
     try {
@@ -644,17 +663,34 @@ export default function SuperAdminDashboard() {
 
       <style>{`
         * { box-sizing: border-box; }
+        button, input, select, textarea { min-height: 48px !important; font-size: 16px !important; } /* Prevent iOS zoom + better touch */
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: ${c.bg}; }
         ::-webkit-scrollbar-thumb { background: ${c.moss}; border-radius: 2px; }
         .nav-item-hover:hover { background: rgba(184,240,64,0.06) !important; color: ${c.text} !important; }
-        .card-hover:hover { border-color: rgba(184,240,64,0.2) !important; transform: translateY(-2px); }
+        .card-hover:hover { border-color: rgba(184,240,64,0.25) !important; transform: translateY(-2px); }
         .card-hover { transition: all 0.2s ease; }
+
         @media (max-width: 768px) {
-          .sidebar { width: 60px !important; }
-          .sidebar .nav-label { display: none; }
-          .sidebar .user-info { display: none; }
-          .main-content { margin-left: 60px !important; }
+          .sidebar { width: 64px !important; }
+          .sidebar .nav-label, .sidebar .user-info { display: none !important; }
+          .main-content { margin-left: 64px !important; padding: 16px !important; padding-top: 82px !important; }
+
+          /* Force ALL grids to single column on mobile */
+          div[style*="grid-template-columns"],
+          div[style*="gridTemplateColumns"] {
+            grid-template-columns: 1fr !important;
+          }
+          .stat-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important; }
+
+          .tab-strip { overflow-x: auto !important; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+          .scroll-list { max-height: 55vh !important; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+          .card-hover { padding: 16px !important; }
+        }
+
+        @media (max-width: 480px) {
+          .main-content { padding: 12px !important; padding-top: 78px !important; }
         }
       `}</style>
 
@@ -818,7 +854,13 @@ export default function SuperAdminDashboard() {
                             <p style={{ color: c.muted, fontSize: '13px', marginTop: '2px' }}>{lead.phone}</p>
                             <p style={{ color: c.muted, fontSize: '12px', marginTop: '2px' }}>Stage: <span style={{ color: lead.isProspect ? c.lime : c.cyan }}>{lead.isProspect ? '👤 Agent takeover' : lead.workflowStatus?.replace(/_/g, ' ')}</span></p>
                           </div>
-                          <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '999px', background: lead.isProspect ? `${c.lime}18` : `${c.cyan}18`, color: lead.isProspect ? c.lime : c.cyan }}>{lead.isProspect ? 'Prospect' : 'Active'}</span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
+                            <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '999px', background: lead.isProspect ? `${c.lime}18` : `${c.cyan}18`, color: lead.isProspect ? c.lime : c.cyan }}>{lead.isProspect ? 'Prospect' : 'Active'}</span>
+                            {lead.takenOver
+                              ? <button onClick={(e) => handleResume(e, lead._id)} style={{ fontSize: '12px', padding: '6px 14px', borderRadius: '8px', background: `${c.cyan}22`, color: c.cyan, border: 'none', cursor: 'pointer', fontWeight: '700', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>🤖 Resume bot</button>
+                              : <button onClick={(e) => handleTakeover(e, lead._id)} style={{ fontSize: '12px', padding: '6px 14px', borderRadius: '8px', background: c.lime, color: '#06080A', border: 'none', cursor: 'pointer', fontWeight: '700', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>✋ Take over</button>
+                            }
+                          </div>
                         </div>
                       ))
                     }
