@@ -327,10 +327,10 @@ function ProspectingPanel({ currentUser }) {
         </div>
       )}
 
-      {/* ── Send Messages ─────────────────────── (Mobile optimized) */}
+      {/* ── Send Messages ─────────────────────── */}
       {activeTab === 'send' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* Left — template + variables (your original) */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          {/* Left — template + variables */}
           <div>
             <div style={{ background: c.card, border: `1px solid ${c.borderDim}`, borderRadius: '14px', padding: '24px', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>Select Template</h3>
@@ -346,7 +346,7 @@ function ProspectingPanel({ currentUser }) {
               {currentTemplate?.variables.includes('agency') && <input value={varAgency} onChange={e => setVarAgency(e.target.value)} placeholder="Default agency name" style={iStyle} />}
             </div>
 
-            {/* Message preview (your original) */}
+            {/* Message preview */}
             {currentTemplate && (
               <div style={{ background: c.surface, border: `1px solid ${c.borderDim}`, borderRadius: '12px', padding: '16px' }}>
                 <p style={{ color: c.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Preview</p>
@@ -362,47 +362,46 @@ function ProspectingPanel({ currentUser }) {
             )}
           </div>
 
-          {/* Right — selected contacts + send (Mobile friendly) */}
+          {/* Right — selected contacts + send */}
           <div>
             <div style={{ background: c.card, border: `1px solid ${c.borderDim}`, borderRadius: '14px', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: '700' }}>
                   {selectedIds.length > 0 ? `${selectedIds.length} selected` : 'Select contacts'}
                 </h3>
-                <button onClick={handleSelectAll} style={{ padding: '8px 16px', background: `${c.lime}22`, color: c.lime, border: `1px solid ${c.border}`, borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>
+                <button onClick={handleSelectAll} style={{ padding: '6px 14px', background: `${c.lime}22`, color: c.lime, border: `1px solid ${c.border}`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit' }}>
                   {selectedIds.length === prospects.filter(p => p.status === 'pending').length && prospects.filter(p => p.status === 'pending').length > 0 ? 'Deselect All' : 'Select All Pending'}
                 </button>
               </div>
 
-              {/* Scrollable contact list - better height for mobile */}
-              <div style={{ maxHeight: '48vh', overflowY: 'auto', marginBottom: '20px', borderRadius: '10px', border: `1px solid ${c.borderDim}` }} className="scroll-list">
+              {/* Inline contact list with checkboxes */}
+              <div style={{ maxHeight: '240px', overflowY: 'auto', marginBottom: '16px', borderRadius: '10px', border: `1px solid ${c.borderDim}` }}>
                 {prospects.filter(p => p.status === 'pending').length === 0 ? (
                   <div style={{ padding: '24px', textAlign: 'center', color: c.muted, fontSize: '13px' }}>
                     No pending contacts. Add contacts first.
                   </div>
                 ) : prospects.filter(p => p.status === 'pending').map(p => (
                   <div key={p._id} onClick={() => setSelectedIds(prev => prev.includes(p._id) ? prev.filter(id => id !== p._id) : [...prev, p._id])}
-                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', borderBottom: `1px solid ${c.borderDim}`, cursor: 'pointer', background: selectedIds.includes(p._id) ? `${c.lime}08` : 'transparent' }}>
+                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderBottom: `1px solid ${c.borderDim}`, cursor: 'pointer', background: selectedIds.includes(p._id) ? `${c.lime}08` : 'transparent' }}>
                     <input type="checkbox" checked={selectedIds.includes(p._id)} onChange={() => {}} style={{ cursor: 'pointer', accentColor: c.lime }} />
                     <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: '14px', fontWeight: '600', color: c.text }}>{p.name !== 'Unknown' ? p.name : p.phone}</p>
-                      <p style={{ fontSize: '12px', color: c.muted }}>{p.phone}{p.agencyName ? ` · ${p.agencyName}` : ''}</p>
+                      <p style={{ fontSize: '13px', fontWeight: '600', color: c.text }}>{p.name !== 'Unknown' ? p.name : p.phone}</p>
+                      <p style={{ fontSize: '11px', color: c.muted }}>{p.phone}{p.agencyName ? ` · ${p.agencyName}` : ''}</p>
                     </div>
                   </div>
                 ))}
               </div>
 
-              <p style={{ color: c.muted, fontSize: '13px', marginBottom: '16px' }}>
+              <p style={{ color: c.muted, fontSize: '12px', marginBottom: '16px' }}>
                 Pending: <span style={{ color: c.lime, fontWeight: '700' }}>{prospects.filter(p => p.status === 'pending').length}</span>
                 {selectedIds.length > 0 && <span style={{ color: c.lime, marginLeft: '8px' }}>· {selectedIds.length} selected</span>}
               </p>
 
-              {/* Big, easy-to-tap send button */}
               <button onClick={handleSend} disabled={sending || !selectedIds.length || !selectedTemplate} style={{
-                width: '100%', padding: '16px', minHeight: '56px', fontSize: '16px',
+                width: '100%', padding: '15px',
                 background: selectedIds.length && selectedTemplate ? c.lime : `${c.lime}44`,
                 color: '#050505', border: 'none', borderRadius: '12px',
-                fontWeight: '700',
+                fontWeight: '700', fontSize: '15px',
                 cursor: selectedIds.length && selectedTemplate ? 'pointer' : 'not-allowed',
                 fontFamily: 'inherit', marginBottom: '12px',
               }}>
@@ -438,6 +437,7 @@ export default function SuperAdminDashboard() {
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Data
   const [overview,          setOverview]          = useState(null);
@@ -663,36 +663,120 @@ export default function SuperAdminDashboard() {
 
       <style>{`
         * { box-sizing: border-box; }
-        button, input, select, textarea { min-height: 48px !important; font-size: 16px !important; } /* Prevent iOS zoom + better touch */
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: ${c.bg}; }
         ::-webkit-scrollbar-thumb { background: ${c.moss}; border-radius: 2px; }
         .nav-item-hover:hover { background: rgba(184,240,64,0.06) !important; color: ${c.text} !important; }
-        .card-hover:hover { border-color: rgba(184,240,64,0.25) !important; transform: translateY(-2px); }
+        .card-hover:hover { border-color: rgba(184,240,64,0.2) !important; transform: translateY(-2px); }
         .card-hover { transition: all 0.2s ease; }
-
         @media (max-width: 768px) {
-          .sidebar { width: 64px !important; }
-          .sidebar .nav-label, .sidebar .user-info { display: none !important; }
-          .main-content { margin-left: 64px !important; padding: 16px !important; padding-top: 82px !important; }
+          /* Hide the desktop sidebar entirely — replaced by drawer */
+          .sidebar { display: none !important; }
+          .desktop-only { display: none !important; }
+          .mobile-hamburger { display: flex !important; }
+          .main-content { margin-left: 0 !important; padding: 12px !important; padding-top: 72px !important; }
+          .main-content h2 { font-size: 17px !important; }
+          .card-hover:hover { transform: none !important; }
 
-          /* Force ALL grids to single column on mobile */
-          div[style*="grid-template-columns"],
-          div[style*="gridTemplateColumns"] {
+          /* Force ALL multi-column grids to single column on mobile */
+          .main-content div[style*="grid-template-columns"],
+          .main-content div[style*="gridTemplateColumns"] {
             grid-template-columns: 1fr !important;
           }
-          .stat-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important; }
+          .stat-grid { grid-template-columns: 1fr 1fr !important; }
+          .main-content .card-hover { padding: 12px 14px !important; }
+          .mobile-stack { flex-direction: column !important; align-items: stretch !important; gap: 10px !important; }
+          .main-content input, .main-content select, .main-content textarea { width: 100% !important; max-width: 100% !important; }
+          .modal-box { width: 95vw !important; max-width: 95vw !important; max-height: 90vh !important; margin: 0 !important; }
+          .tab-strip { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+          .main-content table { display: block !important; overflow-x: auto !important; white-space: nowrap !important; }
 
-          .tab-strip { overflow-x: auto !important; -webkit-overflow-scrolling: touch; white-space: nowrap; }
-          .scroll-list { max-height: 55vh !important; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-
-          .card-hover { padding: 16px !important; }
+          /* Mobile drawer */
+          .mobile-drawer { display: flex !important; }
         }
-
+        @media (min-width: 769px) {
+          .mobile-hamburger { display: none !important; }
+          .mobile-drawer { display: none !important; }
+          .mobile-overlay { display: none !important; }
+        }
         @media (max-width: 480px) {
-          .main-content { padding: 12px !important; padding-top: 78px !important; }
+          .main-content { padding: 8px !important; padding-top: 70px !important; }
+          .main-content h2 { font-size: 16px !important; }
+          .stat-grid { grid-template-columns: 1fr 1fr !important; }
         }
       `}</style>
+
+      {/* ── MOBILE HAMBURGER BUTTON ───────────────────────── */}
+      <button
+        className="mobile-hamburger"
+        onClick={() => setMobileMenuOpen(true)}
+        style={{
+          display: 'none', position: 'fixed', top: '14px', left: '12px', zIndex: 200,
+          width: '44px', height: '44px', borderRadius: '10px',
+          background: c.sidebar, border: `1px solid ${c.borderDim}`,
+          color: c.lime, fontSize: '20px', cursor: 'pointer',
+          alignItems: 'center', justifyContent: 'center',
+        }}
+      >☰</button>
+
+      {/* ── MOBILE DRAWER OVERLAY ─────────────────────────── */}
+      {mobileMenuOpen && (
+        <div
+          className="mobile-overlay"
+          onClick={() => setMobileMenuOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 250 }}
+        />
+      )}
+
+      {/* ── MOBILE DRAWER ─────────────────────────────────── */}
+      <div
+        className="mobile-drawer"
+        style={{
+          display: 'none', position: 'fixed', top: 0, left: 0, bottom: 0,
+          width: '260px', maxWidth: '80vw', background: c.sidebar,
+          borderRight: `1px solid ${c.borderDim}`, zIndex: 300,
+          flexDirection: 'column', overflowY: 'auto',
+          transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.25s ease',
+        }}
+      >
+        {/* Drawer header */}
+        <div style={{ padding: '20px 16px', borderBottom: `1px solid ${c.borderDim}`, display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ width: '34px', height: '34px', background: `linear-gradient(135deg, ${c.lime}, ${c.moss})`, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px' }}>🌿</div>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: '14px', fontWeight: '700', color: c.text, lineHeight: 1 }}>Easy Branding</p>
+            <p style={{ fontSize: '11px', color: c.lime, fontWeight: '600' }}>AI</p>
+          </div>
+          <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'none', border: 'none', color: c.muted, fontSize: '24px', cursor: 'pointer', lineHeight: 1 }}>×</button>
+        </div>
+
+        {/* Drawer nav */}
+        <div style={{ padding: '12px 8px', flex: 1 }}>
+          {navSections.map(nav => (
+            <button key={nav.id} onClick={() => { setSection(nav.id); setMobileMenuOpen(false); }} style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
+              padding: '13px 12px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+              background: section === nav.id ? 'rgba(184,240,64,0.12)' : 'transparent',
+              color: section === nav.id ? c.lime : c.muted,
+              fontSize: '15px', fontWeight: section === nav.id ? '600' : '400',
+              fontFamily: "'Outfit', sans-serif", marginBottom: '2px', textAlign: 'left',
+            }}>
+              <span style={{ fontSize: '20px', width: '26px', textAlign: 'center' }}>{nav.icon}</span>
+              <span style={{ flex: 1 }}>{nav.label}</span>
+              {nav.badge > 0 && <span style={{ background: c.amber, color: '#080A06', fontSize: '11px', fontWeight: '800', padding: '2px 7px', borderRadius: '999px' }}>{nav.badge}</span>}
+            </button>
+          ))}
+        </div>
+
+        {/* Drawer user info */}
+        <div style={{ padding: '16px', borderTop: `1px solid ${c.borderDim}` }}>
+          <p style={{ fontSize: '14px', fontWeight: '600', color: c.text, marginBottom: '2px' }}>{user.fullName || 'Ayanda'}</p>
+          <p style={{ fontSize: '12px', color: c.lime, marginBottom: '12px' }}>{user.role}</p>
+          <button onClick={handleSignOut} style={{ width: '100%', padding: '11px', background: 'rgba(255,255,255,0.05)', border: `1px solid ${c.borderDim}`, color: c.muted, borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontFamily: 'inherit' }}>
+            Sign Out
+          </button>
+        </div>
+      </div>
 
       {/* ── SIDEBAR ───────────────────────────────────────── */}
       <div className="sidebar" style={{
