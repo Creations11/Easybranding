@@ -1950,6 +1950,9 @@ function ClientModal({ tenant, onClose, onSaved }) {
       qualified: tenant?.customMessages?.qualified || '',
       rejected:  tenant?.customMessages?.rejected  || '',
     },
+    customWorkflow: {
+      questions: tenant?.customWorkflow?.questions || [],
+    },
     qualificationRules: {
       minimumBudget:   tenant?.qualificationRules?.minimumBudget   || 500,
       maximumBudget:   tenant?.qualificationRules?.maximumBudget   || 50000,
@@ -1972,9 +1975,20 @@ function ClientModal({ tenant, onClose, onSaved }) {
     if (!form.contactEmail)  { setError('Contact email is required'); return; }
     setSaving(true); setError('');
 
+    // Keep only complete custom questions (must have a key and an ask)
+    const cleanQuestions = (form.customWorkflow?.questions || [])
+      .filter(q => q.key?.trim() && q.ask?.trim())
+      .map(q => ({
+        key:   q.key.trim(),
+        label: q.label?.trim() || q.key.trim(),
+        ask:   q.ask.trim(),
+        ...(q.type === 'number' ? { type: 'number' } : {}),
+      }));
+
     // Transform feeMode into paymentSettings structure
     const payload = {
       ...form,
+      customWorkflow: { ...form.customWorkflow, questions: cleanQuestions },
       paymentSettings: {
         enabled: true,
         convenienceFee: {
@@ -2141,6 +2155,85 @@ function ClientModal({ tenant, onClose, onSaved }) {
           {form.industry === 'appointment'     && '3 questions — collect booking details'}
           {form.industry === 'custom'          && 'No questions — configure manually'}
         </p>
+
+        {/* Custom questions editor */}
+        <p style={{ color: c.cyan, fontSize: '13px', fontWeight: '600', marginBottom: '6px', marginTop: '20px' }}>
+          Custom Questions <span style={{ color: c.muted, fontWeight: '400' }}>— leave empty to use industry defaults</span>
+        </p>
+        <p style={{ color: c.muted, fontSize: '11px', marginBottom: '12px', lineHeight: 1.5 }}>
+          Add questions to fully customise what the bot asks. These override the industry template entirely. The bot asks them in order, then confirms.
+        </p>
+
+        {(form.customWorkflow?.questions || []).map((q, idx) => (
+          <div key={idx} style={{ background: c.surfaceDim || 'rgba(255,255,255,0.03)', border: `1px solid ${c.borderDim}`, borderRadius: '12px', padding: '12px', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <span style={{ color: c.lime, fontSize: '12px', fontWeight: '700' }}>Q{idx + 1}</span>
+              <input
+                value={q.label || ''}
+                onChange={e => {
+                  const qs = [...form.customWorkflow.questions];
+                  qs[idx] = { ...qs[idx], label: e.target.value };
+                  set('customWorkflow', { ...form.customWorkflow, questions: qs });
+                }}
+                placeholder="Short label (e.g. Service type)"
+                style={{ ...iStyle, flex: 1, margin: 0, fontSize: '13px' }}
+              />
+              <button
+                onClick={() => {
+                  const qs = form.customWorkflow.questions.filter((_, i) => i !== idx);
+                  set('customWorkflow', { ...form.customWorkflow, questions: qs });
+                }}
+                style={{ background: 'transparent', border: 'none', color: c.amber, cursor: 'pointer', fontSize: '18px', padding: '0 4px' }}
+              >×</button>
+            </div>
+            <textarea
+              value={q.ask || ''}
+              onChange={e => {
+                const qs = [...form.customWorkflow.questions];
+                qs[idx] = { ...qs[idx], ask: e.target.value };
+                set('customWorkflow', { ...form.customWorkflow, questions: qs });
+              }}
+              placeholder="The full question the bot asks (e.g. What service would you like to book?)"
+              rows={2}
+              style={{ ...iStyle, resize: 'vertical', fontSize: '13px', marginBottom: '8px' }}
+            />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                value={q.key || ''}
+                onChange={e => {
+                  const qs = [...form.customWorkflow.questions];
+                  qs[idx] = { ...qs[idx], key: e.target.value.replace(/[^a-zA-Z0-9]/g, '') };
+                  set('customWorkflow', { ...form.customWorkflow, questions: qs });
+                }}
+                placeholder="field key (e.g. serviceType)"
+                style={{ ...iStyle, flex: 1, margin: 0, fontSize: '12px' }}
+              />
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: c.muted, fontSize: '12px', whiteSpace: 'nowrap' }}>
+                <input
+                  type="checkbox"
+                  checked={q.type === 'number'}
+                  onChange={e => {
+                    const qs = [...form.customWorkflow.questions];
+                    qs[idx] = { ...qs[idx], type: e.target.checked ? 'number' : undefined };
+                    set('customWorkflow', { ...form.customWorkflow, questions: qs });
+                  }}
+                />
+                Number
+              </label>
+            </div>
+          </div>
+        ))}
+
+        <button
+          onClick={() => {
+            const qs = [...(form.customWorkflow?.questions || [])];
+            qs.push({ key: `q${qs.length + 1}`, label: '', ask: '' });
+            set('customWorkflow', { ...form.customWorkflow, questions: qs });
+          }}
+          style={{ width: '100%', padding: '10px', background: 'transparent', border: `1px dashed ${c.lime}66`, color: c.lime, borderRadius: '10px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', marginBottom: '20px' }}
+        >
+          + Add a custom question
+        </button>
 
         {/* Custom messages */}
         <p style={{ color: c.cyan, fontSize: '13px', fontWeight: '600', marginBottom: '10px' }}>
