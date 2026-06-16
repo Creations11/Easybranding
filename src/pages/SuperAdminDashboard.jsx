@@ -2093,22 +2093,26 @@ function ClientModal({ tenant, onClose, onSaved }) {
           </div>
         </div>
 
-        {/* Qualification rules */}
-        <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '12px' }}>Qualification Rules</p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <div>
-            <label style={labelStyle}>Min Budget (R)</label>
-            <input type="number" value={form.qualificationRules.minimumBudget} onChange={e => setRule('minimumBudget', Number(e.target.value))} style={{ ...iStyle, marginBottom: 0 }} />
-          </div>
-          <div>
-            <label style={labelStyle}>Max Budget (R)</label>
-            <input type="number" value={form.qualificationRules.maximumBudget} onChange={e => setRule('maximumBudget', Number(e.target.value))} style={{ ...iStyle, marginBottom: 0 }} />
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '14px', marginBottom: '8px' }}>
-          <input type="checkbox" id="allowUnemployed" checked={form.qualificationRules.allowUnemployed} onChange={e => setRule('allowUnemployed', e.target.checked)} style={{ cursor: 'pointer', accentColor: c.lime, width: '16px', height: '16px' }} />
-          <label htmlFor="allowUnemployed" style={{ color: c.text, fontSize: '14px', cursor: 'pointer' }}>Allow unemployed applicants</label>
-        </div>
+        {/* Qualification rules — only for industries that screen on budget/income */}
+        {['rental_agency', 'property_sales', 'car_dealership', 'recruitment', 'micro_credit'].includes(form.industry) && (
+          <>
+            <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '12px' }}>Qualification Rules</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={labelStyle}>Min Budget (R)</label>
+                <input type="number" value={form.qualificationRules.minimumBudget} onChange={e => setRule('minimumBudget', Number(e.target.value))} style={{ ...iStyle, marginBottom: 0 }} />
+              </div>
+              <div>
+                <label style={labelStyle}>Max Budget (R)</label>
+                <input type="number" value={form.qualificationRules.maximumBudget} onChange={e => setRule('maximumBudget', Number(e.target.value))} style={{ ...iStyle, marginBottom: 0 }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '14px', marginBottom: '8px' }}>
+              <input type="checkbox" id="allowUnemployed" checked={form.qualificationRules.allowUnemployed} onChange={e => setRule('allowUnemployed', e.target.checked)} style={{ cursor: 'pointer', accentColor: c.lime, width: '16px', height: '16px' }} />
+              <label htmlFor="allowUnemployed" style={{ color: c.text, fontSize: '14px', cursor: 'pointer' }}>Allow unemployed applicants</label>
+            </div>
+          </>
+        )}
 
         {/* AI Settings */}
         <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '12px' }}>AI Settings</p>
@@ -2130,17 +2134,19 @@ function ClientModal({ tenant, onClose, onSaved }) {
         {/* Industry & Workflow */}
         <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '12px' }}>Industry & Workflow</p>
         <label style={labelStyle}>Industry / Business Type</label>
-        <select value={form.industry || 'rental_agency'} onChange={e => set('industry', e.target.value)} style={{ ...iStyle }}>
-          <option value="rental_agency">🏠 Rental Agency</option>
-          <option value="property_sales">🏡 Property Sales</option>
+        <select value={form.industry || 'appointment'} onChange={e => set('industry', e.target.value)} style={{ ...iStyle }}>
+          <option value="driving_school">🚦 Driving School</option>
+          <option value="salon">💇 Salon / Barbershop</option>
+          <option value="appointment">📅 Appointment Booking</option>
+          <option value="order_taking">🛒 Order Taking</option>
+          <option value="medical">🏥 Medical Practice</option>
           <option value="car_dealership">🚗 Car Dealership</option>
           <option value="law_firm">⚖️ Law Firm</option>
-          <option value="medical">🏥 Medical Practice</option>
           <option value="recruitment">💼 Recruitment Agency</option>
           <option value="education">🎓 Education / Training</option>
-          <option value="order_taking">🛒 Order Taking</option>
-          <option value="appointment">📅 Appointment Booking</option>
-          <option value="custom">⚙️ Custom</option>
+          <option value="rental_agency">🏠 Rental Agency</option>
+          <option value="property_sales">🏡 Property Sales</option>
+          <option value="custom">⚙️ General / Custom</option>
         </select>
 
         <p style={{ color: c.muted, fontSize: '12px', marginBottom: '14px' }}>
@@ -2151,9 +2157,11 @@ function ClientModal({ tenant, onClose, onSaved }) {
           {form.industry === 'medical'         && '3 questions — everyone qualifies'}
           {form.industry === 'recruitment'     && '4 questions — salary rule'}
           {form.industry === 'education'       && '3 questions — everyone qualifies'}
-          {form.industry === 'order_taking'    && '3 questions — collect order details'}
-          {form.industry === 'appointment'     && '3 questions — collect booking details'}
-          {form.industry === 'custom'          && 'No questions — configure manually'}
+          {form.industry === 'driving_school'  && '5 questions — lesson type, experience, transmission'}
+          {form.industry === 'salon'           && '5 questions — service, stylist, booking'}
+          {form.industry === 'order_taking'    && '5 questions — collect order + delivery details'}
+          {form.industry === 'appointment'     && '4 questions — collect booking details'}
+          {form.industry === 'custom'          && '3 default questions — or add your own below'}
         </p>
 
         {/* Custom questions editor */}
