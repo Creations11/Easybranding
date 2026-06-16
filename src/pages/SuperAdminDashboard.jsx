@@ -2164,18 +2164,24 @@ function ClientModal({ tenant, onClose, onSaved }) {
           {form.industry === 'custom'          && '3 default questions — or add your own below'}
         </p>
 
-        {/* Custom questions editor */}
+        {/* Conversation flow builder */}
         <p style={{ color: c.cyan, fontSize: '13px', fontWeight: '600', marginBottom: '6px', marginTop: '20px' }}>
-          Custom Questions <span style={{ color: c.muted, fontWeight: '400' }}>— leave empty to use industry defaults</span>
+          Conversation Flow <span style={{ color: c.muted, fontWeight: '400' }}>— the order the bot asks things</span>
         </p>
         <p style={{ color: c.muted, fontSize: '11px', marginBottom: '12px', lineHeight: 1.5 }}>
-          Add questions to fully customise what the bot asks. These override the industry template entirely. The bot asks them in order, then confirms.
+          The bot greets the customer, then asks each question below in order, then confirms. Add questions and they become Q1, Q2, Q3… in the order shown. Leave empty to use the industry defaults.
         </p>
+
+        {/* Greeting — the fixed first step */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: `${c.lime}10`, border: `1px solid ${c.lime}33`, borderRadius: '10px', padding: '10px 14px', marginBottom: '10px' }}>
+          <span style={{ color: c.lime, fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap' }}>👋 Greeting</span>
+          <span style={{ color: c.muted, fontSize: '12px' }}>Bot welcomes the customer + asks their name (always first)</span>
+        </div>
 
         {(form.customWorkflow?.questions || []).map((q, idx) => (
           <div key={idx} style={{ background: c.surfaceDim || 'rgba(255,255,255,0.03)', border: `1px solid ${c.borderDim}`, borderRadius: '12px', padding: '12px', marginBottom: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <span style={{ color: c.lime, fontSize: '12px', fontWeight: '700' }}>Q{idx + 1}</span>
+              <span style={{ color: '#06080A', background: c.lime, fontSize: '12px', fontWeight: '800', borderRadius: '6px', padding: '3px 9px', whiteSpace: 'nowrap' }}>Q{idx + 1}</span>
               <input
                 value={q.label || ''}
                 onChange={e => {
@@ -2186,12 +2192,34 @@ function ClientModal({ tenant, onClose, onSaved }) {
                 placeholder="Short label (e.g. Service type)"
                 style={{ ...iStyle, flex: 1, margin: 0, fontSize: '13px' }}
               />
+              {/* Move up / down / remove */}
+              <button
+                disabled={idx === 0}
+                onClick={() => {
+                  const qs = [...form.customWorkflow.questions];
+                  [qs[idx - 1], qs[idx]] = [qs[idx], qs[idx - 1]];
+                  set('customWorkflow', { ...form.customWorkflow, questions: qs });
+                }}
+                style={{ background: 'transparent', border: 'none', color: idx === 0 ? c.borderDim : c.muted, cursor: idx === 0 ? 'default' : 'pointer', fontSize: '16px', padding: '0 2px' }}
+                title="Move up"
+              >▲</button>
+              <button
+                disabled={idx === form.customWorkflow.questions.length - 1}
+                onClick={() => {
+                  const qs = [...form.customWorkflow.questions];
+                  [qs[idx], qs[idx + 1]] = [qs[idx + 1], qs[idx]];
+                  set('customWorkflow', { ...form.customWorkflow, questions: qs });
+                }}
+                style={{ background: 'transparent', border: 'none', color: idx === form.customWorkflow.questions.length - 1 ? c.borderDim : c.muted, cursor: idx === form.customWorkflow.questions.length - 1 ? 'default' : 'pointer', fontSize: '16px', padding: '0 2px' }}
+                title="Move down"
+              >▼</button>
               <button
                 onClick={() => {
                   const qs = form.customWorkflow.questions.filter((_, i) => i !== idx);
                   set('customWorkflow', { ...form.customWorkflow, questions: qs });
                 }}
                 style={{ background: 'transparent', border: 'none', color: c.amber, cursor: 'pointer', fontSize: '18px', padding: '0 4px' }}
+                title="Remove"
               >×</button>
             </div>
             <textarea
@@ -2238,23 +2266,29 @@ function ClientModal({ tenant, onClose, onSaved }) {
             qs.push({ key: `q${qs.length + 1}`, label: '', ask: '' });
             set('customWorkflow', { ...form.customWorkflow, questions: qs });
           }}
-          style={{ width: '100%', padding: '10px', background: 'transparent', border: `1px dashed ${c.lime}66`, color: c.lime, borderRadius: '10px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', marginBottom: '20px' }}
+          style={{ width: '100%', padding: '10px', background: 'transparent', border: `1px dashed ${c.lime}66`, color: c.lime, borderRadius: '10px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', marginBottom: '8px' }}
         >
-          + Add a custom question
+          + Add Q{(form.customWorkflow?.questions?.length || 0) + 1}
         </button>
+
+        {/* Confirmation — the fixed last step */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: `${c.cyan}10`, border: `1px solid ${c.cyan}33`, borderRadius: '10px', padding: '10px 14px', marginBottom: '20px' }}>
+          <span style={{ color: c.cyan, fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap' }}>✅ Confirm</span>
+          <span style={{ color: c.muted, fontSize: '12px' }}>Bot confirms and tells them the team will follow up (always last)</span>
+        </div>
 
         {/* Custom messages */}
         <p style={{ color: c.cyan, fontSize: '13px', fontWeight: '600', marginBottom: '10px' }}>
-          Custom Messages <span style={{ color: c.muted, fontWeight: '400' }}>— leave blank to use industry defaults</span>
+          Message Wording <span style={{ color: c.muted, fontWeight: '400' }}>— leave blank to use industry defaults</span>
         </p>
-        <label style={labelStyle}>Welcome Message</label>
+        <label style={labelStyle}>Greeting message</label>
         <textarea
           value={form.customMessages?.welcome || ''}
           onChange={e => set('customMessages', { ...form.customMessages, welcome: e.target.value })}
           placeholder="Leave blank to use the default for your selected industry"
           rows={2} style={{ ...iStyle, resize: 'vertical' }}
         />
-        <label style={labelStyle}>Qualified Message — use {'{{name}}'}, {'{{brand}}'}, {'{{budget}}'}, {'{{movein}}'}</label>
+        <label style={labelStyle}>Confirmation message — use {'{{name}}'} and {'{{brand}}'}</label>
         <textarea
           value={form.customMessages?.qualified || ''}
           onChange={e => set('customMessages', { ...form.customMessages, qualified: e.target.value })}
