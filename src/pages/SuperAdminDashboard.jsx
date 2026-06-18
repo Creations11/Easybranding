@@ -21,6 +21,9 @@ import ClientModal from '../components/ClientModal';
 import ApproveModal from '../components/ApproveModal';
 import Pagination from '../components/Pagination';
 import { useSearchFilter } from '../hooks/useSearchFilter';
+import AIStatsPanel from '../components/AIStatsPanel';
+import QuickPaymentPanel from '../components/QuickPaymentPanel';
+import WhatsAppStatus from '../components/WhatsAppStatus';
 
 // ── Design tokens ─────────────────────────────────────────────
 const c = {
@@ -94,8 +97,9 @@ export default function SuperAdminDashboard() {
   const [inviteUrl,    setInviteUrl]    = useState('');
 
   // ── Pagination & Search ───────────────────────────────────
+  const [activePage,  setActivePage]  = useState(1);
   const [clientsPage, setClientsPage] = useState(1);
-  const [usersPage, setUsersPage] = useState(1);
+  const [usersPage,   setUsersPage]   = useState(1);
   const ITEMS_PER_PAGE = 10;
 
   const clientsFilter = useSearchFilter(tenants, {
@@ -247,7 +251,7 @@ export default function SuperAdminDashboard() {
               </div>
               <div style={{ display: 'flex', gap: 4, marginBottom: 28, borderBottom: '1px solid ' + c.borderDim, overflowX: 'auto' }}>
                 {opsTabs.map(t => (
-                  <button key={t} onClick={() => setOpsTab(t)} style={{ padding: '10px 16px', background: 'none', border: 'none', borderBottom: opsTab === t ? '2px solid ' + c.lime : '2px solid transparent', color: opsTab === t ? c.lime : c.muted, cursor: 'pointer', fontSize: 13, fontWeight: opsTab === t ? 600 : 400, textTransform: 'capitalize', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
+                  <button key={t} onClick={() => { setOpsTab(t); setActivePage(1); }} style={{ padding: '10px 16px', background: 'none', border: 'none', borderBottom: opsTab === t ? '2px solid ' + c.lime : '2px solid transparent', color: opsTab === t ? c.lime : c.muted, cursor: 'pointer', fontSize: 13, fontWeight: opsTab === t ? 600 : 400, textTransform: 'capitalize', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
                     {t}{t === 'alerts' && alerts.length > 0 && <span style={{ marginLeft: 6, background: c.red, color: '#fff', fontSize: 10, padding: '1px 5px', borderRadius: 999 }}>{alerts.length}</span>}
                   </button>
                 ))}
@@ -290,7 +294,8 @@ export default function SuperAdminDashboard() {
                   <div>
                     <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>Active Conversations ({activeLeads.length})</h2>
                     {activeLeads.length === 0 ? <div style={{ textAlign: 'center', padding: '60px 0', color: c.muted }}><p style={{ fontSize: 40, marginBottom: 16 }}>💬</p><p>No active conversations.</p></div>
-                      : activeLeads.map(lead => (
+                      : <>
+                        {activeLeads.slice((activePage - 1) * ITEMS_PER_PAGE, activePage * ITEMS_PER_PAGE).map(lead => (
                         <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} className="card-hover" style={{ background: c.card, border: '1px solid ' + (lead.isProspect ? c.lime + '44' : c.borderDim), borderRadius: 14, padding: '16px 20px', marginBottom: 10, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
@@ -308,6 +313,15 @@ export default function SuperAdminDashboard() {
                           </div>
                         </div>
                       ))}
+                      <Pagination
+                        currentPage={activePage}
+                        totalPages={Math.ceil(activeLeads.length / ITEMS_PER_PAGE)}
+                        onPageChange={setActivePage}
+                        showInfo
+                        totalItems={activeLeads.length}
+                        itemsPerPage={ITEMS_PER_PAGE}
+                      />
+                    </>}
                   </div>
                 </SectionErrorBoundary>
               )}
@@ -467,7 +481,6 @@ export default function SuperAdminDashboard() {
                 </div>
               )}
 
-              {/* Search + Filter bar */}
               <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
                 <input
                   value={clientsFilter.searchTerm}
@@ -670,7 +683,10 @@ export default function SuperAdminDashboard() {
         {section === 'platform' && isSuperAdmin && (
           <SectionErrorBoundary name="Platform" onRetry={refetch}>
             <div>
-              <div style={{ marginBottom: 28 }}><h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4 }}>Platform</h1><p style={{ color: c.muted, fontSize: 15 }}>System health and revenue overview</p></div>
+              <div style={{ marginBottom: 28 }}>
+                <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4 }}>Platform</h1>
+                <p style={{ color: c.muted, fontSize: 15 }}>System health and revenue overview</p>
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 28 }}>
                 <StatCard label="API Status" value={health?.status === 'ok' ? '✅ Online' : '❌ Issue'} color={c.lime} icon="🟢" />
                 <StatCard label="Database" value={health?.services?.database?.status === 'connected' ? '✅ Connected' : '❌ Down'} color={c.lime} icon="🗄️" />
@@ -681,6 +697,9 @@ export default function SuperAdminDashboard() {
                 <p style={{ color: c.muted, fontSize: 12, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Backend URL</p>
                 <p style={{ color: c.lime, fontSize: 14, fontFamily: 'monospace' }}>{import.meta.env.VITE_API_URL}</p>
               </div>
+              <WhatsAppStatus />
+              <AIStatsPanel />
+              <QuickPaymentPanel />
               {tenantStats?.byPlan && (
                 <div style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 14, padding: 20 }}>
                   <p style={{ color: c.muted, fontSize: 12, marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Revenue by Plan</p>
