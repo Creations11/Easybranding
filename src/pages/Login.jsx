@@ -1,6 +1,6 @@
 // src/pages/Login.jsx
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import api from '../api';
 
 const t = {
@@ -21,17 +21,18 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState('');
-  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true); setError('');
     try {
       const res = await api.post('/auth/login', { email, password });
-      const { token, user } = res.data.data;
-      localStorage.setItem('eb_token', token);
+      const { user } = res.data.data;
+
+      // Token is now in httpOnly cookie — browser handles it automatically
+      // Only store user data
       localStorage.setItem('eb_user', JSON.stringify(user));
-      // Force full page reload to clear any previous session state
+
       if (['super_admin', 'eb_manager', 'eb_agent'].includes(user.role)) window.location.href = '/superadmin';
       else if (user.role === 'admin')    window.location.href = '/admin';
       else if (user.role === 'agent')    window.location.href = '/agent';
@@ -45,7 +46,7 @@ export default function Login() {
   const inputStyle = {
     width: '100%', padding: '14px 16px',
     background: 'rgba(255,255,255,0.04)',
-    border: `1px solid rgba(255,255,255,0.08)`,
+    border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: '12px', color: t.text,
     fontSize: '15px', outline: 'none',
     transition: 'border-color 0.2s ease',

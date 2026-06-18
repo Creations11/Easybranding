@@ -1,8 +1,6 @@
 // src/App.jsx
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-
-// ── NEW: Import providers ────────────────────────────────────
+import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
 
@@ -24,33 +22,10 @@ const getUser = () => {
   catch { return {}; }
 };
 
-// ── Check if JWT token is expired ────────────────────────────
-const isTokenExpired = (token) => {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.exp * 1000 < Date.now();
-  } catch {
-    return true;
-  }
-};
-
-// ── Clear session and redirect to login ──────────────────────
-const clearSession = () => {
-  localStorage.removeItem('eb_token');
-  localStorage.removeItem('eb_user');
-};
-
-// ── Redirect logged-in users away from public pages ──────────
 function PublicRoute({ children }) {
-  const token = localStorage.getItem('eb_token');
-  const user  = getUser();
+  const user = getUser();
 
-  if (token && isTokenExpired(token)) {
-    clearSession();
-    return children;
-  }
-
-  if (!token) return children;
+  if (!user.role) return children;
   if (['super_admin', 'eb_manager', 'eb_agent'].includes(user.role)) return <Navigate to="/superadmin" replace />;
   if (user.role === 'admin')    return <Navigate to="/admin"    replace />;
   if (user.role === 'agent')    return <Navigate to="/agent"    replace />;
@@ -58,15 +33,10 @@ function PublicRoute({ children }) {
   return <Navigate to="/dashboard" replace />;
 }
 
-// ── Protect routes ────────────────────────────────────────────
 function ProtectedRoute({ children, allowedRoles = null }) {
-  const token = localStorage.getItem('eb_token');
-  const user  = getUser();
+  const user = getUser();
 
-  if (!token || isTokenExpired(token)) {
-    clearSession();
-    return <Navigate to="/login" replace />;
-  }
+  if (!user.role) return <Navigate to="/login" replace />;
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     if (['super_admin', 'eb_manager', 'eb_agent'].includes(user.role)) return <Navigate to="/superadmin" replace />;
@@ -79,7 +49,6 @@ function ProtectedRoute({ children, allowedRoles = null }) {
   return children;
 }
 
-// ── NEW: Create QueryClient outside the component ────────────
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -93,28 +62,12 @@ const queryClient = new QueryClient({
 export default function App() {
   const [chatOpen, setChatOpen] = useState(false);
 
-  // Check token expiry every 60 seconds — auto logout if expired
-  useEffect(() => {
-    const check = () => {
-      const token = localStorage.getItem('eb_token');
-      if (token && isTokenExpired(token)) {
-        clearSession();
-        window.location.href = '/login';
-      }
-    };
-    const interval = setInterval(check, 60000);
-    check();
-    return () => clearInterval(interval);
-  }, []);
-
   return (
-    // ── NEW: Wrap with providers ────────────────────────────
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Router>
           <Nav onChatOpen={() => setChatOpen(true)} />
           <Routes>
-            {/* ── Public ── */}
             <Route path="/"         element={<PublicRoute><Home /></PublicRoute>} />
             <Route path="/login"          element={<PublicRoute><Login /></PublicRoute>} />
             <Route path="/register"       element={<PublicRoute><Register /></PublicRoute>} />
@@ -123,42 +76,36 @@ export default function App() {
             <Route path="/refund-policy"  element={<RefundPolicy />} />
             <Route path="/contact"        element={<ContactPage />} />
 
-            {/* ── Pending ── */}
             <Route path="/pending" element={
               <ProtectedRoute allowedRoles={['borrower']}>
                 <PendingApproval />
               </ProtectedRoute>
             } />
 
-            {/* ── Super Admin + EB Manager ── */}
             <Route path="/superadmin" element={
               <ProtectedRoute allowedRoles={['super_admin', 'eb_manager', 'eb_agent']}>
                 <SuperAdminDashboard />
               </ProtectedRoute>
             } />
 
-            {/* ── Operations Center ── */}
             <Route path="/dashboard" element={
               <ProtectedRoute allowedRoles={['super_admin', 'admin', 'eb_manager']}>
                 <Dashboard />
               </ProtectedRoute>
             } />
 
-            {/* ── Agent workspace ── */}
             <Route path="/agent" element={
               <ProtectedRoute allowedRoles={['agent', 'admin', 'super_admin', 'eb_agent', 'eb_manager']}>
                 <AgentDashboard />
               </ProtectedRoute>
             } />
 
-            {/* ── Admin — tenant admins only ── */}
             <Route path="/admin" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminDashboard />
               </ProtectedRoute>
             } />
 
-            {/* ── Catch all ── */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <ChatModal isOpen={chatOpen} onClose={() => setChatOpen(false)} />
