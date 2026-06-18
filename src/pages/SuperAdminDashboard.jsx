@@ -19,11 +19,14 @@ import AgentStatsPanel from '../components/AgentStatsPanel';
 import EBTeamPanel from '../components/EBTeamPanel';
 import ClientModal from '../components/ClientModal';
 import ApproveModal from '../components/ApproveModal';
+import BulkClientActions from '../components/BulkClientActions';
 import Pagination from '../components/Pagination';
 import { useSearchFilter } from '../hooks/useSearchFilter';
 import AIStatsPanel from '../components/AIStatsPanel';
 import QuickPaymentPanel from '../components/QuickPaymentPanel';
 import WhatsAppStatus from '../components/WhatsAppStatus';
+import AuditLog from '../components/AuditLog';
+import exportCSV from '../utils/exportCSV';
 
 // ── Design tokens ─────────────────────────────────────────────
 const c = {
@@ -95,6 +98,8 @@ export default function SuperAdminDashboard() {
   const [approveModal, setApproveModal] = useState(null);
   const [inviteModal,  setInviteModal]  = useState(null);
   const [inviteUrl,    setInviteUrl]    = useState('');
+  const [bulkModal,    setBulkModal]    = useState(false);
+  const [selectedClientIds, setSelectedClientIds] = useState([]);
 
   // ── Pagination & Search ───────────────────────────────────
   const [activePage,  setActivePage]  = useState(1);
@@ -468,9 +473,32 @@ export default function SuperAdminDashboard() {
         {section === 'clients' && (
           <SectionErrorBoundary name="Clients" onRetry={refetch}>
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
                 <div><h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4 }}>Clients</h1><p style={{ color: c.muted, fontSize: 15 }}>Manage rental agency accounts</p></div>
-                <button onClick={() => setClientModal({})} style={{ padding: '12px 24px', background: c.lime, color: '#080A06', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>+ Add Client</button>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button onClick={() => {
+                    if (selectedClientIds.length === 0) {
+                      alert('Select clients first by checking the boxes');
+                      return;
+                    }
+                    setBulkModal(true);
+                  }} style={{ padding: '12px 18px', background: selectedClientIds.length > 0 ? c.amber + '22' : 'rgba(255,255,255,0.04)', color: selectedClientIds.length > 0 ? c.amber : c.muted, border: '1px solid ' + (selectedClientIds.length > 0 ? c.amber + '33' : c.borderDim), borderRadius: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px' }}>
+                    📦 Bulk ({selectedClientIds.length})
+                  </button>
+                  <button onClick={() => {
+                    const exportData = clientsFilter.filtered.map(t => ({
+                      businessName: t.businessName || '',
+                      status: t.status || '',
+                      plan: t.plan || '',
+                      email: t.contactEmail || '',
+                      whatsapp: t.whatsappNumber || '',
+                      leads: t.totalLeads || 0,
+                      monthlyFee: 'R' + (t.monthlyFee || 0),
+                    }));
+                    exportCSV(exportData, 'clients-export');
+                  }} style={{ padding: '12px 18px', background: c.cyan + '22', color: c.cyan, border: '1px solid ' + c.cyan + '33', borderRadius: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px' }}>📥 Export CSV</button>
+                  <button onClick={() => setClientModal({})} style={{ padding: '12px 24px', background: c.lime, color: '#080A06', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>+ Add Client</button>
+                </div>
               </div>
               {tenantStats && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 28 }}>
@@ -532,24 +560,29 @@ export default function SuperAdminDashboard() {
                   {clientsFilter.filtered
                     .slice((clientsPage - 1) * ITEMS_PER_PAGE, clientsPage * ITEMS_PER_PAGE)
                     .map(tenant => (
-                    <div key={tenant._id} className="card-hover" style={{ background: c.card, border: '1px solid ' + (!tenant.whatsappNumber ? c.amber + '44' : c.borderDim), borderRadius: 14, padding: '18px 24px', marginBottom: 10 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-                            <strong style={{ fontSize: 16 }}>{tenant.businessName}</strong>
-                            <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: (STATUS_COLOR[tenant.status] || c.muted) + '22', color: STATUS_COLOR[tenant.status] || c.muted, fontWeight: 600 }}>{tenant.status}</span>
-                            <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: (PLAN_COLOR[tenant.plan] || c.muted) + '22', color: PLAN_COLOR[tenant.plan] || c.muted }}>{tenant.plan}</span>
-                            {!tenant.whatsappNumber && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: c.amber + '22', color: c.amber, fontWeight: 600 }}>⚠️ No WhatsApp</span>}
+                    <div key={tenant._id} className="card-hover" style={{ background: c.card, border: '1px solid ' + (!tenant.whatsappNumber ? c.amber + '44' : selectedClientIds.includes(tenant._id) ? c.lime + '66' : c.borderDim), borderRadius: 14, padding: '18px 24px', marginBottom: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                        <input type="checkbox" checked={selectedClientIds.includes(tenant._id)} onChange={() => {
+                          setSelectedClientIds(prev => prev.includes(tenant._id) ? prev.filter(id => id !== tenant._id) : [...prev, tenant._id]);
+                        }} style={{ cursor: 'pointer', accentColor: c.lime, width: 16, height: 16 }} />
+                        <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                              <strong style={{ fontSize: 16 }}>{tenant.businessName}</strong>
+                              <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: (STATUS_COLOR[tenant.status] || c.muted) + '22', color: STATUS_COLOR[tenant.status] || c.muted, fontWeight: 600 }}>{tenant.status}</span>
+                              <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: (PLAN_COLOR[tenant.plan] || c.muted) + '22', color: PLAN_COLOR[tenant.plan] || c.muted }}>{tenant.plan}</span>
+                              {!tenant.whatsappNumber && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: c.amber + '22', color: c.amber, fontWeight: 600 }}>⚠️ No WhatsApp</span>}
+                            </div>
+                            <p style={{ color: c.muted, fontSize: 13 }}>{tenant.contactEmail}{tenant.whatsappNumber ? ' · ' + tenant.whatsappNumber : ''}</p>
                           </div>
-                          <p style={{ color: c.muted, fontSize: 13 }}>{tenant.contactEmail}{tenant.whatsappNumber ? ' · ' + tenant.whatsappNumber : ''}</p>
-                        </div>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                          <div style={{ textAlign: 'center', padding: '6px 12px', background: c.lime + '08', borderRadius: 8 }}><p style={{ color: c.lime, fontWeight: 700, fontSize: 16 }}>{tenant.totalLeads || 0}</p><p style={{ color: c.muted, fontSize: 10 }}>Leads</p></div>
-                          <div style={{ textAlign: 'center', padding: '6px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}><p style={{ color: c.text, fontWeight: 700, fontSize: 16 }}>R{tenant.monthlyFee}</p><p style={{ color: c.muted, fontSize: 10 }}>/mo</p></div>
-                          <button onClick={() => handleSuspendToggle(tenant)} style={{ padding: '7px 14px', background: tenant.status === 'suspended' ? c.lime + '22' : c.amber + '22', color: tenant.status === 'suspended' ? c.lime : c.amber, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' }}>{tenant.status === 'suspended' ? '▶ Activate' : '⏸ Suspend'}</button>
-                          <button onClick={() => setClientModal(tenant)} style={{ padding: '7px 14px', background: c.lime + '22', color: c.lime, border: '1px solid ' + c.border, borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>Edit</button>
-                          <button onClick={() => generateInvite(tenant)} style={{ padding: '7px 14px', background: c.cyan + '22', color: c.cyan, border: '1px solid ' + c.cyan + '33', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>🔗 Invite</button>
-                          {isSuperAdmin && <button onClick={() => handleDeleteClient(tenant)} style={{ padding: '7px 14px', background: c.red + '22', color: c.red, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>Delete</button>}
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <div style={{ textAlign: 'center', padding: '6px 12px', background: c.lime + '08', borderRadius: 8 }}><p style={{ color: c.lime, fontWeight: 700, fontSize: 16 }}>{tenant.totalLeads || 0}</p><p style={{ color: c.muted, fontSize: 10 }}>Leads</p></div>
+                            <div style={{ textAlign: 'center', padding: '6px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}><p style={{ color: c.text, fontWeight: 700, fontSize: 16 }}>R{tenant.monthlyFee}</p><p style={{ color: c.muted, fontSize: 10 }}>/mo</p></div>
+                            <button onClick={() => handleSuspendToggle(tenant)} style={{ padding: '7px 14px', background: tenant.status === 'suspended' ? c.lime + '22' : c.amber + '22', color: tenant.status === 'suspended' ? c.lime : c.amber, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' }}>{tenant.status === 'suspended' ? '▶ Activate' : '⏸ Suspend'}</button>
+                            <button onClick={() => setClientModal(tenant)} style={{ padding: '7px 14px', background: c.lime + '22', color: c.lime, border: '1px solid ' + c.border, borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>Edit</button>
+                            <button onClick={() => generateInvite(tenant)} style={{ padding: '7px 14px', background: c.cyan + '22', color: c.cyan, border: '1px solid ' + c.cyan + '33', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>🔗 Invite</button>
+                            {isSuperAdmin && <button onClick={() => handleDeleteClient(tenant)} style={{ padding: '7px 14px', background: c.red + '22', color: c.red, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>Delete</button>}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -593,7 +626,20 @@ export default function SuperAdminDashboard() {
         {section === 'users' && (
           <SectionErrorBoundary name="Users" onRetry={refetch}>
             <div>
-              <div style={{ marginBottom: 28 }}><h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4 }}>Users</h1><p style={{ color: c.muted, fontSize: 15 }}>Platform user management</p></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
+                <div><h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4 }}>Users</h1><p style={{ color: c.muted, fontSize: 15 }}>Platform user management</p></div>
+                <button onClick={() => {
+                  const exportData = usersFilter.filtered.map(u => ({
+                    name: u.fullName || '',
+                    email: u.email || '',
+                    phone: u.phone || '',
+                    role: u.role || '',
+                    approved: u.approved ? 'Yes' : 'No',
+                    plan: u.requestedPlan || '',
+                  }));
+                  exportCSV(exportData, 'users-export');
+                }} style={{ padding: '12px 18px', background: c.cyan + '22', color: c.cyan, border: '1px solid ' + c.cyan + '33', borderRadius: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px' }}>📥 Export CSV</button>
+              </div>
               {pendingUsers.length > 0 && (
                 <div style={{ marginBottom: 32 }}>
                   <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 14, color: c.amber }}>⏳ Pending Approvals ({pendingUsers.length})</h3>
@@ -698,6 +744,7 @@ export default function SuperAdminDashboard() {
                 <p style={{ color: c.lime, fontSize: 14, fontFamily: 'monospace' }}>{import.meta.env.VITE_API_URL}</p>
               </div>
               <WhatsAppStatus />
+              <AuditLog />
               <AIStatsPanel />
               <QuickPaymentPanel />
               {tenantStats?.byPlan && (
@@ -738,6 +785,14 @@ export default function SuperAdminDashboard() {
             </div>
           </div>
         </div>
+      )}
+      {bulkModal && (
+        <BulkClientActions
+          selectedIds={selectedClientIds}
+          tenants={tenants}
+          onAction={() => { refetch(); setSelectedClientIds([]); }}
+          onClose={() => setBulkModal(false)}
+        />
       )}
     </div>
   );
