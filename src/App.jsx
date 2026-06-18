@@ -2,6 +2,10 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
+// ── NEW: Import providers ────────────────────────────────────
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from './context/AuthContext';
+
 import Nav from './components/Nav';
 import ChatModal from './components/ChatModal';
 
@@ -26,7 +30,7 @@ const isTokenExpired = (token) => {
     const payload = JSON.parse(atob(token.split('.')[1]));
     return payload.exp * 1000 < Date.now();
   } catch {
-    return true; // If we can't parse it — treat as expired
+    return true;
   }
 };
 
@@ -41,7 +45,6 @@ function PublicRoute({ children }) {
   const token = localStorage.getItem('eb_token');
   const user  = getUser();
 
-  // Clear expired token — don't redirect
   if (token && isTokenExpired(token)) {
     clearSession();
     return children;
@@ -60,7 +63,6 @@ function ProtectedRoute({ children, allowedRoles = null }) {
   const token = localStorage.getItem('eb_token');
   const user  = getUser();
 
-  // Expired token → clear and redirect to login
   if (!token || isTokenExpired(token)) {
     clearSession();
     return <Navigate to="/login" replace />;
@@ -77,6 +79,17 @@ function ProtectedRoute({ children, allowedRoles = null }) {
   return children;
 }
 
+// ── NEW: Create QueryClient outside the component ────────────
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: true,
+      retry: 2,
+      staleTime: 30_000,
+    },
+  },
+});
+
 export default function App() {
   const [chatOpen, setChatOpen] = useState(false);
 
@@ -90,62 +103,67 @@ export default function App() {
       }
     };
     const interval = setInterval(check, 60000);
-    check(); // Check immediately on mount
+    check();
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <Router>
-      <Nav onChatOpen={() => setChatOpen(true)} />
-      <Routes>
-        {/* ── Public ── */}
-        <Route path="/"         element={<PublicRoute><Home /></PublicRoute>} />
-        <Route path="/login"          element={<PublicRoute><Login /></PublicRoute>} />
-        <Route path="/register"       element={<PublicRoute><Register /></PublicRoute>} />
-        <Route path="/terms"          element={<TermsOfUse />} />
-        <Route path="/privacy"        element={<PrivacyPolicy />} />
-        <Route path="/refund-policy"  element={<RefundPolicy />} />
-        <Route path="/contact"        element={<ContactPage />} />
+    // ── NEW: Wrap with providers ────────────────────────────
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <Router>
+          <Nav onChatOpen={() => setChatOpen(true)} />
+          <Routes>
+            {/* ── Public ── */}
+            <Route path="/"         element={<PublicRoute><Home /></PublicRoute>} />
+            <Route path="/login"          element={<PublicRoute><Login /></PublicRoute>} />
+            <Route path="/register"       element={<PublicRoute><Register /></PublicRoute>} />
+            <Route path="/terms"          element={<TermsOfUse />} />
+            <Route path="/privacy"        element={<PrivacyPolicy />} />
+            <Route path="/refund-policy"  element={<RefundPolicy />} />
+            <Route path="/contact"        element={<ContactPage />} />
 
-        {/* ── Pending ── */}
-        <Route path="/pending" element={
-          <ProtectedRoute allowedRoles={['borrower']}>
-            <PendingApproval />
-          </ProtectedRoute>
-        } />
+            {/* ── Pending ── */}
+            <Route path="/pending" element={
+              <ProtectedRoute allowedRoles={['borrower']}>
+                <PendingApproval />
+              </ProtectedRoute>
+            } />
 
-        {/* ── Super Admin + EB Manager ── */}
-        <Route path="/superadmin" element={
-          <ProtectedRoute allowedRoles={['super_admin', 'eb_manager', 'eb_agent']}>
-            <SuperAdminDashboard />
-          </ProtectedRoute>
-        } />
+            {/* ── Super Admin + EB Manager ── */}
+            <Route path="/superadmin" element={
+              <ProtectedRoute allowedRoles={['super_admin', 'eb_manager', 'eb_agent']}>
+                <SuperAdminDashboard />
+              </ProtectedRoute>
+            } />
 
-        {/* ── Operations Center ── */}
-        <Route path="/dashboard" element={
-          <ProtectedRoute allowedRoles={['super_admin', 'admin', 'eb_manager']}>
-            <Dashboard />
-          </ProtectedRoute>
-        } />
+            {/* ── Operations Center ── */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute allowedRoles={['super_admin', 'admin', 'eb_manager']}>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
 
-        {/* ── Agent workspace ── */}
-        <Route path="/agent" element={
-          <ProtectedRoute allowedRoles={['agent', 'admin', 'super_admin', 'eb_agent', 'eb_manager']}>
-            <AgentDashboard />
-          </ProtectedRoute>
-        } />
+            {/* ── Agent workspace ── */}
+            <Route path="/agent" element={
+              <ProtectedRoute allowedRoles={['agent', 'admin', 'super_admin', 'eb_agent', 'eb_manager']}>
+                <AgentDashboard />
+              </ProtectedRoute>
+            } />
 
-        {/* ── Admin — tenant admins only ── */}
-        <Route path="/admin" element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <AdminDashboard />
-          </ProtectedRoute>
-        } />
+            {/* ── Admin — tenant admins only ── */}
+            <Route path="/admin" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } />
 
-        {/* ── Catch all ── */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-      <ChatModal isOpen={chatOpen} onClose={() => setChatOpen(false)} />
-    </Router>
+            {/* ── Catch all ── */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+          <ChatModal isOpen={chatOpen} onClose={() => setChatOpen(false)} />
+        </Router>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
