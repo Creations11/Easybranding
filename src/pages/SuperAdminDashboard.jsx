@@ -1,6 +1,18 @@
 // src/pages/SuperAdminDashboard.jsx
 // ─────────────────────────────────────────────────────────────
 // Easy Branding AI — Super Admin & EB Manager Dashboard
+//
+// FIX APPLIED (21 June 2026):
+// PACMembersPanel.jsx was built and verified working (stats, search,
+// filter, member detail modal, CSV export, payment status) but was
+// NEVER imported or added to navSections / the section render block
+// in this file. It existed as a complete, working component with no
+// way to actually reach it from the dashboard UI — there was no tab,
+// no button, nothing in navSections pointing to it. Fixed by adding
+// the import, a "Members" nav entry (shown to super admins, since
+// PAC member management is an administrative function), and the
+// corresponding section render block, following the same pattern
+// already used for "platform" (isSuperAdmin-gated).
 // ─────────────────────────────────────────────────────────────
 import { useState, useMemo } from 'react';
 import api from '../api';
@@ -27,6 +39,8 @@ import QuickPaymentPanel from '../components/QuickPaymentPanel';
 import WhatsAppStatus from '../components/WhatsAppStatus';
 import AuditLog from '../components/AuditLog';
 import exportCSV from '../utils/exportCSV';
+// FIX: PACMembersPanel existed but was never imported.
+import PACMembersPanel from '../components/PACMembersPanel';
 
 // ── Design tokens ─────────────────────────────────────────────
 const c = {
@@ -155,6 +169,11 @@ export default function SuperAdminDashboard() {
     const s = [];
     if (!isEBAgent) { s.push({ id: 'operations', icon: '🏠', label: 'Operations', badge: alerts.length }); }
     if (!isEBAgent) { s.push({ id: 'clients',    icon: '👥', label: 'Clients',    badge: 0 }); }
+    // FIX: PACMembersPanel had no nav entry anywhere — added here,
+    // gated to super admin since member management is an
+    // administrative function, matching the gating pattern already
+    // used for "platform" below.
+    if (isSuperAdmin) { s.push({ id: 'members', icon: '✊', label: 'PAC Members', badge: 0 }); }
     s.push({ id: 'prospecting', icon: '📤', label: 'Prospecting', badge: 0 });
     if (isEBAgent)  { s.push({ id: 'agentstats', icon: '📊', label: 'My Stats', badge: 0 }); }
     if (!isEBAgent) { s.push({ id: 'ebteam',     icon: '👔', label: 'EB Team',   badge: 0 }); }
@@ -598,6 +617,15 @@ export default function SuperAdminDashboard() {
                 </>
               )}
             </div>
+          </SectionErrorBoundary>
+        )}
+
+        {/* ════════ PAC MEMBERS ════════ */}
+        {/* FIX: this entire block was missing — PACMembersPanel.jsx
+            existed as a complete component but had no render path. */}
+        {section === 'members' && isSuperAdmin && (
+          <SectionErrorBoundary name="PAC Members" onRetry={refetch}>
+            <PACMembersPanel />
           </SectionErrorBoundary>
         )}
 
