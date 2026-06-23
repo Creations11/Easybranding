@@ -1,5 +1,16 @@
 // src/App.jsx
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+//
+// FIX APPLIED (23 June 2026):
+// <Nav /> was mounted directly inside <Router>, outside of <Routes>,
+// so it rendered unconditionally on EVERY route — including
+// /superadmin, /dashboard, /admin, and /agent, which all already
+// have their own complete header/sidebar built into their page
+// components. This caused the public marketing navbar ("Sign In" /
+// "Get Started" / leaf logo) to visibly float on top of the
+// authenticated dashboard, even when already logged in. Fixed by
+// only rendering <Nav /> when the current route is one of the
+// public-facing pages, using React Router's useLocation hook.
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
@@ -49,6 +60,19 @@ function ProtectedRoute({ children, allowedRoles = null }) {
   return children;
 }
 
+// FIX: routes that should show the public marketing navbar. Every
+// authenticated dashboard route (/superadmin, /dashboard, /admin,
+// /agent, /pending) is deliberately excluded — those pages render
+// their own header/sidebar and should never show the public nav.
+const PUBLIC_NAV_ROUTES = ['/', '/login', '/register', '/terms', '/privacy', '/refund-policy', '/contact'];
+
+function ConditionalNav({ onChatOpen }) {
+  const location = useLocation();
+  const showNav = PUBLIC_NAV_ROUTES.includes(location.pathname);
+  if (!showNav) return null;
+  return <Nav onChatOpen={onChatOpen} />;
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -66,7 +90,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Router>
-          <Nav onChatOpen={() => setChatOpen(true)} />
+          <ConditionalNav onChatOpen={() => setChatOpen(true)} />
           <Routes>
             <Route path="/"         element={<PublicRoute><Home /></PublicRoute>} />
             <Route path="/login"          element={<PublicRoute><Login /></PublicRoute>} />
