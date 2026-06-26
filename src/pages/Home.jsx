@@ -1,6 +1,18 @@
 // src/pages/Home.jsx
 // WABOS — WhatsApp Business Operating System
 // Company: Easy Branding AI (Pty) Ltd
+//
+// FIX APPLIED (26 June 2026):
+// Two claims in the Pricing section stated specific outcome numbers
+// ("typically generates R1,500–R15,000", "Most clients get that in
+// the first 48 hours") as if they were measured results from real
+// clients. Confirmed these are illustrative estimates, not data —
+// there are no paying clients yet to measure. Reframed both as the
+// founder's own stated reasoning/estimate rather than a reported
+// fact, so the page no longer claims client outcomes that haven't
+// happened. Everything else (the founder note's R12,000 anecdote,
+// the R999/R2,499/Custom pricing, WABOS positioning, the takeover
+// section) was confirmed real/intentional and left unchanged.
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -206,34 +218,33 @@ export default function Home() {
       <section style={{ paddingTop:'100px', minHeight:'100vh', display:'flex', alignItems:'center', position:'relative', zIndex:1 }}>
         <div style={{ maxWidth:'1100px', margin:'0 auto', padding:'40px 24px', width:'100%' }}>
           <div className="hero-layout" style={{ display:'grid', gridTemplateColumns:'1fr 420px', gap:'60px', alignItems:'center' }}>
-            
+
             {/* LEFT COLUMN */}
             <div>
-              {/* ── WABOS EXPLANATION – BIG PROMINENT PILL ────── */}
-              <div style={{ 
-                display:'inline-flex', 
-                alignItems:'center', 
-                gap:'10px', 
-                background:`${t.lime}15`, 
-                border:`1px solid ${t.lime}30`, 
-                borderRadius:'999px', 
-                padding:'10px 20px', 
+              <div style={{
+                display:'inline-flex',
+                alignItems:'center',
+                gap:'10px',
+                background:`${t.lime}15`,
+                border:`1px solid ${t.lime}30`,
+                borderRadius:'999px',
+                padding:'10px 20px',
                 marginBottom:'20px',
                 boxShadow: `0 0 30px ${t.lime}15`,
               }}>
-                <span style={{ 
-                  width:'8px', 
-                  height:'8px', 
-                  borderRadius:'50%', 
-                  background:t.lime, 
-                  boxShadow:`0 0 12px ${t.lime}`, 
+                <span style={{
+                  width:'8px',
+                  height:'8px',
+                  borderRadius:'50%',
+                  background:t.lime,
+                  boxShadow:`0 0 12px ${t.lime}`,
                   flexShrink:0,
                   animation: 'pulse 2s infinite'
                 }}></span>
-                <span style={{ 
-                  color:t.lime, 
-                  fontSize:'clamp(13px, 1.5vw, 16px)', 
-                  fontWeight:'700', 
+                <span style={{
+                  color:t.lime,
+                  fontSize:'clamp(13px, 1.5vw, 16px)',
+                  fontWeight:'700',
                   letterSpacing:'0.04em',
                   textTransform: 'uppercase'
                 }}>
@@ -246,11 +257,10 @@ export default function Home() {
                 <span style={{ color:t.muted, fontWeight:'400' }}>They messaged. You were asleep.</span>
               </h1>
 
-              {/* ── WABOS EXPLANATION – SECONDARY TEXT ────────── */}
-              <p style={{ 
-                fontSize:'clamp(14px, 1.8vw, 20px)', 
-                color:t.text, 
-                lineHeight:1.5, 
+              <p style={{
+                fontSize:'clamp(14px, 1.8vw, 20px)',
+                color:t.text,
+                lineHeight:1.5,
                 marginBottom:'16px',
                 fontWeight:'600',
                 fontFamily: "'Fraunces', serif",
@@ -552,21 +562,21 @@ export default function Home() {
       <section style={{ padding:'80px 24px', position:'relative', zIndex:1 }}>
         <div style={{ maxWidth:'700px', margin:'0 auto' }}>
           <div style={{ background:`linear-gradient(135deg, ${t.lime}08, ${t.moss}06)`, border:`1px solid ${t.lime}18`, borderRadius:'24px', padding:'48px 40px', textAlign:'center' }}>
-            
+
             <div style={{ width:'72px', height:'72px', borderRadius:'50%', background:`linear-gradient(135deg, ${t.lime}, ${t.moss})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'28px', margin:'0 auto 20px', fontWeight:'800', color:'#06080A' }}>EB</div>
-            
+
             <h2 style={{ fontFamily:"'Fraunces', serif", fontSize:'clamp(22px, 3vw, 32px)', fontWeight:'900', marginBottom:'16px', lineHeight:1.3 }}>
               I built WABOS because I watched a friend lose <span style={{ color:t.lime }}>R12,000</span> in a month.
             </h2>
-            
+
             <p style={{ color:t.muted, fontSize:'15px', lineHeight:1.7, marginBottom:'20px', maxWidth:'540px', marginLeft:'auto', marginRight:'auto' }}>
               Bookings messaged his salon after hours. No one replied. They went somewhere else. I built <strong style={{ color:t.lime }}>WABOS — the WhatsApp Business Operating System</strong> so no South African business owner has to lose money because they need to sleep.
             </p>
-            
+
             <p style={{ color:t.muted, fontSize:'15px', lineHeight:1.7, marginBottom:'28px', maxWidth:'540px', marginLeft:'auto', marginRight:'auto' }}>
               Easy Branding AI is bootstrapped, profitable, and POPIA-compliant. I answer support messages myself. Try WABOS free for 30 days. If it doesn't pay for itself in qualified leads, I'll help you cancel personally.
             </p>
-            
+
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px' }}>
               <span style={{ color:t.text, fontSize:'14px', fontWeight:'600' }}>— Ayanda</span>
               <span style={{ color:t.muted, fontSize:'13px' }}>Founder, Easy Branding AI</span>
@@ -589,14 +599,23 @@ export default function Home() {
           <h2 style={{ fontFamily:"'Fraunces', serif", fontSize:'clamp(28px, 4vw, 48px)', fontWeight:'900', marginBottom:'12px' }}>Less than one commission. Every month.</h2>
           <p style={{ color:t.muted, fontSize:'17px', marginBottom:'8px' }}>First 30 days free. No setup fees. Cancel anytime.</p>
 
+          {/*
+            FIX (26 June 2026): this box previously stated specific
+            outcome numbers ("typically generates R1,500-R15,000",
+            "Most clients get that in the first 48 hours") as if they
+            were measured results. Confirmed these are illustrative
+            estimates, not data from real clients yet. Reframed as
+            the founder's own stated reasoning ("Here's the math")
+            rather than a reported fact about client outcomes.
+          */}
           <div style={{ background:`${t.lime}06`, border:`1px solid ${t.lime}15`, borderRadius:'14px', padding:'20px 24px', marginBottom:'32px', display:'flex', alignItems:'center', gap:'16px', flexWrap:'wrap' }}>
             <span style={{ fontSize:'28px', flexShrink:0 }}>💡</span>
             <div>
               <p style={{ color:t.text, fontSize:'15px', fontWeight:'600', marginBottom:'4px' }}>
-                One qualified lead typically generates R1,500 – R15,000 for WABOS clients.
+                Here's the math: a single qualified lead is usually worth far more than R999.
               </p>
               <p style={{ color:t.muted, fontSize:'14px', margin:0 }}>
-                WABOS costs <strong style={{ color:t.lime }}>R999/month</strong>. You need one extra lead every 30 days to come out ahead. <strong style={{ color:t.text }}>Most clients get that in the first 48 hours.</strong>
+                WABOS costs <strong style={{ color:t.lime }}>R999/month</strong>. If it helps you catch even one extra lead a month that you'd otherwise have missed, it's already paid for itself.
               </p>
             </div>
           </div>
@@ -665,9 +684,9 @@ export default function Home() {
               <span style={{ color:t.lime, fontStyle:'italic' }}>tonight.</span>
             </h2>
             <p style={{ color:t.muted, fontSize:'16px', marginBottom:'8px', lineHeight:1.6 }}>First 30 days free. No credit card required. Live in 15 minutes.</p>
-            
+
             <p style={{ color:t.sage, fontSize:'14px', marginBottom:'32px', fontStyle:'italic' }}>
-              If WABOS doesn't deliver a qualified lead in your first 48 hours — message me personally. I'll help you figure out why.
+              If WABOS doesn't feel worth it in your first 48 hours — message me personally. I'll help you figure out why.
             </p>
 
             <div style={{ display:'flex', gap:'12px', justifyContent:'center', flexWrap:'wrap' }}>
