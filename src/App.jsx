@@ -10,6 +10,10 @@
 // authenticated dashboard, even when already logged in. Fixed by
 // only rendering <Nav /> when the current route is one of the
 // public-facing pages, using React Router's useLocation hook.
+//
+// UPDATED (26 June 2026):
+// Added Documentation, Onboarding, and Help pages to support
+// user education and onboarding flow.
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -27,6 +31,11 @@ import AdminDashboard     from './pages/AdminDashboard';
 import AgentDashboard     from './pages/AgentDashboard';
 import PendingApproval    from './pages/PendingApproval';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
+
+// ── New Documentation & Onboarding Pages ────────────────────
+import Documentation from './pages/Documentation';
+import Onboarding from './pages/Onboarding';
+import Help from './pages/Help';
 
 const getUser = () => {
   try { return JSON.parse(localStorage.getItem('eb_user') || '{}'); }
@@ -60,11 +69,23 @@ function ProtectedRoute({ children, allowedRoles = null }) {
   return children;
 }
 
-// FIX: routes that should show the public marketing navbar. Every
-// authenticated dashboard route (/superadmin, /dashboard, /admin,
-// /agent, /pending) is deliberately excluded — those pages render
+// ── Public Nav Routes ─────────────────────────────────────────
+// Routes that should show the public marketing navbar.
+// Authenticated dashboard routes (/superadmin, /dashboard, /admin,
+// /agent, /pending) are deliberately excluded — those pages render
 // their own header/sidebar and should never show the public nav.
-const PUBLIC_NAV_ROUTES = ['/', '/login', '/register', '/terms', '/privacy', '/refund-policy', '/contact'];
+const PUBLIC_NAV_ROUTES = [
+  '/',
+  '/login',
+  '/register',
+  '/terms',
+  '/privacy',
+  '/refund-policy',
+  '/contact',
+  '/documentation',
+  '/onboarding',
+  '/help',
+];
 
 function ConditionalNav({ onChatOpen }) {
   const location = useLocation();
@@ -92,14 +113,23 @@ export default function App() {
         <Router>
           <ConditionalNav onChatOpen={() => setChatOpen(true)} />
           <Routes>
-            <Route path="/"         element={<PublicRoute><Home /></PublicRoute>} />
-            <Route path="/login"          element={<PublicRoute><Login /></PublicRoute>} />
-            <Route path="/register"       element={<PublicRoute><Register /></PublicRoute>} />
-            <Route path="/terms"          element={<TermsOfUse />} />
-            <Route path="/privacy"        element={<PrivacyPolicy />} />
-            <Route path="/refund-policy"  element={<RefundPolicy />} />
-            <Route path="/contact"        element={<ContactPage />} />
+            {/* ── Public Routes ──────────────────────────────────── */}
+            <Route path="/" element={<PublicRoute><Home /></PublicRoute>} />
+            <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+            <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
+            {/* ── Legal Pages ───────────────────────────────────── */}
+            <Route path="/terms" element={<TermsOfUse />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/refund-policy" element={<RefundPolicy />} />
+            <Route path="/contact" element={<ContactPage />} />
+
+            {/* ── Documentation & Help ──────────────────────────── */}
+            <Route path="/documentation" element={<Documentation />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/help" element={<Help />} />
+
+            {/* ── Protected Routes ──────────────────────────────── */}
             <Route path="/pending" element={
               <ProtectedRoute allowedRoles={['borrower']}>
                 <PendingApproval />
@@ -130,6 +160,7 @@ export default function App() {
               </ProtectedRoute>
             } />
 
+            {/* ── Fallback ──────────────────────────────────────── */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <ChatModal isOpen={chatOpen} onClose={() => setChatOpen(false)} />
