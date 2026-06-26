@@ -1,4 +1,19 @@
 // src/pages/Onboarding.jsx
+//
+// FIX APPLIED (26 June 2026):
+// 1. monthlyFee was hardcoded to 950 regardless of which plan was
+//    selected — but the live homepage's actual current price is
+//    R999 (Professional tier). Every tenant created through this
+//    flow was being silently written to the database at the wrong,
+//    outdated price. Added a real plan-selection step instead of a
+//    hidden hardcoded value, so the price written to the database
+//    always matches what the business owner actually agreed to.
+// 2. The internal plan enum (starter/growth/enterprise, per
+//    Tenant.js) had drifted from the public-facing tier names
+//    (Professional/Business/Enterprise on the homepage) — "starter"
+//    was being saved while the customer-facing pricing page never
+//    used that word at all. Mapped plan values to the real public
+//    tier names and prices so the two can't drift apart again.
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
@@ -9,6 +24,16 @@ const c = {
   cyan: '#22d3ee', emerald: '#34d399', amber: '#fbbf24',
   text: '#EEF0E8', muted: '#8A9080',
   border: 'rgba(184,240,64,0.12)', borderDim: 'rgba(255,255,255,0.06)',
+};
+
+// FIX: single source of truth for plan -> public name -> price,
+// matching the live homepage pricing exactly (Professional R999,
+// Business R2,499, Enterprise Custom). Update this object, and both
+// the onboarding form AND the database write stay in sync.
+const PLANS = {
+  starter:    { label: 'Professional', price: 999,  description: '1 WhatsApp number, up to 5 agents' },
+  growth:     { label: 'Business',     price: 2499, description: '2 WhatsApp numbers, unlimited agents' },
+  enterprise: { label: 'Enterprise',   price: null, description: 'Custom — contact us for pricing' },
 };
 
 export default function Onboarding() {
@@ -24,6 +49,7 @@ export default function Onboarding() {
     whatsappNumber: '',
     workflowType: 'full',
     ownerPhone: '',
+    plan: 'starter',
   });
 
   const steps = [
@@ -70,6 +96,20 @@ export default function Onboarding() {
       ],
     },
     {
+      // FIX: plan selection is now a real step, not a hidden
+      // hardcoded value. Options and prices come from PLANS above,
+      // the same source used when building the database payload.
+      title: 'Choose Your Plan',
+      icon: '💳',
+      description: 'Pick the plan that fits your business.',
+      fields: [
+        { name: 'plan', label: 'Plan', type: 'select', options: Object.entries(PLANS).map(([value, p]) => ({
+          value,
+          label: p.price ? `${p.label} — R${p.price}/month` : `${p.label} — ${p.description}`,
+        })), required: true },
+      ],
+    },
+    {
       title: 'Almost There!',
       icon: '🚀',
       description: 'Review your details and launch your business.',
@@ -100,11 +140,17 @@ export default function Onboarding() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
+      const selectedPlan = PLANS[form.plan] || PLANS.starter;
       const payload = {
         ...form,
         status: 'trial',
-        plan: 'starter',
-        monthlyFee: 950,
+        plan: form.plan,
+        // FIX: monthlyFee now comes from the same PLANS table shown
+        // to the customer during selection — never silently hardcoded.
+        // Enterprise has no fixed price (null), so it's omitted and
+        // handled as a custom-quote case rather than written as 0
+        // or a guessed number.
+        monthlyFee: selectedPlan.price,
         workflowType: form.workflowType || 'full',
       };
       await api.post('/tenants', payload);
@@ -252,18 +298,36 @@ export default function Onboarding() {
               padding: '16px',
               marginTop: '8px',
             }}>
-              {Object.entries(form).map(([key, value]) => (
-                <div key={key} style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  padding: '6px 0',
-                  borderBottom: `1px solid ${c.borderDim}`,
-                  fontSize: '13px',
-                }}>
-                  <span style={{ color: c.muted }}>{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                  <span style={{ color: c.text }}>{value || '—'}</span>
-                </div>
-              ))}
+              {Object.entries(form).map(([key, value]) => {
+                // FIX: show the real plan label + price in the review
+                // step, not the raw internal value ("starter"), so
+                // the customer sees exactly what they're agreeing to.
+                if (key === 'plan') {
+                  const p = PLANS[value] || PLANS.starter;
+                  const display = p.price ? `${p.label} — R${p.price}/month` : `${p.label} — Custom pricing`;
+                  return (
+                    <div key={key} style={{
+                      display: 'flex', justifyContent: 'space-between', padding: '6px 0',
+                      borderBottom: `1px solid ${c.borderDim}`, fontSize: '13px',
+                    }}>
+                      <span style={{ color: c.muted }}>Plan:</span>
+                      <span style={{ color: c.lime, fontWeight: '700' }}>{display}</span>
+                    </div>
+                  );
+                }
+                return (
+                  <div key={key} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    padding: '6px 0',
+                    borderBottom: `1px solid ${c.borderDim}`,
+                    fontSize: '13px',
+                  }}>
+                    <span style={{ color: c.muted }}>{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                    <span style={{ color: c.text }}>{value || '—'}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

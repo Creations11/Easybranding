@@ -16,7 +16,7 @@ export default function Help() {
   const faqs = [
     {
       q: 'How do I get started with WABOS?',
-      a: 'Click "Get Started" on the homepage. Follow the onboarding wizard. You\'ll be live in 15 minutes.',
+      a: 'Click "Get Started" or message us on WhatsApp. We\'ll set your business up and have you live in 15 minutes.',
     },
     {
       q: 'What is PAC Mode?',
@@ -28,7 +28,7 @@ export default function Help() {
     },
     {
       q: 'What happens if I don\'t respond to a lead?',
-      a: 'The bot handles qualification. If a lead needs human intervention, you\'ll get an alert. You can take over anytime.',
+      a: 'The bot handles qualification. If a lead needs human intervention, you\'ll get an alert. You can take over anytime — directly from your own WhatsApp, no dashboard required.',
     },
     {
       q: 'How do I get support?',
@@ -70,7 +70,7 @@ export default function Help() {
           marginBottom: '40px',
         }}>
           {[
-            { icon: '🚀', label: 'Getting Started', to: '/onboarding' },
+            { icon: '🚀', label: 'Getting Started', to: '/documentation' },
             { icon: '📚', label: 'Documentation', to: '/documentation' },
             { icon: '💬', label: 'Commands', to: '/documentation?section=commands' },
             { icon: '📞', label: 'Contact Support', to: '/contact' },
