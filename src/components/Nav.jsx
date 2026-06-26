@@ -32,31 +32,142 @@ export default function Nav({ onChatOpen }) {
 
   const NavLinks = ({ mobile = false }) => (
     <>
+      {/* ── Public Links ────────────────────────────────────── */}
+      {!token && (
+        <>
+          <Link to="/documentation" onClick={() => setMenuOpen(false)} style={{ 
+            padding: mobile ? '14px 0' : '8px 16px', 
+            color: t.muted, 
+            textDecoration: 'none', 
+            fontSize: mobile ? '16px' : '14px', 
+            display: 'block', 
+            borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' 
+          }}>
+            📚 Docs
+          </Link>
+          <Link to="/help" onClick={() => setMenuOpen(false)} style={{ 
+            padding: mobile ? '14px 0' : '8px 16px', 
+            color: t.muted, 
+            textDecoration: 'none', 
+            fontSize: mobile ? '16px' : '14px', 
+            display: 'block', 
+            borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' 
+          }}>
+            ❓ Help
+          </Link>
+        </>
+      )}
+
+      {/* ── Authenticated Links ────────────────────────────── */}
       {token && isSuperAdmin && (
-        <Link to="/superadmin" onClick={() => setMenuOpen(false)} style={{ padding: mobile ? '14px 0' : '8px 16px', color: t.lime, fontWeight: '600', textDecoration: 'none', fontSize: mobile ? '16px' : '14px', display: 'block', borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' }}>
+        <Link to="/superadmin" onClick={() => setMenuOpen(false)} style={{ 
+          padding: mobile ? '14px 0' : '8px 16px', 
+          color: t.lime, 
+          fontWeight: '600', 
+          textDecoration: 'none', 
+          fontSize: mobile ? '16px' : '14px', 
+          display: 'block', 
+          borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' 
+        }}>
           Dashboard
         </Link>
       )}
       {token && isAdmin && (
-        <Link to="/admin" onClick={() => setMenuOpen(false)} style={{ padding: mobile ? '14px 0' : '8px 16px', color: t.cyan, fontWeight: '600', textDecoration: 'none', fontSize: mobile ? '16px' : '14px', display: 'block', borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' }}>
+        <Link to="/admin" onClick={() => setMenuOpen(false)} style={{ 
+          padding: mobile ? '14px 0' : '8px 16px', 
+          color: t.cyan, 
+          fontWeight: '600', 
+          textDecoration: 'none', 
+          fontSize: mobile ? '16px' : '14px', 
+          display: 'block', 
+          borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' 
+        }}>
           Admin
         </Link>
       )}
       {token && isAgent && !isSuperAdmin && (
-        <Link to="/agent" onClick={() => setMenuOpen(false)} style={{ padding: mobile ? '14px 0' : '8px 16px', color: t.emerald, fontWeight: '600', textDecoration: 'none', fontSize: mobile ? '16px' : '14px', display: 'block', borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' }}>
+        <Link to="/agent" onClick={() => setMenuOpen(false)} style={{ 
+          padding: mobile ? '14px 0' : '8px 16px', 
+          color: t.emerald, 
+          fontWeight: '600', 
+          textDecoration: 'none', 
+          fontSize: mobile ? '16px' : '14px', 
+          display: 'block', 
+          borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' 
+        }}>
           Agent
         </Link>
       )}
+
+      {/* ── Documentation & Help (Logged In) ────────────────── */}
+      {token && (
+        <>
+          <Link to="/documentation" onClick={() => setMenuOpen(false)} style={{ 
+            padding: mobile ? '14px 0' : '8px 16px', 
+            color: t.muted, 
+            textDecoration: 'none', 
+            fontSize: mobile ? '16px' : '14px', 
+            display: 'block', 
+            borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' 
+          }}>
+            📚 Docs
+          </Link>
+          <Link to="/help" onClick={() => setMenuOpen(false)} style={{ 
+            padding: mobile ? '14px 0' : '8px 16px', 
+            color: t.muted, 
+            textDecoration: 'none', 
+            fontSize: mobile ? '16px' : '14px', 
+            display: 'block', 
+            borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' 
+          }}>
+            ❓ Help
+          </Link>
+        </>
+      )}
+
+      {/* ── Auth Actions ────────────────────────────────────── */}
       {token ? (
-        <button onClick={handleSignOut} style={{ padding: mobile ? '14px 0' : '8px 18px', background: 'none', border: mobile ? 'none' : '1px solid rgba(255,255,255,0.1)', color: t.muted, borderRadius: mobile ? '0' : '8px', cursor: 'pointer', fontSize: mobile ? '16px' : '14px', fontFamily: "'Outfit', sans-serif", textAlign: 'left', width: mobile ? '100%' : 'auto' }}>
+        <button onClick={handleSignOut} style={{ 
+          padding: mobile ? '14px 0' : '8px 18px', 
+          background: 'none', 
+          border: mobile ? 'none' : '1px solid rgba(255,255,255,0.1)', 
+          color: t.muted, 
+          borderRadius: mobile ? '0' : '8px', 
+          cursor: 'pointer', 
+          fontSize: mobile ? '16px' : '14px', 
+          fontFamily: "'Outfit', sans-serif", 
+          textAlign: 'left', 
+          width: mobile ? '100%' : 'auto' 
+        }}>
           Sign Out
         </button>
       ) : (
         <>
-          <Link to="/login" onClick={() => setMenuOpen(false)} style={{ padding: mobile ? '14px 0' : '8px 18px', background: 'transparent', border: mobile ? 'none' : '1px solid rgba(255,255,255,0.1)', color: t.muted, borderRadius: mobile ? '0' : '8px', textDecoration: 'none', fontSize: mobile ? '16px' : '14px', display: 'block', borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' }}>
+          <Link to="/login" onClick={() => setMenuOpen(false)} style={{ 
+            padding: mobile ? '14px 0' : '8px 18px', 
+            background: 'transparent', 
+            border: mobile ? 'none' : '1px solid rgba(255,255,255,0.1)', 
+            color: t.muted, 
+            borderRadius: mobile ? '0' : '8px', 
+            textDecoration: 'none', 
+            fontSize: mobile ? '16px' : '14px', 
+            display: 'block', 
+            borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' 
+          }}>
             Sign In
           </Link>
-          <Link to="/register" onClick={() => setMenuOpen(false)} style={{ padding: mobile ? '16px 0' : '8px 18px', background: mobile ? t.lime : t.lime, color: '#080A06', borderRadius: mobile ? '12px' : '8px', textDecoration: 'none', fontSize: mobile ? '16px' : '14px', fontWeight: '700', display: 'block', textAlign: mobile ? 'center' : 'left', marginTop: mobile ? '8px' : '0' }}>
+          <Link to="/register" onClick={() => setMenuOpen(false)} style={{ 
+            padding: mobile ? '16px 0' : '8px 18px', 
+            background: mobile ? t.lime : t.lime, 
+            color: '#080A06', 
+            borderRadius: mobile ? '12px' : '8px', 
+            textDecoration: 'none', 
+            fontSize: mobile ? '16px' : '14px', 
+            fontWeight: '700', 
+            display: 'block', 
+            textAlign: mobile ? 'center' : 'left', 
+            marginTop: mobile ? '8px' : '0' 
+          }}>
             Get Started
           </Link>
         </>
@@ -78,7 +189,21 @@ export default function Nav({ onChatOpen }) {
         }
       `}</style>
 
-      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: t.bg, backdropFilter: 'blur(16px)', padding: '0 20px', height: '64px', display: 'flex', alignItems: 'center', borderBottom: `1px solid ${t.border}`, fontFamily: "'Outfit', sans-serif" }}>
+      <nav style={{ 
+        position: 'fixed', 
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        zIndex: 100, 
+        background: t.bg, 
+        backdropFilter: 'blur(16px)', 
+        padding: '0 20px', 
+        height: '64px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        borderBottom: `1px solid ${t.border}`, 
+        fontFamily: "'Outfit', sans-serif" 
+      }}>
         <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
 
           {/* Logo */}
@@ -90,7 +215,7 @@ export default function Nav({ onChatOpen }) {
           </Link>
 
           {/* Desktop links */}
-          <div className="nav-desktop" style={{ gap: '6px', alignItems: 'center' }}>
+          <div className="nav-desktop" style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
             <NavLinks />
           </div>
 
@@ -98,24 +223,83 @@ export default function Nav({ onChatOpen }) {
           <button
             className="nav-hamburger"
             onClick={() => setMenuOpen(!menuOpen)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', display: 'none', flexDirection: 'column', gap: '5px' }}>
-            <span style={{ display: 'block', width: '22px', height: '2px', background: menuOpen ? t.lime : t.text, transition: 'all 0.2s', transform: menuOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none' }} />
-            <span style={{ display: 'block', width: '22px', height: '2px', background: menuOpen ? t.lime : t.text, transition: 'all 0.2s', opacity: menuOpen ? 0 : 1 }} />
-            <span style={{ display: 'block', width: '22px', height: '2px', background: menuOpen ? t.lime : t.text, transition: 'all 0.2s', transform: menuOpen ? 'rotate(-45deg) translate(5px, -5px)' : 'none' }} />
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              cursor: 'pointer', 
+              padding: '8px', 
+              display: 'none', 
+              flexDirection: 'column', 
+              gap: '5px' 
+            }}
+          >
+            <span style={{ 
+              display: 'block', 
+              width: '22px', 
+              height: '2px', 
+              background: menuOpen ? t.lime : t.text, 
+              transition: 'all 0.2s', 
+              transform: menuOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none' 
+            }} />
+            <span style={{ 
+              display: 'block', 
+              width: '22px', 
+              height: '2px', 
+              background: menuOpen ? t.lime : t.text, 
+              transition: 'all 0.2s', 
+              opacity: menuOpen ? 0 : 1 
+            }} />
+            <span style={{ 
+              display: 'block', 
+              width: '22px', 
+              height: '2px', 
+              background: menuOpen ? t.lime : t.text, 
+              transition: 'all 0.2s', 
+              transform: menuOpen ? 'rotate(-45deg) translate(5px, -5px)' : 'none' 
+            }} />
           </button>
         </div>
       </nav>
 
       {/* Mobile menu dropdown */}
       {menuOpen && (
-        <div className="nav-mobile-menu" style={{ position: 'fixed', top: '64px', left: 0, right: 0, background: t.bg, borderBottom: `1px solid ${t.border}`, zIndex: 99, padding: '8px 24px 24px', fontFamily: "'Outfit', sans-serif" }}>
+        <div className="nav-mobile-menu" style={{ 
+          position: 'fixed', 
+          top: '64px', 
+          left: 0, 
+          right: 0, 
+          background: t.bg, 
+          borderBottom: `1px solid ${t.border}`, 
+          zIndex: 99, 
+          padding: '8px 24px 24px', 
+          fontFamily: "'Outfit', sans-serif" 
+        }}>
           <NavLinks mobile />
         </div>
       )}
 
       {/* Floating action button */}
       {token && onChatOpen && (
-        <button onClick={onChatOpen} style={{ position: 'fixed', bottom: '24px', right: '20px', width: '52px', height: '52px', borderRadius: '50%', background: `linear-gradient(135deg, ${t.lime}, #4A6741)`, border: 'none', fontSize: '22px', boxShadow: `0 8px 24px rgba(184,240,64,0.3)`, zIndex: 150, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button 
+          onClick={onChatOpen} 
+          style={{ 
+            position: 'fixed', 
+            bottom: '24px', 
+            right: '20px', 
+            width: '52px', 
+            height: '52px', 
+            borderRadius: '50%', 
+            background: `linear-gradient(135deg, ${t.lime}, #4A6741)`, 
+            border: 'none', 
+            fontSize: '22px', 
+            boxShadow: `0 8px 24px rgba(184,240,64,0.3)`, 
+            zIndex: 150, 
+            cursor: 'pointer', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center' 
+          }}
+        >
           🌿
         </button>
       )}
