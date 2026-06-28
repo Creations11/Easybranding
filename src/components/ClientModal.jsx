@@ -1,6 +1,17 @@
 // src/components/ClientModal.jsx
+//
+// FIX APPLIED (28 June 2026):
+// No UI anywhere allowed setting a question's expected answer type
+// (phone/email/number) at creation time — confirmed by checking
+// every client-editing component in the codebase. This meant a real
+// "what's your contact number" question accepted a single digit as
+// valid, since nothing declared what kind of answer it expected.
+// Added a new "Questions" section using QuestionEditor.jsx, wired to
+// customWorkflow.questions (already in the backend's allowed-fields
+// whitelist from an earlier fix, so this persists correctly).
 import { useState } from 'react';
 import api from '../api';
+import QuestionEditor from './QuestionEditor';
 
 const c = {
   surface: '#0D110C', lime: '#B8F040', cyan: '#22d3ee',
@@ -27,6 +38,9 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
     ownerPhone:     tenant?.ownerPhone     || '',
     feeMode:        tenant?.paymentSettings?.convenienceFee?.type === 'gross_up' ? 'gross_up' : 'absorb',
   });
+  // NEW: custom questions, separate from `form` since this is a
+  // nested array (customWorkflow.questions), not a flat field.
+  const [questions, setQuestions] = useState(tenant?.customWorkflow?.questions || []);
 
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
@@ -36,6 +50,21 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
   const handleSave = async () => {
     if (!form.businessName) { setError('Business name is required'); return; }
     if (!form.contactEmail)  { setError('Contact email is required'); return; }
+
+    // NEW: validate questions before saving — every question needs
+    // at minimum a key and ask text, or the bot will break on it.
+    for (const q of questions) {
+      if (!q.key || !q.ask) {
+        setError('Every question needs a field key and question text. Check your questions list.');
+        return;
+      }
+    }
+    const keys = questions.map(q => q.key);
+    if (new Set(keys).size !== keys.length) {
+      setError('Question field keys must be unique — you have a duplicate key.');
+      return;
+    }
+
     setSaving(true); setError('');
 
     const payload = {
@@ -46,6 +75,12 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
           type:   form.feeMode === 'gross_up' ? 'gross_up' : 'absorb',
           paidBy: form.feeMode === 'gross_up' ? 'customer' : 'business',
         },
+      },
+      // NEW: persist questions under customWorkflow, alongside
+      // whatever workflowMode/qualifyRules already exist there.
+      customWorkflow: {
+        ...(tenant?.customWorkflow || {}),
+        questions,
       },
     };
 
@@ -130,6 +165,14 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
             <input type="number" value={form.monthlyFee} onChange={e => set('monthlyFee', Number(e.target.value))} style={{ ...iStyle, marginBottom: 0 }} />
           </div>
         </div>
+
+        {/* NEW: Custom Questions section — the actual fix. Every
+            question's answer type is now a deliberate choice made
+            here, not guessed at by the backend after the fact. */}
+        <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '12px' }}>
+          Custom Questions
+        </p>
+        <QuestionEditor questions={questions} onChange={setQuestions} />
 
         <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '12px' }}>AI Settings</p>
         <div style={{ background: c.surface, borderRadius: '12px', padding: '14px 16px', border: '1px solid ' + c.borderDim }}>
