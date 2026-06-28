@@ -1,8 +1,18 @@
 // src/pages/AdminDashboard.jsx
+//
+// FIX APPLIED (26 June 2026):
+// AgentManager.jsx existed as a real, working component but was
+// never imported or rendered anywhere — same "built but not wired
+// in" pattern as several other features this week. Added it as a
+// new "Agents" tab inside ClientModal, alongside the existing
+// details/whatsapp/workflow/billing/usage/test tabs. Only shown in
+// edit mode (isEdit), matching how usage/test already work, since
+// it needs a real client._id to call the agent-invite endpoints.
 import { useState, useEffect } from 'react';
 import api from '../api';
 import SuperAdminPanel from '../components/SuperAdminPanel';
 import LeadDetailModal from '../components/LeadDetailModal';
+import AgentManager from '../components/AgentManager';
 
 
 // Mobile responsive styles
@@ -233,7 +243,9 @@ function ClientModal({ client, onClose, onSave }) {
     } finally { setSaving(false); }
   };
 
-  const modalTabs = [...['details', 'whatsapp', 'workflow', 'billing'], ...(isEdit ? ['usage', 'test'] : [])];
+  // FIX (26 June 2026): added 'agents' tab, only in edit mode —
+  // matches usage/test, which also require a real client._id.
+  const modalTabs = [...['details', 'whatsapp', 'workflow', 'billing'], ...(isEdit ? ['agents', 'usage', 'test'] : [])];
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
@@ -323,6 +335,13 @@ function ClientModal({ client, onClose, onSave }) {
                 <option value="cancelled">Cancelled</option>
               </select>
             </div>
+          )}
+
+          {/* FIX (26 June 2026): new Agents tab — renders the
+              previously-unconnected AgentManager component, scoped
+              to this specific tenant via client._id. */}
+          {tab === 'agents' && isEdit && (
+            <AgentManager tenantId={client._id} />
           )}
 
           {tab === 'usage' && (
