@@ -620,11 +620,24 @@ export default function AdminDashboard() {
             <h2 style={{ marginBottom: '20px', fontSize: '20px' }}>Qualified Leads ({qualifiedLeads.length})</h2>
             {qualifiedLeads.length === 0 ? <p style={{ color: colors.muted, textAlign: 'center', padding: '60px 0' }}>No qualified leads yet.</p>
             : qualifiedLeads.map(lead => (
-              <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} style={{ background: colors.card, border: `1px solid ${lead.aiSummary?.urgency === 'high' ? colors.lime + '44' : colors.borderDim}`, borderRadius: '14px', padding: '18px 24px', marginBottom: '10px', cursor: 'pointer' }}>
+              <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} style={{ background: colors.card, border: `1px solid ${lead.needsManualFollowUp ? colors.amber + '66' : lead.aiSummary?.urgency === 'high' ? colors.lime + '44' : colors.borderDim}`, borderRadius: '14px', padding: '18px 24px', marginBottom: '10px', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
                       <strong style={{ fontSize: '16px' }}>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
+                      {/* NEW (29 June 2026): visible warning when a lead reached
+                          "qualified" without ever giving a usable contact number —
+                          previously this flag was saved to the database but shown
+                          nowhere, so a lead missing critical contact info looked
+                          identical to a fully complete one. */}
+                      {lead.needsManualFollowUp && (
+                        <span style={{
+                          fontSize: '12px', padding: '3px 10px', borderRadius: '999px', fontWeight: '700',
+                          background: `${colors.amber}22`, color: colors.amber,
+                        }}>
+                          ⚠️ No phone captured
+                        </span>
+                      )}
                       {/* AI Score Badge */}
                       {lead.aiSummary?.score && (
                         <span style={{
