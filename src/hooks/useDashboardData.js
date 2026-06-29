@@ -3,6 +3,14 @@
 // React Query hooks for dashboard data
 // Each hook handles its own loading/error/caching
 // Safe to import — won't fetch if user is an eb_agent
+//
+// FIX APPLIED (29 June 2026):
+// Added useClosedLeads, matching the existing pattern exactly —
+// previously there was no hook to fetch closed leads at all, which
+// was the actual reason a closed lead had no way to be found or
+// reopened in the dashboard (no missing button — the data itself
+// was never fetched). Pairs with the new GET /admin-ops/leads/closed
+// route and getClosedLeads controller added the same day.
 // ─────────────────────────────────────────────────────────────
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
@@ -53,6 +61,15 @@ export function useRejectedLeads() {
   return useIfNotAgent(
     ['admin-ops', 'leads', 'rejected'],
     () => api.get('/admin-ops/leads/rejected').then(r => r.data?.data?.leads || []),
+    { staleTime: 30_000 }
+  );
+}
+
+// NEW (29 June 2026): closed leads — see file header.
+export function useClosedLeads() {
+  return useIfNotAgent(
+    ['admin-ops', 'leads', 'closed'],
+    () => api.get('/admin-ops/leads/closed').then(r => r.data?.data?.leads || []),
     { staleTime: 30_000 }
   );
 }

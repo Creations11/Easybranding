@@ -21,7 +21,7 @@ import SectionErrorBoundary from '../components/SectionErrorBoundary';
 import { useAuth } from '../context/AuthContext';
 import {
   useOverview, useActiveLeads, useQualifiedLeads,
-  useRejectedLeads, useStages, useViewings,
+  useRejectedLeads, useClosedLeads, useStages, useViewings,
   useMessages, useAlerts, useTenants, useTenantStats,
   useUsers, usePendingUsers, useAgents, useHealth,
   useRefetchAll,
@@ -83,6 +83,7 @@ export default function SuperAdminDashboard() {
   const activeLeads  = useActiveLeads().data || [];
   const qualifiedLeads = useQualifiedLeads().data || [];
   const rejectedLeads  = useRejectedLeads().data || [];
+  const closedLeads    = useClosedLeads().data || [];
   const stages       = useStages().data || [];
   const viewings     = useViewings().data || [];
   const messages     = useMessages().data || [];
@@ -145,6 +146,14 @@ export default function SuperAdminDashboard() {
     try { await api.post('/admin-ops/leads/' + lid + '/resume'); refetch(); }
     catch (err) { alert(err.response?.data?.message || 'Resume failed'); }
   };
+  // NEW (29 June 2026): reopen a closed lead back into normal bot
+  // flow — see useDashboardData.js and adminOpsController.js for
+  // the full explanation of why this was needed.
+  const handleReopen = async (e, lid) => {
+    e.stopPropagation();
+    try { await api.post('/admin-ops/leads/' + lid + '/reopen'); refetch(); }
+    catch (err) { alert(err.response?.data?.message || 'Reopen failed'); }
+  };
   const handleDeleteClient = async (tenant) => {
     if (!confirm('Delete ' + tenant.businessName + '?')) return;
     try { await api.delete('/tenants/' + tenant._id); refetch(); }
@@ -182,7 +191,7 @@ export default function SuperAdminDashboard() {
     return s;
   }, [isEBAgent, isSuperAdmin, alerts.length, pendingUsers.length]);
 
-  const opsTabs = ['overview', 'active', 'qualified', 'rejected', 'funnel', 'viewings', 'messages', 'alerts'];
+  const opsTabs = ['overview', 'active', 'qualified', 'rejected', 'closed', 'funnel', 'viewings', 'messages', 'alerts'];
 
   // ── Loading ────────────────────────────────────────────────
   if (isLoading) {
@@ -408,6 +417,34 @@ export default function SuperAdminDashboard() {
                         <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} className="card-hover" style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 12, padding: '14px 18px', marginBottom: 8, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div><strong>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong><p style={{ color: c.muted, fontSize: 12, marginTop: 2 }}>{lead.rejectionReason || 'Did not qualify'}</p></div>
                           <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 999, background: c.red + '18', color: c.red }}>Rejected</span>
+                        </div>
+                      ))}
+                  </div>
+                </SectionErrorBoundary>
+              )}
+
+              {/* ════════ CLOSED ════════ */}
+              {/* NEW (29 June 2026): previously closed leads had no
+                  view anywhere in the dashboard — once closed, a
+                  lead was effectively unreachable. See
+                  adminOpsController.js / useDashboardData.js for the
+                  backend half of this fix. */}
+              {opsTab === 'closed' && (
+                <SectionErrorBoundary name="Closed Leads" onRetry={refetch}>
+                  <div>
+                    <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>Closed Leads ({closedLeads.length})</h2>
+                    {closedLeads.length === 0 ? <div style={{ textAlign: 'center', padding: '60px 0', color: c.muted }}><p style={{ fontSize: 40, marginBottom: 16 }}>🔒</p><p>No closed leads.</p></div>
+                      : closedLeads.map(lead => (
+                        <div key={lead._id} className="card-hover" style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 12, padding: '14px 18px', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div onClick={() => setLeadDetailId(lead._id)} style={{ cursor: 'pointer', flex: 1 }}>
+                            <strong>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
+                            <p style={{ color: c.muted, fontSize: 12, marginTop: 2 }}>{lead.closeReason || 'Manually closed'}{lead.closedAt ? ' · ' + new Date(lead.closedAt).toLocaleDateString('en-ZA') : ''}</p>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 999, background: c.muted + '18', color: c.muted }}>Closed</span>
+                            <button onClick={(e) => handleReopen(e, lead._id)} style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, background: c.lime + '22', color: c.lime, border: '1px solid ' + c.border, cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>🔓 Reopen</button>
+                            <button onClick={(e) => handleTakeover(e, lead._id)} style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, background: c.lime, color: '#06080A', border: 'none', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>✋ Reopen & Take over</button>
+                          </div>
                         </div>
                       ))}
                   </div>
