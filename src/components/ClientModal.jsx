@@ -194,6 +194,7 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
           <option value="recruitment">💼 Recruitment Agency</option>
           <option value="education">🎓 Education / Training</option>
           <option value="rental_agency">🏠 Rental Agency</option>
+          <option value="easy_branding">🌿 Easy Branding AI (own demo)</option>
           <option value="property_sales">🏡 Property Sales</option>
           <option value="custom">⚙️ General / Custom</option>
         </select>
