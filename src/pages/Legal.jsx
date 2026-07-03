@@ -71,13 +71,24 @@ export function TermsOfUse() {
 // ── PRIVACY POLICY ────────────────────────────────────────────
 export function PrivacyPolicy() {
   return (
-    <LegalLayout title="Privacy Policy" subtitle="Last updated: 11 June 2026">
+    <LegalLayout title="Privacy Policy" subtitle="Last updated: 3 July 2026">
       <Section title="1. Introduction" body={`Easy Branding AI (Pty) Ltd is committed to protecting your personal information in accordance with the Protection of Personal Information Act 4 of 2013 (POPIA).\n\nThis Privacy Policy explains how we collect, use, store, and protect personal information when you use our Platform.`}/>
       <Section title="2. Information We Collect" body={`We collect:\n\n• Business information: business name, registration details, industry type\n• Contact details: name, email address, phone number, WhatsApp number\n• Account credentials: username and encrypted password\n• Customer data: lead information collected via WhatsApp on behalf of our clients\n• Usage data: platform activity, login times, features used\n• Payment information: processed securely via Paystack — we do not store card details`}/>
       <Section title="3. How We Use Your Information" body={`We use collected information to:\n\n• Provide and operate the Platform\n• Process subscription payments\n• Send account notifications and service updates\n• Provide customer support\n• Improve the Platform\n• Comply with legal obligations\n\nWe do not sell, rent, or share your personal information with third parties for marketing purposes.`}/>
-      <Section title="4. Customer Data (Your Clients' Data)" body={`When you use our Platform, your customers' data is collected on your behalf. You are the Responsible Party under POPIA. We act as the Operator processing data on your behalf. Each client's data is fully isolated — no cross-client data sharing occurs.\n\nYou are responsible for obtaining consent from your customers to process their data via WhatsApp automation.`}/>
+      {/*
+        UPDATED (3 July 2026): added explicit deletion instructions
+        for END CUSTOMERS (leads who message a client's WhatsApp
+        number) — not just for paying tenant clients, which Section 6
+        already covered. This is the section Meta's "User Data
+        Deletion" App Dashboard field specifically needs to be able
+        to find: a real, working path for the person WHO ACTUALLY
+        MESSAGED WHATSAPP to request their own data be deleted, since
+        that's the "person" Meta's requirement is really about in a
+        WhatsApp-integrated app, not just the paying business owner.
+      */}
+      <Section title="4. Customer Data (Your Clients' Data)" body={`When you use our Platform, your customers' data is collected on your behalf. You are the Responsible Party under POPIA. We act as the Operator processing data on your behalf. Each client's data is fully isolated — no cross-client data sharing occurs.\n\nYou are responsible for obtaining consent from your customers to process their data via WhatsApp automation.\n\nHow an end customer can request deletion: If you are a customer who messaged a business using our Platform and want your data deleted, you may either (a) message that business directly on WhatsApp and request deletion, or (b) contact Easy Branding AI directly at ayanda@easybranding.co.za with the phone number you messaged from and the name of the business you contacted. We will verify the request and delete your data within 30 days, in compliance with POPIA.`}/>
       <Section title="5. Data Storage and Security" body={`Your data is stored on MongoDB Atlas, Render, and Cloudinary — all encrypted. We implement SSL/TLS encryption, role-based access control, and conduct regular security reviews.\n\nWe will notify you within 72 hours of becoming aware of any data breach affecting your information.`}/>
-      <Section title="6. Data Retention" body={`• Active accounts: retained for the duration of your subscription\n• Cancelled accounts: deleted 30 days after cancellation\n• Payment records: 5 years as required by South African tax law\n\nYou may request deletion at any time by contacting ayanda@easybranding.co.za.`}/>
+      <Section title="6. Data Retention" body={`• Active accounts: retained for the duration of your subscription\n• Cancelled accounts: deleted 30 days after cancellation\n• Payment records: 5 years as required by South African tax law\n\nAs a client, you may request deletion of your account data at any time by contacting ayanda@easybranding.co.za. For end-customer (lead) data deletion requests, see Section 4 above.`}/>
       <Section title="7. Third-Party Services" body={`We use: Twilio (WhatsApp), Anthropic (AI), Google Gemini (content), Paystack (payments), SendGrid (email), Cloudinary (documents). We only share the minimum data necessary for each service to function.`}/>
       <Section title="8. Your Rights Under POPIA" body={`You have the right to access, correct, delete, and object to the processing of your personal information. Contact us at ayanda@easybranding.co.za. We will respond within 30 days.\n\nYou may also lodge a complaint with the Information Regulator of South Africa at inforegulator.org.za.`}/>
       <Section title="9. Contact Us" body={`Easy Branding AI (Pty) Ltd\nInformation Officer: Ayanda Sogula\nEmail: ayanda@easybranding.co.za\nWhatsApp: +27 84 654 9578\nWebsite: easybranding.co.za`}/>
