@@ -1,6 +1,7 @@
 // src/pages/Legal.jsx
 // All legal pages as named exports — Terms, Privacy, Refund, Contact
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async'; // ← ADD THIS IMPORT
 
 const t = {
   bg: '#06080A', surface: '#0D110C', card: '#121710',
@@ -8,10 +9,71 @@ const t = {
   dim: 'rgba(255,255,255,0.06)', border: 'rgba(184,240,64,0.12)',
 };
 
-function LegalLayout({ title, subtitle, children }) {
+// ⚠️ UPDATE THIS URL to match where you uploaded your image
+const BASE_IMAGE_URL = 'https://easybranding.co.za/images/og-share.jpg';
+
+// ── Get current URL for canonical and og:url ──────────────────
+const getCurrentUrl = () => {
+  return typeof window !== 'undefined' ? window.location.href : 'https://easybranding.co.za';
+};
+
+const getCurrentPath = () => {
+  return typeof window !== 'undefined' ? window.location.pathname : '/';
+};
+
+function LegalLayout({ title, subtitle, children, pageDescription }) {
+  const fullTitle = `${title} | WABOS by Easy Branding AI`;
+  const description = pageDescription || subtitle;
+  
   return (
     <div style={{ fontFamily:"'Outfit', sans-serif", background:t.bg, color:t.text, minHeight:'100vh' }}>
       <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fraunces:wght@700;900&display=swap" rel="stylesheet"/>
+      
+      {/* ===== OPEN GRAPH / SEO META TAGS ===== */}
+      <Helmet>
+        {/* Basic Meta */}
+        <title>{fullTitle}</title>
+        <meta name="description" content={description} />
+        <link rel="canonical" href={getCurrentUrl()} />
+        
+        {/* Open Graph Tags */}
+        <meta property="og:title" content={fullTitle} />
+        <meta property="og:description" content={description} />
+        <meta property="og:url" content={getCurrentUrl()} />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Easy Branding AI" />
+        
+        {/* ⚠️ CRITICAL: The image tag */}
+        <meta property="og:image" content={BASE_IMAGE_URL} />
+        <meta property="og:image:secure_url" content={BASE_IMAGE_URL} />
+        <meta property="og:image:type" content="image/jpeg" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        
+        {/* Twitter Card Tags */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={fullTitle} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content={BASE_IMAGE_URL} />
+        
+        {/* JSON-LD Structured Data */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": fullTitle,
+            "description": description,
+            "url": getCurrentUrl(),
+            "publisher": {
+              "@type": "Organization",
+              "name": "Easy Branding AI (Pty) Ltd",
+              "url": "https://easybranding.co.za"
+            }
+          })}
+        </script>
+      </Helmet>
+      
+      {/* ── Navigation ──────────────────────────────────────── */}
       <nav style={{ background:'rgba(6,8,10,0.92)', backdropFilter:'blur(20px)', borderBottom:`1px solid ${t.border}`, padding:'0 24px', height:'64px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, zIndex:100 }}>
         <Link to="/" style={{ display:'flex', alignItems:'center', gap:'8px', textDecoration:'none' }}>
           <span style={{ fontSize:'20px' }}>🌿</span>
@@ -19,12 +81,16 @@ function LegalLayout({ title, subtitle, children }) {
         </Link>
         <Link to="/" style={{ color:t.muted, textDecoration:'none', fontSize:'14px' }}>← Back to home</Link>
       </nav>
+      
+      {/* ── Content ──────────────────────────────────────────── */}
       <div style={{ maxWidth:'800px', margin:'0 auto', padding:'60px 24px' }}>
         <p style={{ color:t.lime, fontSize:'12px', fontWeight:'700', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:'16px' }}>Legal</p>
         <h1 style={{ fontFamily:"'Fraunces', serif", fontSize:'clamp(32px, 5vw, 52px)', fontWeight:'900', marginBottom:'8px' }}>{title}</h1>
         <p style={{ color:t.muted, fontSize:'14px', marginBottom:'48px' }}>{subtitle}</p>
         {children}
       </div>
+      
+      {/* ── Footer ───────────────────────────────────────────── */}
       <footer style={{ borderTop:`1px solid ${t.dim}`, padding:'32px 24px', textAlign:'center' }}>
         <p style={{ color:t.muted, fontSize:'13px', marginBottom:'12px' }}>© 2026 Easy Branding AI (Pty) Ltd · Reg No. 2026/453740/07 · Registered in South Africa · POPIA Compliant</p>
         <div style={{ display:'flex', gap:'20px', justifyContent:'center', flexWrap:'wrap' }}>
@@ -51,7 +117,11 @@ function Section({ title, body }) {
 // ── TERMS OF USE ─────────────────────────────────────────────
 export function TermsOfUse() {
   return (
-    <LegalLayout title="Terms of Use" subtitle="Last updated: 11 June 2026">
+    <LegalLayout 
+      title="Terms of Use" 
+      subtitle="Last updated: 11 June 2026"
+      pageDescription="Terms of Use for Easy Branding AI — the WhatsApp lead qualification automation platform for South African rental agencies."
+    >
       <Section title="1. Acceptance of Terms" body={`By accessing or using Easy Branding AI ("the Platform"), operated by Easy Branding AI (Pty) Ltd (Registration No. 2026/453740/07), you agree to be bound by these Terms of Use. If you do not agree, you may not use the Platform.\n\nThese terms constitute a binding legal agreement between you ("Client" or "User") and Easy Branding AI (Pty) Ltd ("we", "us", "our"), a company registered in South Africa.`}/>
       <Section title="2. Description of Service" body={`Easy Branding AI provides a WhatsApp business automation platform that enables businesses to automate customer enquiries, qualify leads, manage sales pipelines, and collect payments via WhatsApp. The Platform includes:\n\n• WhatsApp chatbot automation and AI-powered lead scoring\n• A live management dashboard\n• Outbound prospecting tools\n• Document management via WhatsApp\n• Payment collection via Paystack\n• Team management tools`}/>
       <Section title="3. Account Registration" body={`To use the Platform you must register for an account and provide accurate, complete information. You are responsible for:\n\n• Maintaining the confidentiality of your login credentials\n• All activity that occurs under your account\n• Ensuring your team members comply with these terms\n\nWe reserve the right to suspend or terminate accounts that provide false information or violate these terms.`}/>
@@ -71,21 +141,14 @@ export function TermsOfUse() {
 // ── PRIVACY POLICY ────────────────────────────────────────────
 export function PrivacyPolicy() {
   return (
-    <LegalLayout title="Privacy Policy" subtitle="Last updated: 3 July 2026">
+    <LegalLayout 
+      title="Privacy Policy" 
+      subtitle="Last updated: 3 July 2026"
+      pageDescription="How Easy Branding AI (Pty) Ltd collects, uses, stores, and protects personal information in compliance with POPIA."
+    >
       <Section title="1. Introduction" body={`Easy Branding AI (Pty) Ltd is committed to protecting your personal information in accordance with the Protection of Personal Information Act 4 of 2013 (POPIA).\n\nThis Privacy Policy explains how we collect, use, store, and protect personal information when you use our Platform.`}/>
       <Section title="2. Information We Collect" body={`We collect:\n\n• Business information: business name, registration details, industry type\n• Contact details: name, email address, phone number, WhatsApp number\n• Account credentials: username and encrypted password\n• Customer data: lead information collected via WhatsApp on behalf of our clients\n• Usage data: platform activity, login times, features used\n• Payment information: processed securely via Paystack — we do not store card details`}/>
       <Section title="3. How We Use Your Information" body={`We use collected information to:\n\n• Provide and operate the Platform\n• Process subscription payments\n• Send account notifications and service updates\n• Provide customer support\n• Improve the Platform\n• Comply with legal obligations\n\nWe do not sell, rent, or share your personal information with third parties for marketing purposes.`}/>
-      {/*
-        UPDATED (3 July 2026): added explicit deletion instructions
-        for END CUSTOMERS (leads who message a client's WhatsApp
-        number) — not just for paying tenant clients, which Section 6
-        already covered. This is the section Meta's "User Data
-        Deletion" App Dashboard field specifically needs to be able
-        to find: a real, working path for the person WHO ACTUALLY
-        MESSAGED WHATSAPP to request their own data be deleted, since
-        that's the "person" Meta's requirement is really about in a
-        WhatsApp-integrated app, not just the paying business owner.
-      */}
       <Section title="4. Customer Data (Your Clients' Data)" body={`When you use our Platform, your customers' data is collected on your behalf. You are the Responsible Party under POPIA. We act as the Operator processing data on your behalf. Each client's data is fully isolated — no cross-client data sharing occurs.\n\nYou are responsible for obtaining consent from your customers to process their data via WhatsApp automation.\n\nHow an end customer can request deletion: If you are a customer who messaged a business using our Platform and want your data deleted, you may either (a) message that business directly on WhatsApp and request deletion, or (b) contact Easy Branding AI directly at ayanda@easybranding.co.za with the phone number you messaged from and the name of the business you contacted. We will verify the request and delete your data within 30 days, in compliance with POPIA.`}/>
       <Section title="5. Data Storage and Security" body={`Your data is stored on MongoDB Atlas, Render, and Cloudinary — all encrypted. We implement SSL/TLS encryption, role-based access control, and conduct regular security reviews.\n\nWe will notify you within 72 hours of becoming aware of any data breach affecting your information.`}/>
       <Section title="6. Data Retention" body={`• Active accounts: retained for the duration of your subscription\n• Cancelled accounts: deleted 30 days after cancellation\n• Payment records: 5 years as required by South African tax law\n\nAs a client, you may request deletion of your account data at any time by contacting ayanda@easybranding.co.za. For end-customer (lead) data deletion requests, see Section 4 above.`}/>
@@ -99,7 +162,11 @@ export function PrivacyPolicy() {
 // ── REFUND POLICY ─────────────────────────────────────────────
 export function RefundPolicy() {
   return (
-    <LegalLayout title="Refund & Cancellation Policy" subtitle="Last updated: 11 June 2026">
+    <LegalLayout 
+      title="Refund & Cancellation Policy" 
+      subtitle="Last updated: 11 June 2026"
+      pageDescription="Refund and cancellation policy for Easy Branding AI subscriptions — 30-day free trial, monthly billing, cancellation terms."
+    >
       <Section title="1. Free Trial" body={`All Easy Branding AI plans include a 30-day free trial.\n\n• No credit card required to start\n• No charge during the trial period\n• Cancel at any time during the trial with no obligation\n• First payment processed on day 31 if you choose to continue`}/>
       <Section title="2. Subscription Billing" body={`After the free trial, subscriptions are billed monthly in advance:\n\n• Starter: R950/month\n• Growth: R2,450/month\n• Enterprise: Custom pricing agreed in writing\n\nPayments are processed via Paystack. You will receive an invoice by email after each payment.`}/>
       <Section title="3. Cancellation Policy" body={`You may cancel at any time by sending a written request to ayanda@easybranding.co.za with your business name and registered email address.\n\nCancellation takes effect at the end of your current billing period. We require 30 days written notice. You retain full access until the end of the paid period.`}/>
@@ -107,24 +174,6 @@ export function RefundPolicy() {
       <Section title="5. Platform Failure" body={`If the Platform experiences downtime exceeding 72 consecutive hours due to our infrastructure, you may request a pro-rata credit. Downtime caused by third-party services (WhatsApp, Twilio, Paystack) is not eligible for credit.`}/>
       <Section title="6. Data After Cancellation" body={`After cancellation, your data is retained for 30 days. You may request a data export within those 30 days. After 30 days, all data is permanently deleted.`}/>
       <Section title="7. Contact Us" body={`Easy Branding AI (Pty) Ltd\nEmail: ayanda@easybranding.co.za\nWhatsApp: +27 84 654 9578\nWebsite: easybranding.co.za\n\nWe aim to respond to all queries within 1 business day.`}/>
-
-      {/* Summary box */}
-      <div style={{ background:'rgba(184,240,64,0.06)', border:'1px solid rgba(184,240,64,0.2)', borderRadius:'16px', padding:'28px' }}>
-        <h3 style={{ fontFamily:"'Fraunces', serif", fontSize:'20px', fontWeight:'900', marginBottom:'16px', color:t.lime }}>Summary</h3>
-        {[
-          ['Free trial', '30 days — no charge, cancel anytime'],
-          ['Monthly billing', 'Billed in advance on same date each month'],
-          ['Cancellation', '30 days written notice to ayanda@easybranding.co.za'],
-          ['Refunds', 'No refunds for partial months'],
-          ['Data after cancellation', 'Retained 30 days then permanently deleted'],
-          ['Support', 'ayanda@easybranding.co.za · +27 84 654 9578'],
-        ].map(([k, v], i) => (
-          <div key={i} style={{ display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap:'8px', padding:'10px 0', borderBottom: i < 5 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-            <span style={{ color:t.muted, fontSize:'14px' }}>{k}</span>
-            <span style={{ color:t.text, fontSize:'14px', fontWeight:'600' }}>{v}</span>
-          </div>
-        ))}
-      </div>
     </LegalLayout>
   );
 }
@@ -132,7 +181,11 @@ export function RefundPolicy() {
 // ── CONTACT PAGE ──────────────────────────────────────────────
 export function ContactPage() {
   return (
-    <LegalLayout title="Contact Us" subtitle="We respond within 1 business day">
+    <LegalLayout 
+      title="Contact Us" 
+      subtitle="We respond within 1 business day"
+      pageDescription="Contact Easy Branding AI — WhatsApp lead qualification automation for South African rental agencies. Email, WhatsApp, and business information."
+    >
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))', gap:'16px', marginBottom:'48px' }}>
         {[
           { icon:'📧', label:'Email', value:'ayanda@easybranding.co.za', href:'mailto:ayanda@easybranding.co.za' },
