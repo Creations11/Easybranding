@@ -1,7 +1,7 @@
 // src/pages/Legal.jsx
 // All legal pages as named exports — Terms, Privacy, Refund, Contact
 import { Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import { Helmet } from 'react-helmet-async'; // ← Only ONE import
 
 const t = {
   bg: '#06080A', surface: '#0D110C', card: '#121710',
@@ -9,9 +9,10 @@ const t = {
   dim: 'rgba(255,255,255,0.06)', border: 'rgba(184,240,64,0.12)',
 };
 
-// ⚠️ IMPORTANT: Replace this with your actual image URL
+// ⚠️ UPDATE THIS URL to match where you uploaded your image
 // For GitHub Pages: https://YOUR-USERNAME.github.io/REPO-NAME/og-share.jpg
 // For custom domain: https://easybranding.co.za/og-share.jpg
+// Using placeholder for now - replace with your actual image URL
 const BASE_IMAGE_URL = 'https://placehold.co/1200x630/06080A/B8F040?text=Easy+Branding+AI';
 
 // ── Get current URL for canonical and og:url ──────────────────
