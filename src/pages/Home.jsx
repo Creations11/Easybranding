@@ -373,6 +373,32 @@ export default function Home() {
         </section>
       </div>
 
+      {/* ── WHAT WABOS ACTUALLY IS ───────────────────────────── */}
+      <section className="section" style={{ background: t.boneDim, paddingTop: '72px', paddingBottom: '72px' }}>
+        <div className="wrap-narrow">
+          <p className="section-label section-label-signal">
+            What WABOS actually is
+          </p>
+          <p style={{
+            fontFamily: "'Fraunces', serif",
+            fontWeight: 700,
+            fontSize: 'clamp(24px, 3.5vw, 32px)',
+            lineHeight: 1.4,
+            color: t.voidDeep,
+            letterSpacing: '-0.01em',
+            marginBottom: '20px',
+          }}>
+            WABOS is a WhatsApp operating system for small businesses.
+          </p>
+          <p style={{ fontSize: '18px', color: t.ink, opacity: 0.7, lineHeight: 1.7, marginBottom: '16px' }}>
+            It replaces your back office — qualifying leads, booking jobs, taking payments, sending invoices — all inside the WhatsApp you already use. No dashboards, no apps, no learning curve.
+          </p>
+          <p style={{ fontSize: '15px', color: t.fade }}>
+            Built by <strong style={{ color: t.signalDim }}>Easy Branding AI</strong>, a bootstrapped South African company.
+          </p>
+        </div>
+      </section>
+
       {/* ── ACT 1: THIS IS YOUR DAY ──────────────────────────── */}
       <section className="section">
         <div className="wrap-narrow">
@@ -615,6 +641,45 @@ export default function Home() {
           }}>
             When it matters — a big job, an upset customer, a VIP — you're one message away from stepping in yourself. Always.
           </p>
+        </div>
+      </section>
+
+      {/* ── SERVICES: WHAT WABOS HANDLES ─────────────────────── */}
+      <section className="section">
+        <div className="wrap">
+          <p className="section-label section-label-signal" style={{ textAlign: 'center' }}>
+            What WABOS handles
+          </p>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            border: '1px solid rgba(13,23,18,0.12)',
+            borderRadius: '12px',
+            overflow: 'hidden',
+          }}>
+            {[
+              { icon: '📥', title: 'Lead capture & qualification', body: 'Every WhatsApp enquiry is answered instantly, qualified, and scored — 24/7.' },
+              { icon: '📅', title: 'Bookings & appointments', body: 'Customers pick a date/time inside WhatsApp; you wake up to a full calendar.' },
+              { icon: '💳', title: 'Payments & invoicing', body: 'Paystack links, invoices, and receipts sent automatically — no separate apps.' },
+              { icon: '👤', title: 'Human takeover', body: 'You or your team can step into any chat from your own WhatsApp, anytime.' },
+              { icon: '📊', title: 'Command Centre', body: 'Type LEADS, STATS, PAY, or INVOICE from your WhatsApp to control everything.' },
+              { icon: '🔔', title: 'Daily summaries & alerts', body: 'A morning report shows what happened overnight; hot leads buzz your phone.' },
+            ].map((item, i) => (
+              <div key={i} style={{
+                padding: '28px 24px',
+                borderTop: '1px solid rgba(13,23,18,0.12)',
+                borderLeft: '1px solid rgba(13,23,18,0.12)',
+              }}>
+                <div style={{ fontSize: '22px', marginBottom: '10px' }}>{item.icon}</div>
+                <div style={{ fontFamily: "'Archivo', sans-serif", fontWeight: 700, fontSize: '15px', color: t.voidDeep, marginBottom: '6px' }}>
+                  {item.title}
+                </div>
+                <div style={{ fontSize: '14px', color: t.ink, opacity: 0.65, lineHeight: 1.6 }}>
+                  {item.body}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
