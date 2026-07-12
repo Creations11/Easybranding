@@ -1,12 +1,10 @@
 // src/App.jsx
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
 import { HelmetProvider } from 'react-helmet-async'; // ← ADD THIS IMPORT
 
 import Nav from './components/Nav';
-import ChatModal from './components/ChatModal';
 
 import Home               from './pages/Home';
 import { TermsOfUse, PrivacyPolicy, RefundPolicy, ContactPage } from './pages/Legal';
@@ -66,11 +64,11 @@ const PUBLIC_NAV_ROUTES = [
   '/help',
 ];
 
-function ConditionalNav({ onChatOpen }) {
+function ConditionalNav() {
   const location = useLocation();
   const showNav = PUBLIC_NAV_ROUTES.includes(location.pathname);
   if (!showNav) return null;
-  return <Nav onChatOpen={onChatOpen} />;
+  return <Nav />;
 }
 
 const queryClient = new QueryClient({
@@ -84,14 +82,12 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
-  const [chatOpen, setChatOpen] = useState(false);
-
   return (
     <HelmetProvider> {/* ← WRAP YOUR ENTIRE APP WITH HelmetProvider */}
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <Router>
-            <ConditionalNav onChatOpen={() => setChatOpen(true)} />
+            <ConditionalNav />
             <Routes>
               {/* ── Public Routes ──────────────────────────────────── */}
               <Route path="/"         element={<PublicRoute><Home /></PublicRoute>} />
@@ -146,7 +142,6 @@ export default function App() {
               {/* ── Fallback ──────────────────────────────────────── */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-            <ChatModal isOpen={chatOpen} onClose={() => setChatOpen(false)} />
           </Router>
         </AuthProvider>
       </QueryClientProvider>

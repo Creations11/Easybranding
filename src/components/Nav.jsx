@@ -12,7 +12,7 @@ const t = {
   bg:      'rgba(8,10,6,0.97)',
 };
 
-export default function Nav({ onChatOpen }) {
+export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const token = localStorage.getItem('eb_token');
   const user = (() => {
@@ -276,32 +276,6 @@ export default function Nav({ onChatOpen }) {
         }}>
           <NavLinks mobile />
         </div>
-      )}
-
-      {/* Floating action button */}
-      {token && onChatOpen && (
-        <button 
-          onClick={onChatOpen} 
-          style={{ 
-            position: 'fixed', 
-            bottom: '24px', 
-            right: '20px', 
-            width: '52px', 
-            height: '52px', 
-            borderRadius: '50%', 
-            background: `linear-gradient(135deg, ${t.lime}, #4A6741)`, 
-            border: 'none', 
-            fontSize: '22px', 
-            boxShadow: `0 8px 24px rgba(184,240,64,0.3)`, 
-            zIndex: 150, 
-            cursor: 'pointer', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center' 
-          }}
-        >
-          🌿
-        </button>
       )}
     </>
   );
