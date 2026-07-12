@@ -34,7 +34,6 @@ import ApproveModal from '../components/ApproveModal';
 import BulkClientActions from '../components/BulkClientActions';
 import Pagination from '../components/Pagination';
 import { useSearchFilter } from '../hooks/useSearchFilter';
-import AIStatsPanel from '../components/AIStatsPanel';
 import QuickPaymentPanel from '../components/QuickPaymentPanel';
 import WhatsAppStatus from '../components/WhatsAppStatus';
 import AuditLog from '../components/AuditLog';
@@ -770,7 +769,7 @@ export default function SuperAdminDashboard() {
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 999, background: u.approved ? c.lime + '22' : c.amber + '22', color: u.approved ? c.lime : c.amber }}>{u.approved ? '✅ Approved' : '⏳ Pending'}</span>
                         {u.role === 'super_admin' || u._id === user.id ? <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 999, background: c.cyan + '22', color: c.cyan, fontWeight: 600 }}>{u.role} {u._id === user.id ? '(you)' : '🔒'}</span>
-                          : <select defaultValue={u.role} onChange={async (e) => { try { await api.patch('/users/' + u._id + '/role', { role: e.target.value }); refetch(); } catch (err) { alert(err.response?.data?.message || 'Failed'); e.target.value = u.role; } }} style={{ padding: '4px 8px', background: c.cyan + '18', border: '1px solid ' + c.cyan + '33', color: c.cyan, borderRadius: 8, fontSize: 12, cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}>
+                          : <select defaultValue={u.role} onChange={async (e) => { try { await api.put('/users/' + u._id, { role: e.target.value }); refetch(); } catch (err) { alert(err.response?.data?.message || 'Failed'); e.target.value = u.role; } }} style={{ padding: '4px 8px', background: c.cyan + '18', border: '1px solid ' + c.cyan + '33', color: c.cyan, borderRadius: 8, fontSize: 12, cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}>
                             <option value="borrower">borrower</option><option value="agent">agent</option><option value="admin">admin</option><option value="eb_agent">eb_agent</option><option value="eb_manager">eb_manager</option>{isSuperAdmin && <option value="super_admin">super_admin</option>}
                           </select>}
                       </div>
@@ -810,7 +809,6 @@ export default function SuperAdminDashboard() {
               </div>
               <WhatsAppStatus />
               <AuditLog />
-              <AIStatsPanel />
               <QuickPaymentPanel />
               {tenantStats?.byPlan && (
                 <div style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 14, padding: 20 }}>

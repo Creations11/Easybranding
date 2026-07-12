@@ -28,7 +28,6 @@ export default function EBTeamPanel({ isSuperAdmin, tenants, onReload }) {
   const [loading, setLoading] = useState(true);
   const [inviteModal, setInviteModal] = useState(false);
   const [inviteUrl, setInviteUrl] = useState('');
-  const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('eb_agent');
   const [sending, setSending] = useState(false);
   const [msg, setMsg] = useState('');
@@ -66,7 +65,7 @@ export default function EBTeamPanel({ isSuperAdmin, tenants, onReload }) {
   const handleRemove = async (u) => {
     if (!window.confirm('Remove ' + u.fullName + ' from the team?')) return;
     try {
-      await api.patch('/users/' + u._id + '/role', { role: 'borrower' });
+      await api.put('/users/' + u._id, { role: 'borrower' });
       setMsg('✅ ' + u.fullName + ' removed from team');
       setTimeout(() => setMsg(''), 3000);
       loadTeam();
@@ -75,14 +74,9 @@ export default function EBTeamPanel({ isSuperAdmin, tenants, onReload }) {
 
   const handleGenerateInvite = async () => {
     setSending(true);
-    try {
-      const res = await api.post('/auth/invite-team', { email: inviteEmail, role: inviteRole });
-      setInviteUrl(res.data.data?.inviteUrl || '');
-      setMsg('✅ Invite link generated');
-    } catch (err) {
-      setInviteUrl(window.location.origin + '/register?role=' + inviteRole);
-      setMsg('✅ Share this registration link');
-    } finally { setSending(false); }
+    setInviteUrl(window.location.origin + '/register?role=' + inviteRole);
+    setMsg('✅ Share this registration link');
+    setSending(false);
   };
 
   const ROLE_COLOR = { super_admin: c.lime, eb_manager: c.cyan, eb_agent: c.amber };
@@ -185,8 +179,6 @@ export default function EBTeamPanel({ isSuperAdmin, tenants, onReload }) {
               <option value="eb_agent">EB Agent — Prospecting only</option>
               <option value="eb_manager">EB Manager — Full platform access</option>
             </select>
-            <p style={{ color: c.muted, fontSize: '12px', marginBottom: '6px' }}>Email (optional)</p>
-            <input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="agent@easybranding.co.za" style={{ width: '100%', padding: '12px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid ' + c.borderDim, borderRadius: '10px', color: c.text, fontSize: '14px', outline: 'none', fontFamily: 'inherit', marginBottom: '20px' }} />
             {inviteUrl && (
               <div style={{ background: '#1C1C19', border: '1px solid ' + c.borderDim, borderRadius: '10px', padding: '14px', marginBottom: '14px', wordBreak: 'break-all' }}>
                 <p style={{ color: c.muted, fontSize: '11px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Invite Link</p>

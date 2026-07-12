@@ -950,7 +950,7 @@ export default function AdminDashboard() {
                             defaultValue={user.role}
                             onChange={async (e) => {
                               try {
-                                await api.patch(`/users/${user._id}/role`, { role: e.target.value });
+                                await api.put(`/users/${user._id}`, { role: e.target.value });
                                 loadData();
                               } catch (err) {
                                 alert(err.response?.data?.message || 'Failed to update role');
