@@ -275,6 +275,7 @@ export default function SuperAdminDashboard() {
       <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Fraunces:ital,wght@0,700;0,900;1,700;1,900&display=swap" rel="stylesheet" />
       <style>{`
         *{box-sizing:border-box}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:${c.bg}}::-webkit-scrollbar-thumb{background:${c.moss};border-radius:2px}.nav-item-hover:hover{background:rgba(184,240,64,0.06)!important;color:${c.text}!important}.card-hover:hover{border-color:rgba(184,240,64,0.2)!important;transform:translateY(-2px)}.card-hover{transition:all 0.2s ease}
+        .leads-board-scroll::-webkit-scrollbar{height:10px}.leads-board-scroll::-webkit-scrollbar-track{background:${c.borderDim};border-radius:999px}.leads-board-scroll::-webkit-scrollbar-thumb{background:${c.lime};border-radius:999px}
         @media(max-width:768px){.sidebar{display:none!important}.mobile-hamburger{display:flex!important}.main-content{margin-left:0!important;padding:12px!important;padding-top:72px!important}.main-content div[style*="grid-template-columns"]{grid-template-columns:1fr!important}.mobile-drawer{display:flex!important}}
         @media(min-width:769px){.mobile-hamburger{display:none!important}.mobile-drawer{display:none!important}}
       `}</style>
@@ -409,7 +410,20 @@ export default function SuperAdminDashboard() {
                       </select>
                     </div>
 
-                    <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
+                    <p style={{ color: c.muted, fontSize: 12, marginBottom: 12 }}>
+                      Scroll sideways (mouse wheel, trackpad, or drag the scrollbar below) to see Qualified, Rejected, Closed{leadColumns.some(c2 => c2.key === 'other') ? ', and Other' : ''} →
+                    </p>
+
+                    {/* onWheel: a horizontal-scroll-only row is easy to miss —
+                        without this, columns past the first are only reachable
+                        via a trackpad swipe or shift+scroll, which most mouse
+                        users won't discover. Converts normal vertical scroll
+                        into horizontal movement while hovering the board. */}
+                    <div
+                      className="leads-board-scroll"
+                      onWheel={e => { if (e.deltaY !== 0) { e.currentTarget.scrollLeft += e.deltaY; e.preventDefault(); } }}
+                      style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}
+                    >
                       {leadColumns.map(col => (
                         <div key={col.key} style={{ flex: '0 0 300px', width: 300 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>

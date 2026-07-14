@@ -554,6 +554,7 @@ export default function AdminDashboard() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#050505', color: colors.text, padding: 'clamp(80px, 10vw, 100px) clamp(16px, 4vw, 40px) 40px' }}>
+      <style>{`.leads-board-scroll::-webkit-scrollbar{height:10px}.leads-board-scroll::-webkit-scrollbar-track{background:${colors.borderDim};border-radius:999px}.leads-board-scroll::-webkit-scrollbar-thumb{background:${colors.lime};border-radius:999px}`}</style>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
 
         <div style={{ marginBottom: '40px' }}>
@@ -626,7 +627,17 @@ export default function AdminDashboard() {
         {tab === 'leads' && (
           <div>
             <h2 style={{ marginBottom: '20px', fontSize: '20px' }}>Leads</h2>
-            <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
+            <p style={{ color: colors.muted, fontSize: '12px', marginBottom: '12px' }}>
+              Scroll sideways (mouse wheel, trackpad, or drag the scrollbar below) to see Qualified, Rejected, and Closed →
+            </p>
+            {/* onWheel: a horizontal-scroll-only row is easy to miss without
+                a trackpad — converts normal vertical scroll into horizontal
+                movement while hovering the board. */}
+            <div
+              className="leads-board-scroll"
+              onWheel={e => { if (e.deltaY !== 0) { e.currentTarget.scrollLeft += e.deltaY; e.preventDefault(); } }}
+              style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }}
+            >
               {leadColumns.map(col => (
                 <div key={col.key} style={{ flex: '0 0 300px', width: '300px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
