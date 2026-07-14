@@ -20,7 +20,7 @@ import LeadDetailModal from '../components/LeadDetailModal';
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
 import { useAuth } from '../context/AuthContext';
 import {
-  useOverview, useActiveLeads, useQualifiedLeads,
+  useOverview, useAllLeads, useActiveLeads, useQualifiedLeads,
   useRejectedLeads, useClosedLeads, useStages, useViewings,
   useMessages, useAlerts, useTenants, useTenantStats,
   useUsers, usePendingUsers, useAgents, useHealth,
@@ -79,6 +79,7 @@ export default function SuperAdminDashboard() {
 
   // ── React Query data ──────────────────────────────────────
   const overview     = useOverview().data;
+  const allLeads     = useAllLeads().data || [];
   const activeLeads  = useActiveLeads().data || [];
   const qualifiedLeads = useQualifiedLeads().data || [];
   const rejectedLeads  = useRejectedLeads().data || [];
@@ -160,18 +161,38 @@ export default function SuperAdminDashboard() {
   // ── Leads CRM board: grouped by status, filterable by tenant ─
   const [leadsTenantFilter, setLeadsTenantFilter] = useState('all');
 
+  // /admin-ops/conversations/active is framed as "live conversations
+  // right now" — likely time-windowed rather than every in-progress
+  // lead. Anything in allLeads not present in one of the four status
+  // buckets below gets its own "Other" column instead of silently
+  // disappearing, so every lead in the system shows up somewhere.
+  const categorizedIds = useMemo(() => {
+    const ids = new Set();
+    [...activeLeads, ...qualifiedLeads, ...rejectedLeads, ...closedLeads].forEach(l => ids.add(l._id));
+    return ids;
+  }, [activeLeads, qualifiedLeads, rejectedLeads, closedLeads]);
+
+  const otherLeads = useMemo(
+    () => allLeads.filter(l => !categorizedIds.has(l._id)),
+    [allLeads, categorizedIds]
+  );
+
   const leadColumns = useMemo(() => {
     const byTenant = (list) => leadsTenantFilter === 'all'
       ? list
       : list.filter(l => l.tenantId === leadsTenantFilter);
 
-    return [
+    const cols = [
       { key: 'active',    label: 'Active',    icon: '💬', items: byTenant(activeLeads) },
       { key: 'qualified', label: 'Qualified', icon: '✅', items: byTenant(qualifiedLeads) },
       { key: 'rejected',  label: 'Rejected',  icon: '❌', items: byTenant(rejectedLeads) },
       { key: 'closed',    label: 'Closed',    icon: '🔒', items: byTenant(closedLeads) },
     ];
-  }, [activeLeads, qualifiedLeads, rejectedLeads, closedLeads, leadsTenantFilter]);
+    if (otherLeads.length > 0) {
+      cols.push({ key: 'other', label: 'Other', icon: '❔', items: byTenant(otherLeads) });
+    }
+    return cols;
+  }, [activeLeads, qualifiedLeads, rejectedLeads, closedLeads, otherLeads, leadsTenantFilter]);
 
   // ── Mutations ──────────────────────────────────────────────
   const handleSuspendToggle = async (tenant) => {
@@ -375,7 +396,7 @@ export default function SuperAdminDashboard() {
                 <SectionErrorBoundary name="Leads" onRetry={refetch}>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
-                      <h2 style={{ fontSize: 20, fontWeight: 700 }}>Leads</h2>
+                      <h2 style={{ fontSize: 20, fontWeight: 700 }}>Leads <span style={{ color: c.muted, fontWeight: 400, fontSize: 14 }}>({allLeads.length} total in system)</span></h2>
                       <select
                         value={leadsTenantFilter}
                         onChange={e => setLeadsTenantFilter(e.target.value)}
@@ -432,6 +453,10 @@ export default function SuperAdminDashboard() {
                                       <p style={{ color: c.muted, fontSize: 11, marginBottom: 6 }}>{lead.closeReason || 'Manually closed'}{lead.closedAt ? ' · ' + new Date(lead.closedAt).toLocaleDateString('en-ZA') : ''}</p>
                                       <button onClick={(e) => handleReopen(e, lead._id)} style={{ fontSize: 11, padding: '5px 12px', borderRadius: 8, background: c.lime + '22', color: c.lime, border: '1px solid ' + c.border, cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit' }}>🔓 Reopen</button>
                                     </>
+                                  )}
+
+                                  {col.key === 'other' && (
+                                    <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 999, background: c.amber + '18', color: c.amber }}>{lead.workflowStatus?.replace(/_/g, ' ') || 'unknown status'}</span>
                                   )}
                                 </div>
                               );

@@ -41,6 +41,18 @@ export function useOverview() {
   );
 }
 
+// All leads, regardless of status — used as a completeness check
+// against the four status-specific admin-ops lists below, which
+// (per their "active conversations right now" framing) may be
+// time-windowed rather than exhaustive.
+export function useAllLeads() {
+  return useIfNotAgent(
+    ['leads', 'all'],
+    () => api.get('/leads').then(r => r.data?.data?.leads || []),
+    { staleTime: 30_000 }
+  );
+}
+
 export function useActiveLeads() {
   return useIfNotAgent(
     ['admin-ops', 'conversations', 'active'],
