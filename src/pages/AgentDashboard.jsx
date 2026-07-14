@@ -201,7 +201,7 @@ export default function AgentDashboard() {
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#050505', color: colors.text, padding: '100px 40px 80px' }}>
+    <div style={{ minHeight: '100vh', background: '#050505', color: colors.text, padding: 'clamp(80px, 10vw, 100px) clamp(16px, 4vw, 40px) 40px' }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
 
         {/* Header */}
@@ -225,14 +225,14 @@ export default function AgentDashboard() {
         )}
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', borderBottom: `1px solid ${colors.borderDim}`, paddingBottom: '0' }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', borderBottom: `1px solid ${colors.borderDim}`, paddingBottom: '0', overflowX: 'auto' }}>
           {['leads', 'viewings', 'queue', 'alerts'].map(t => (
             <button key={t} onClick={() => setTab(t)} style={{
               padding: '12px 24px', background: 'none', border: 'none',
               borderBottom: tab === t ? `2px solid ${colors.lime}` : '2px solid transparent',
               color: tab === t ? colors.lime : colors.muted,
               cursor: 'pointer', fontSize: '15px', fontWeight: tab === t ? '600' : '400',
-              textTransform: 'capitalize', marginBottom: '-1px',
+              textTransform: 'capitalize', marginBottom: '-1px', whiteSpace: 'nowrap',
             }}>
               {t === 'queue' ? 'Takeover Queue' : t.charAt(0).toUpperCase() + t.slice(1)}
               {t === 'alerts' && alerts.length > 0 && (

@@ -427,6 +427,7 @@ export default function AdminDashboard() {
   const [activeConversations, setActiveConversations] = useState([]);
   const [qualifiedLeads,      setQualifiedLeads]      = useState([]);
   const [rejectedLeads,       setRejectedLeads]       = useState([]);
+  const [closedLeads,         setClosedLeads]         = useState([]);
   const [alerts,              setAlerts]              = useState([]);
   const [agents,              setAgents]              = useState([]);
   const [clients,             setClients]             = useState([]);
@@ -460,11 +461,12 @@ export default function AdminDashboard() {
 
   const loadData = async () => {
     try {
-      const [ovRes, activeRes, qualRes, rejRes, alertRes, agentRes, clientRes, statsRes, pendingRes, usersRes, stagesRes, messagesRes, viewingsRes] = await Promise.all([
+      const [ovRes, activeRes, qualRes, rejRes, closedRes, alertRes, agentRes, clientRes, statsRes, pendingRes, usersRes, stagesRes, messagesRes, viewingsRes] = await Promise.all([
         api.get('/admin-ops/overview'),
         api.get('/admin-ops/conversations/active'),
         api.get('/admin-ops/leads/qualified'),
         api.get('/admin-ops/leads/rejected'),
+        api.get('/admin-ops/leads/closed'),
         api.get('/admin-ops/alerts'),
         api.get('/admin-ops/agents'),
         api.get('/tenants'),
@@ -479,6 +481,7 @@ export default function AdminDashboard() {
       setActiveConversations(activeRes.data.data?.leads || []);
       setQualifiedLeads(qualRes.data.data?.leads || []);
       setRejectedLeads(rejRes.data.data?.leads || []);
+      setClosedLeads(closedRes.data.data?.leads || []);
       setAlerts(alertRes.data.data?.alerts || []);
       setAgents(agentRes.data.data?.agents || []);
       setClients(clientRes.data.data?.tenants || []);
@@ -516,6 +519,16 @@ export default function AdminDashboard() {
     setPendingUsers(prev => prev.filter(u => u._id !== user._id));
   };
 
+  const handleReopen = async (e, leadId) => {
+    e.stopPropagation();
+    try {
+      await api.post(`/admin-ops/leads/${leadId}/reopen`);
+      await loadData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Reopen failed');
+    }
+  };
+
   const filteredClients = clients.filter(c => {
     const ms = !clientSearch || c.businessName?.toLowerCase().includes(clientSearch.toLowerCase()) || c.contactEmail?.toLowerCase().includes(clientSearch.toLowerCase());
     const mf = clientFilter === 'all' || c.status === clientFilter;
@@ -526,14 +539,21 @@ export default function AdminDashboard() {
   if (error)   return <div style={{ padding: '140px', color: colors.red }}>{error}</div>;
 
   const tabs = [
-    'overview', 'active', 'qualified', 'rejected',
+    'overview', 'leads',
     'funnel', 'viewings', 'messages', 'alerts',
     ...(isSuperAdmin ? ['clients', 'users', 'platform'] : []),
     ...(isAdmin ? ['users'] : []),
   ];
 
+  const leadColumns = [
+    { key: 'active',    label: 'Active',    icon: '💬', items: activeConversations },
+    { key: 'qualified', label: 'Qualified', icon: '✅', items: qualifiedLeads },
+    { key: 'rejected',  label: 'Rejected',  icon: '❌', items: rejectedLeads },
+    { key: 'closed',    label: 'Closed',    icon: '🔒', items: closedLeads },
+  ];
+
   return (
-    <div style={{ minHeight: '100vh', background: '#050505', color: colors.text, padding: '100px 40px 80px' }}>
+    <div style={{ minHeight: '100vh', background: '#050505', color: colors.text, padding: 'clamp(80px, 10vw, 100px) clamp(16px, 4vw, 40px) 40px' }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
 
         <div style={{ marginBottom: '40px' }}>
@@ -577,7 +597,7 @@ export default function AdminDashboard() {
               cursor: 'pointer', fontSize: '13px', fontWeight: tab === t ? '600' : '400',
               textTransform: 'capitalize', marginBottom: '-1px', whiteSpace: 'nowrap',
             }}>
-              {t === 'active' ? 'Active' : t.charAt(0).toUpperCase() + t.slice(1)}
+              {t.charAt(0).toUpperCase() + t.slice(1)}
               {t === 'alerts' && alerts.length > 0 && <span style={{ marginLeft: '5px', background: colors.red, color: '#fff', fontSize: '10px', padding: '1px 5px', borderRadius: '999px' }}>{alerts.length}</span>}
               {t === 'users'  && pendingUsers.length > 0 && <span style={{ marginLeft: '5px', background: colors.amber, color: '#050505', fontSize: '10px', padding: '1px 5px', borderRadius: '999px' }}>{pendingUsers.length}</span>}
             </button>
@@ -597,108 +617,65 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ── Active ─────────────────────────────────────────── */}
-        {tab === 'active' && (
+        {/* ── Leads CRM board ───────────────────────────────────── */}
+        {/* Replaces the old separate active/qualified/rejected tabs
+            with status columns side by side, plus a Closed column
+            that didn't exist anywhere in this dashboard before —
+            closed leads were previously unreachable and unreopenable
+            from here. */}
+        {tab === 'leads' && (
           <div>
-            <h2 style={{ marginBottom: '20px', fontSize: '20px' }}>Active Conversations ({activeConversations.length})</h2>
-            {activeConversations.length === 0 ? <p style={{ color: colors.muted, textAlign: 'center', padding: '60px 0' }}>No active conversations.</p>
-            : activeConversations.map(lead => (
-              <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '14px', padding: '16px 20px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                <div><strong>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong><p style={{ color: colors.muted, fontSize: '13px' }}>{lead.phone}</p><p style={{ color: colors.muted, fontSize: '12px' }}>Stage {lead.stageNumber}/{lead.totalStages} · {lead.minutesSinceLastMessage}m ago</p></div>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '12px', padding: '4px 12px', borderRadius: '999px', background: `${colors.cyan}22`, color: colors.cyan }}>{lead.workflowStatus?.replace(/_/g, ' ')}</span>
-                  <button onClick={() => setAssignModal(lead)} style={{ padding: '7px 14px', background: `${colors.amber}22`, color: colors.amber, border: `1px solid ${colors.amber}44`, borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Assign</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+            <h2 style={{ marginBottom: '20px', fontSize: '20px' }}>Leads</h2>
+            <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
+              {leadColumns.map(col => (
+                <div key={col.key} style={{ flex: '0 0 300px', width: '300px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                    <span style={{ fontSize: '15px', fontWeight: '700' }}>{col.icon} {col.label}</span>
+                    <span style={{ fontSize: '11px', padding: '2px 9px', borderRadius: '999px', background: colors.borderDim, color: colors.muted, fontWeight: '700' }}>{col.items.length}</span>
+                  </div>
+                  <div style={{ maxHeight: '620px', overflowY: 'auto', paddingRight: '4px' }}>
+                    {col.items.length === 0 ? (
+                      <p style={{ color: colors.muted, fontSize: '13px', padding: '20px 0', textAlign: 'center' }}>None</p>
+                    ) : col.items.map(lead => (
+                      <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} style={{ background: colors.card, border: `1px solid ${col.key === 'qualified' && lead.needsManualFollowUp ? colors.amber + '66' : colors.borderDim}`, borderRadius: '12px', padding: '12px 14px', marginBottom: '8px', cursor: 'pointer' }}>
+                        <strong style={{ fontSize: '13px' }}>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
+                        <p style={{ color: colors.muted, fontSize: '12px', marginBottom: '6px' }}>{lead.phone}</p>
 
-        {/* ── Qualified ──────────────────────────────────────── */}
-        {tab === 'qualified' && (
-          <div>
-            <h2 style={{ marginBottom: '20px', fontSize: '20px' }}>Qualified Leads ({qualifiedLeads.length})</h2>
-            {qualifiedLeads.length === 0 ? <p style={{ color: colors.muted, textAlign: 'center', padding: '60px 0' }}>No qualified leads yet.</p>
-            : qualifiedLeads.map(lead => (
-              <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} style={{ background: colors.card, border: `1px solid ${lead.needsManualFollowUp ? colors.amber + '66' : lead.aiSummary?.urgency === 'high' ? colors.lime + '44' : colors.borderDim}`, borderRadius: '14px', padding: '18px 24px', marginBottom: '10px', cursor: 'pointer' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-                      <strong style={{ fontSize: '16px' }}>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
-                      {/* NEW (29 June 2026): visible warning when a lead reached
-                          "qualified" without ever giving a usable contact number —
-                          previously this flag was saved to the database but shown
-                          nowhere, so a lead missing critical contact info looked
-                          identical to a fully complete one. */}
-                      {lead.needsManualFollowUp && (
-                        <span style={{
-                          fontSize: '12px', padding: '3px 10px', borderRadius: '999px', fontWeight: '700',
-                          background: `${colors.amber}22`, color: colors.amber,
-                        }}>
-                          ⚠️ No phone captured
-                        </span>
-                      )}
-                      {/* AI Score Badge */}
-                      {lead.aiSummary?.score && (
-                        <span style={{
-                          fontSize: '12px', padding: '3px 10px', borderRadius: '999px', fontWeight: '700',
-                          background: lead.aiSummary.score >= 8 ? `${colors.lime}22` : lead.aiSummary.score >= 5 ? `${colors.amber}22` : `${colors.muted}22`,
-                          color: lead.aiSummary.score >= 8 ? colors.lime : lead.aiSummary.score >= 5 ? colors.amber : colors.muted,
-                        }}>
-                          🤖 {lead.aiSummary.score}/10 · {lead.aiSummary.scoreLabel}
-                        </span>
-                      )}
-                    </div>
-                    <p style={{ color: colors.muted, fontSize: '13px', marginTop: '2px' }}>{lead.phone}</p>
-                    <div style={{ marginTop: '8px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                      {lead.propertyInterest && <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: `${colors.cyan}22`, color: colors.cyan }}>{lead.propertyInterest}</span>}
-                      {lead.monthlyBudget    && <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: `${colors.lime}22`, color: colors.lime }}>R{lead.monthlyBudget}/mo</span>}
-                      {lead.moveInDate       && <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: `${colors.amber}22`, color: colors.amber }}>{lead.moveInDate}</span>}
-                      {lead.monthlyIncome    && <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: `${colors.emerald}22`, color: colors.emerald }}>R{lead.monthlyIncome} income</span>}
-                    </div>
-
-                    {/* AI Summary */}
-                    {lead.aiSummary?.summary && (
-                      <div style={{ marginTop: '12px', background: 'rgba(184,240,64,0.04)', border: `1px solid ${colors.border}`, borderRadius: '10px', padding: '12px 14px' }}>
-                        <p style={{ color: colors.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>🤖 AI Analysis</p>
-                        <p style={{ color: colors.text, fontSize: '13px', lineHeight: '1.6', marginBottom: '8px' }}>{lead.aiSummary.summary}</p>
-                        {lead.aiSummary.recommendedAction && (
-                          <p style={{ color: colors.lime, fontSize: '12px', fontWeight: '600' }}>→ {lead.aiSummary.recommendedAction}</p>
+                        {col.key === 'active' && (
+                          <>
+                            <p style={{ color: colors.muted, fontSize: '11px', marginBottom: '6px' }}>Stage {lead.stageNumber}/{lead.totalStages} · {lead.minutesSinceLastMessage}m ago</p>
+                            <button onClick={e => { e.stopPropagation(); setAssignModal(lead); }} style={{ padding: '5px 12px', background: `${colors.amber}22`, color: colors.amber, border: `1px solid ${colors.amber}44`, borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '600' }}>Assign</button>
+                          </>
                         )}
-                        {lead.aiSummary.redFlags?.length > 0 && (
-                          <div style={{ marginTop: '6px' }}>
-                            {lead.aiSummary.redFlags.map((flag, i) => (
-                              <p key={i} style={{ color: colors.amber, fontSize: '12px' }}>⚠️ {flag}</p>
-                            ))}
-                          </div>
+
+                        {col.key === 'qualified' && (
+                          <>
+                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                              {lead.needsManualFollowUp && <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '999px', fontWeight: '700', background: `${colors.amber}22`, color: colors.amber }}>⚠️ No phone</span>}
+                              {lead.aiSummary?.score && <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '999px', fontWeight: '700', background: lead.aiSummary.score >= 8 ? `${colors.lime}22` : `${colors.amber}22`, color: lead.aiSummary.score >= 8 ? colors.lime : colors.amber }}>🤖 {lead.aiSummary.score}/10</span>}
+                            </div>
+                            {lead.assignedAgent
+                              ? <p style={{ color: colors.emerald, fontSize: '11px' }}>✅ Assigned to {lead.assignedAgent}</p>
+                              : <button onClick={e => { e.stopPropagation(); setAssignModal(lead); }} style={{ padding: '5px 12px', background: `${colors.lime}22`, color: colors.lime, border: `1px solid ${colors.border}`, borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '600' }}>Assign Agent</button>}
+                          </>
+                        )}
+
+                        {col.key === 'rejected' && (
+                          <p style={{ color: colors.red, fontSize: '11px' }}>{lead.rejectionReason || 'Did not qualify'}</p>
+                        )}
+
+                        {col.key === 'closed' && (
+                          <>
+                            <p style={{ color: colors.muted, fontSize: '11px', marginBottom: '6px' }}>{lead.closeReason || 'Manually closed'}{lead.closedAt ? ' · ' + new Date(lead.closedAt).toLocaleDateString('en-ZA') : ''}</p>
+                            <button onClick={e => handleReopen(e, lead._id)} style={{ padding: '5px 12px', background: `${colors.lime}22`, color: colors.lime, border: `1px solid ${colors.border}`, borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '600' }}>🔓 Reopen</button>
+                          </>
                         )}
                       </div>
-                    )}
-                    {lead.assignedAgent && <p style={{ color: colors.emerald, fontSize: '12px', marginTop: '8px' }}>✅ Assigned to {lead.assignedAgent}</p>}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginLeft: '16px' }}>
-                    {!lead.assignedAgent && <button onClick={e => { e.stopPropagation(); setAssignModal(lead); }} style={{ padding: '8px 16px', background: `${colors.lime}22`, color: colors.lime, border: `1px solid ${colors.border}`, borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>Assign Agent</button>}
-                    {lead.viewingRequested
-                      ? <span style={{ fontSize: '12px', padding: '8px 14px', borderRadius: '10px', background: `${colors.emerald}22`, color: colors.emerald, textAlign: 'center' }}>📅 Viewing Set</span>
-                      : <span style={{ fontSize: '12px', padding: '8px 14px', borderRadius: '10px', background: `${colors.amber}22`, color: colors.amber, textAlign: 'center' }}>No Viewing</span>}
+                    ))}
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ── Rejected ───────────────────────────────────────── */}
-        {tab === 'rejected' && (
-          <div>
-            <h2 style={{ marginBottom: '20px', fontSize: '20px' }}>Rejected Leads ({rejectedLeads.length})</h2>
-            {rejectedLeads.length === 0 ? <p style={{ color: colors.muted, textAlign: 'center', padding: '60px 0' }}>No rejected leads.</p>
-            : rejectedLeads.map(lead => (
-              <div key={lead._id} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '14px', padding: '16px 20px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div><strong>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong><p style={{ color: colors.muted, fontSize: '13px' }}>{lead.phone}</p></div>
-                <span style={{ fontSize: '12px', padding: '4px 12px', borderRadius: '999px', background: `${colors.red}22`, color: colors.red }}>{lead.rejectionReason}</span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
 
