@@ -21,6 +21,25 @@ const t = {
   borderDim: 'rgba(255,255,255,0.06)',
 };
 
+// ── Local-only case notes ─────────────────────────────────────
+// No backend endpoint exists for lead notes yet, so these are
+// stored in localStorage, keyed by leadId. Not synced across
+// devices or team members — replace with a real API call once
+// the backend adds one.
+const NOTES_KEY = 'eb_lead_notes';
+
+function getAllNotes() {
+  try { return JSON.parse(localStorage.getItem(NOTES_KEY) || '{}'); }
+  catch { return {}; }
+}
+
+function saveNote(leadId, text) {
+  const all = getAllNotes();
+  if (text.trim()) all[leadId] = { text: text.trim(), updatedAt: new Date().toISOString() };
+  else delete all[leadId];
+  localStorage.setItem(NOTES_KEY, JSON.stringify(all));
+}
+
 const STATUS_COLORS = {
   qualified:                 t.lime,
   not_qualified:             t.red,
@@ -89,6 +108,8 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
   const [loading,       setLoading]       = useState(true);
   const [actionLoading, setActionLoading] = useState('');
   const [actionMsg,     setActionMsg]     = useState('');
+  const [noteText,      setNoteText]      = useState('');
+  const [noteSavedAt,   setNoteSavedAt]   = useState(null);
   const bottomRef = useRef(null);
 
   const load = async () => {
@@ -106,6 +127,16 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
   };
 
   useEffect(() => { load(); }, [leadId]);
+  useEffect(() => {
+    const existing = getAllNotes()[leadId];
+    setNoteText(existing?.text || '');
+    setNoteSavedAt(existing?.updatedAt || null);
+  }, [leadId]);
+
+  const handleSaveNote = () => {
+    saveNote(leadId, noteText);
+    setNoteSavedAt(noteText.trim() ? new Date().toISOString() : null);
+  };
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [timeline]);
 
   const doAction = async (action, payload = {}, successMsg) => {
@@ -222,14 +253,16 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '4px', padding: '0 24px', borderBottom: `1px solid ${t.borderDim}` }}>
-          {['conversation', 'details', 'history'].map(tab => (
+          {['conversation', 'details', 'notes', 'history'].map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)} style={{
               padding: '10px 16px', background: 'none', border: 'none',
               borderBottom: activeTab === tab ? `2px solid ${t.lime}` : '2px solid transparent',
               color: activeTab === tab ? t.lime : t.muted,
               cursor: 'pointer', fontSize: '13px', fontWeight: activeTab === tab ? '600' : '400',
               textTransform: 'capitalize', marginBottom: '-1px',
-            }}>{tab}</button>
+            }}>
+              {tab}{tab === 'notes' && noteSavedAt ? ' •' : ''}
+            </button>
           ))}
         </div>
 
@@ -284,6 +317,28 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
                   <p style={{ color: t.text, fontSize: '14px', fontWeight: '500' }}>{item.value}</p>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* ── Notes tab ─── */}
+          {/* Local-only (see NOTES_KEY above) — not synced across devices/team members until a backend endpoint exists. */}
+          {activeTab === 'notes' && (
+            <div>
+              <textarea
+                value={noteText}
+                onChange={e => setNoteText(e.target.value)}
+                placeholder="Add internal notes about this case..."
+                rows={10}
+                style={{ width: '100%', padding: '14px', background: t.surface, border: `1px solid ${t.borderDim}`, borderRadius: '10px', color: t.text, fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                <p style={{ color: t.muted, fontSize: '11px' }}>
+                  {noteSavedAt ? `Saved ${new Date(noteSavedAt).toLocaleString('en-ZA')} · stored in this browser only` : 'Not saved yet · stored in this browser only'}
+                </p>
+                <button onClick={handleSaveNote} style={{ padding: '8px 20px', background: t.lime, color: '#080A06', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}>
+                  Save Note
+                </button>
+              </div>
             </div>
           )}
 

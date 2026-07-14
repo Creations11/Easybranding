@@ -129,6 +129,35 @@ export default function SuperAdminDashboard() {
     searchFields: ['fullName', 'email', 'phone'],
   });
 
+  // ── Messages: filter by business name + date contacted ────
+  const [msgSearch,   setMsgSearch]   = useState('');
+  const [msgDateFrom, setMsgDateFrom] = useState('');
+  const [msgDateTo,   setMsgDateTo]   = useState('');
+
+  const tenantNameById = useMemo(
+    () => Object.fromEntries(tenants.map(t => [t._id, t.businessName])),
+    [tenants]
+  );
+
+  const filteredMessages = useMemo(() => {
+    const term = msgSearch.trim().toLowerCase();
+    const from = msgDateFrom ? new Date(msgDateFrom + 'T00:00:00') : null;
+    const to   = msgDateTo   ? new Date(msgDateTo   + 'T23:59:59') : null;
+
+    return messages.filter(msg => {
+      if (term) {
+        const business = (msg.businessName || tenantNameById[msg.tenantId] || '').toLowerCase();
+        const name  = (msg.name  || '').toLowerCase();
+        const phone = (msg.phone || '').toLowerCase();
+        if (!business.includes(term) && !name.includes(term) && !phone.includes(term)) return false;
+      }
+      const ts = msg.timestamp ? new Date(msg.timestamp) : null;
+      if (from && (!ts || ts < from)) return false;
+      if (to   && (!ts || ts > to))   return false;
+      return true;
+    });
+  }, [messages, msgSearch, msgDateFrom, msgDateTo, tenantNameById]);
+
   // ── Mutations ──────────────────────────────────────────────
   const handleSuspendToggle = async (tenant) => {
     const ns = tenant.status === 'suspended' ? 'active' : 'suspended';
@@ -487,19 +516,51 @@ export default function SuperAdminDashboard() {
               {opsTab === 'messages' && (
                 <SectionErrorBoundary name="Messages" onRetry={refetch}>
                   <div>
-                    <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>Recent Messages</h2>
-                    {messages.map((msg, i) => (
-                      <div key={i} onClick={() => setLeadDetailId(msg.leadId)} className="card-hover" style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 12, padding: '12px 16px', marginBottom: 8, cursor: 'pointer', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: msg.direction === 'inbound' ? c.cyan + '22' : c.lime + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{msg.direction === 'inbound' ? '📱' : '🤖'}</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                            <strong style={{ fontSize: 13 }}>{msg.name !== 'Unknown' ? msg.name : msg.phone}</strong>
-                            <span style={{ fontSize: 11, color: c.muted }}>{new Date(msg.timestamp).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>Recent Messages ({filteredMessages.length}{filteredMessages.length !== messages.length ? ` of ${messages.length}` : ''})</h2>
+
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
+                      <input
+                        value={msgSearch}
+                        onChange={e => setMsgSearch(e.target.value)}
+                        placeholder="Search business, name, or phone..."
+                        style={{ flex: '1 1 220px', padding: '10px 14px', borderRadius: 10, background: c.card, border: '1px solid ' + c.borderDim, color: c.text, fontSize: 13, outline: 'none', fontFamily: 'inherit' }}
+                      />
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: c.muted }}>
+                        From
+                        <input type="date" value={msgDateFrom} onChange={e => setMsgDateFrom(e.target.value)}
+                          style={{ padding: '9px 10px', borderRadius: 10, background: c.card, border: '1px solid ' + c.borderDim, color: c.text, fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: c.muted }}>
+                        To
+                        <input type="date" value={msgDateTo} onChange={e => setMsgDateTo(e.target.value)}
+                          style={{ padding: '9px 10px', borderRadius: 10, background: c.card, border: '1px solid ' + c.borderDim, color: c.text, fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
+                      </label>
+                      {(msgSearch || msgDateFrom || msgDateTo) && (
+                        <button onClick={() => { setMsgSearch(''); setMsgDateFrom(''); setMsgDateTo(''); }}
+                          style={{ padding: '9px 14px', borderRadius: 10, background: 'transparent', border: '1px solid ' + c.borderDim, color: c.muted, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          Clear
+                        </button>
+                      )}
+                    </div>
+
+                    {filteredMessages.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '60px 0', color: c.muted }}><p style={{ fontSize: 40, marginBottom: 16 }}>💬</p><p>No messages match these filters.</p></div>
+                    ) : filteredMessages.map((msg, i) => {
+                      const business = msg.businessName || tenantNameById[msg.tenantId];
+                      return (
+                        <div key={i} onClick={() => setLeadDetailId(msg.leadId)} className="card-hover" style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 12, padding: '12px 16px', marginBottom: 8, cursor: 'pointer', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                          <div style={{ width: 32, height: 32, borderRadius: '50%', background: msg.direction === 'inbound' ? c.cyan + '22' : c.lime + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{msg.direction === 'inbound' ? '📱' : '🤖'}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2, gap: 8 }}>
+                              <strong style={{ fontSize: 13 }}>{msg.name !== 'Unknown' ? msg.name : msg.phone}</strong>
+                              <span style={{ fontSize: 11, color: c.muted, whiteSpace: 'nowrap' }}>{new Date(msg.timestamp).toLocaleDateString('en-ZA')} · {new Date(msg.timestamp).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            {business && <p style={{ color: c.cyan, fontSize: 11, marginBottom: 3 }}>{business}</p>}
+                            <p style={{ color: c.muted, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.body}</p>
                           </div>
-                          <p style={{ color: c.muted, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.body}</p>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </SectionErrorBoundary>
               )}
