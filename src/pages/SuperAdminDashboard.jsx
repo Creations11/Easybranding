@@ -336,7 +336,7 @@ export default function SuperAdminDashboard() {
       </div>
 
       {/* Main content */}
-      <div className="main-content" style={{ marginLeft: sidebarOpen ? 220 : 64, flex: 1, padding: '32px', paddingTop: 96, transition: 'margin-left 0.2s ease', minHeight: '100vh' }}>
+      <div className="main-content" style={{ marginLeft: sidebarOpen ? 220 : 64, flex: 1, minWidth: 0, padding: '32px', paddingTop: 96, transition: 'margin-left 0.2s ease', minHeight: '100vh' }}>
 
         {/* ════════ OPERATIONS ════════ */}
         {section === 'operations' && (
