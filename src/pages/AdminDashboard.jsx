@@ -632,10 +632,24 @@ export default function AdminDashboard() {
             </p>
             {/* onWheel: a horizontal-scroll-only row is easy to miss without
                 a trackpad — converts normal vertical scroll into horizontal
-                movement while hovering the board. */}
+                movement while hovering the board, but ONLY when there's no
+                vertical scrolling left to do in whatever's under the cursor
+                (otherwise this hijacks scrolling through a column's own
+                620px-tall internal list, making anything past the visible
+                portion unreachable). */}
             <div
               className="leads-board-scroll"
-              onWheel={e => { if (e.deltaY !== 0) { e.currentTarget.scrollLeft += e.deltaY; e.preventDefault(); } }}
+              onWheel={e => {
+                if (e.deltaY === 0) return;
+                const col = e.target.closest('.lead-column-scroll');
+                if (col) {
+                  const canScrollDown = e.deltaY > 0 && col.scrollTop + col.clientHeight < col.scrollHeight;
+                  const canScrollUp = e.deltaY < 0 && col.scrollTop > 0;
+                  if (canScrollDown || canScrollUp) return;
+                }
+                e.currentTarget.scrollLeft += e.deltaY;
+                e.preventDefault();
+              }}
               style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }}
             >
               {leadColumns.map(col => (
@@ -644,7 +658,7 @@ export default function AdminDashboard() {
                     <span style={{ fontSize: '15px', fontWeight: '700' }}>{col.icon} {col.label}</span>
                     <span style={{ fontSize: '11px', padding: '2px 9px', borderRadius: '999px', background: colors.borderDim, color: colors.muted, fontWeight: '700' }}>{col.items.length}</span>
                   </div>
-                  <div style={{ maxHeight: '620px', overflowY: 'auto', paddingRight: '4px' }}>
+                  <div className="lead-column-scroll" style={{ maxHeight: '620px', overflowY: 'auto', paddingRight: '4px' }}>
                     {col.items.length === 0 ? (
                       <p style={{ color: colors.muted, fontSize: '13px', padding: '20px 0', textAlign: 'center' }}>None</p>
                     ) : col.items.map(lead => (

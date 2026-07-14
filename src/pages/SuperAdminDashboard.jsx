@@ -418,10 +418,26 @@ export default function SuperAdminDashboard() {
                         without this, columns past the first are only reachable
                         via a trackpad swipe or shift+scroll, which most mouse
                         users won't discover. Converts normal vertical scroll
-                        into horizontal movement while hovering the board. */}
+                        into horizontal movement while hovering the board —
+                        but ONLY when there's no vertical scrolling left to do
+                        in whatever's under the cursor. Without that check,
+                        this handler hijacked scrolling through a column's own
+                        list (each column has its own 620px-tall internal
+                        scroll), making anything past the visible portion of
+                        a column unreachable. */}
                     <div
                       className="leads-board-scroll"
-                      onWheel={e => { if (e.deltaY !== 0) { e.currentTarget.scrollLeft += e.deltaY; e.preventDefault(); } }}
+                      onWheel={e => {
+                        if (e.deltaY === 0) return;
+                        const col = e.target.closest('.lead-column-scroll');
+                        if (col) {
+                          const canScrollDown = e.deltaY > 0 && col.scrollTop + col.clientHeight < col.scrollHeight;
+                          const canScrollUp = e.deltaY < 0 && col.scrollTop > 0;
+                          if (canScrollDown || canScrollUp) return; // let the column scroll normally
+                        }
+                        e.currentTarget.scrollLeft += e.deltaY;
+                        e.preventDefault();
+                      }}
                       style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}
                     >
                       {leadColumns.map(col => (
@@ -430,7 +446,7 @@ export default function SuperAdminDashboard() {
                             <span style={{ fontSize: 15, fontWeight: 700 }}>{col.icon} {col.label}</span>
                             <span style={{ fontSize: 11, padding: '2px 9px', borderRadius: 999, background: c.borderDim, color: c.muted, fontWeight: 700 }}>{col.items.length}</span>
                           </div>
-                          <div style={{ maxHeight: 620, overflowY: 'auto', paddingRight: 4 }}>
+                          <div className="lead-column-scroll" style={{ maxHeight: 620, overflowY: 'auto', paddingRight: 4 }}>
                             {col.items.length === 0 ? (
                               <p style={{ color: c.muted, fontSize: 13, padding: '20px 0', textAlign: 'center' }}>None</p>
                             ) : col.items.map(lead => {
