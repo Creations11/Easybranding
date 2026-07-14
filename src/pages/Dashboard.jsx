@@ -300,6 +300,7 @@ export default function Dashboard() {
                           fontSize: '14px',
                           lineHeight: '1.5',
                           whiteSpace: 'pre-wrap',
+                          overflowWrap: 'anywhere',
                         }}>
                           {msg.body}
                         </div>

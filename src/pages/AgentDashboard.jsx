@@ -363,7 +363,7 @@ export default function AgentDashboard() {
                           </div>
                         ) : (
                           <>
-                            <div style={{ padding: '11px 15px', borderRadius: msg.direction === 'outbound' ? '16px 16px 4px 16px' : '16px 16px 16px 4px', background: msg.direction === 'outbound' ? colors.lime : '#1C1C19', color: msg.direction === 'outbound' ? '#050505' : colors.text, fontSize: '14px', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
+                            <div style={{ padding: '11px 15px', borderRadius: msg.direction === 'outbound' ? '16px 16px 4px 16px' : '16px 16px 16px 4px', background: msg.direction === 'outbound' ? colors.lime : '#1C1C19', color: msg.direction === 'outbound' ? '#050505' : colors.text, fontSize: '14px', lineHeight: '1.5', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
                               {msg.body}
                             </div>
                             <div style={{ fontSize: '11px', color: colors.muted, marginTop: '3px', textAlign: msg.direction === 'outbound' ? 'right' : 'left' }}>

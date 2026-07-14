@@ -206,7 +206,7 @@ export default function ProspectingPanel({ currentUser }) {
                 <div>
                   <strong style={{ fontSize: '14px' }}>{p.name !== 'Unknown' ? p.name : p.phone}</strong>
                   <p style={{ color: c.muted, fontSize: '12px', marginTop: '2px' }}>{p.phone}{p.agencyName ? ' · ' + p.agencyName : ''}</p>
-                  {p.replyText && <p style={{ color: c.text, fontSize: '12px', marginTop: '4px', fontStyle: 'italic' }}>"{p.replyText}"</p>}
+                  {p.replyText && <p style={{ color: c.text, fontSize: '12px', marginTop: '4px', fontStyle: 'italic', overflowWrap: 'anywhere' }}>"{p.replyText}"</p>}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -262,7 +262,7 @@ export default function ProspectingPanel({ currentUser }) {
             {currentTemplate && (
               <div style={{ background: c.surface, border: '1px solid ' + c.borderDim, borderRadius: '12px', padding: '16px' }}>
                 <p style={{ color: c.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Preview</p>
-                <p style={{ color: c.text, fontSize: '13px', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                <p style={{ color: c.text, fontSize: '13px', lineHeight: '1.6', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
                   {typeof currentTemplate.preview === 'function'
                     ? currentTemplate.preview({ name: varName || '[Name]', agency: varAgency || '[Agency]' })
                     : (currentTemplate.preview || '').replace(/\[Name\]/g, varName || '[Name]').replace(/\[Agency\]/g, varAgency || '[Agency]')

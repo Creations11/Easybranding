@@ -401,7 +401,7 @@ function ClientModal({ client, onClose, onSave }) {
                   ) : (
                     <div>
                       <p style={{ color: colors.muted, fontSize: '11px', marginBottom: '8px', textTransform: 'uppercase' }}>Bot Response</p>
-                      <p style={{ color: colors.text, fontSize: '14px', whiteSpace: 'pre-wrap', lineHeight: '1.6', marginBottom: '12px' }}>{testResult.reply}</p>
+                      <p style={{ color: colors.text, fontSize: '14px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', lineHeight: '1.6', marginBottom: '12px' }}>{testResult.reply}</p>
                       <p style={{ color: colors.muted, fontSize: '12px' }}>Next stage: <span style={{ color: colors.lime }}>{testResult.nextStage}</span></p>
                     </div>
                   )}
