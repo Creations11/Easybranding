@@ -116,7 +116,6 @@ export default function SuperAdminDashboard() {
   const [selectedClientIds, setSelectedClientIds] = useState([]);
 
   // ── Pagination & Search ───────────────────────────────────
-  const [activePage,  setActivePage]  = useState(1);
   const [clientsPage, setClientsPage] = useState(1);
   const [usersPage,   setUsersPage]   = useState(1);
   const ITEMS_PER_PAGE = 10;
@@ -157,6 +156,22 @@ export default function SuperAdminDashboard() {
       return true;
     });
   }, [messages, msgSearch, msgDateFrom, msgDateTo, tenantNameById]);
+
+  // ── Leads CRM board: grouped by status, filterable by tenant ─
+  const [leadsTenantFilter, setLeadsTenantFilter] = useState('all');
+
+  const leadColumns = useMemo(() => {
+    const byTenant = (list) => leadsTenantFilter === 'all'
+      ? list
+      : list.filter(l => l.tenantId === leadsTenantFilter);
+
+    return [
+      { key: 'active',    label: 'Active',    icon: '💬', items: byTenant(activeLeads) },
+      { key: 'qualified', label: 'Qualified', icon: '✅', items: byTenant(qualifiedLeads) },
+      { key: 'rejected',  label: 'Rejected',  icon: '❌', items: byTenant(rejectedLeads) },
+      { key: 'closed',    label: 'Closed',    icon: '🔒', items: byTenant(closedLeads) },
+    ];
+  }, [activeLeads, qualifiedLeads, rejectedLeads, closedLeads, leadsTenantFilter]);
 
   // ── Mutations ──────────────────────────────────────────────
   const handleSuspendToggle = async (tenant) => {
@@ -219,7 +234,7 @@ export default function SuperAdminDashboard() {
     return s;
   }, [isEBAgent, isSuperAdmin, alerts.length, pendingUsers.length]);
 
-  const opsTabs = ['overview', 'active', 'qualified', 'rejected', 'closed', 'funnel', 'viewings', 'messages', 'alerts'];
+  const opsTabs = ['overview', 'leads', 'funnel', 'viewings', 'messages', 'alerts'];
 
   // ── Loading ────────────────────────────────────────────────
   if (isLoading) {
@@ -312,7 +327,7 @@ export default function SuperAdminDashboard() {
               </div>
               <div style={{ display: 'flex', gap: 4, marginBottom: 28, borderBottom: '1px solid ' + c.borderDim, overflowX: 'auto' }}>
                 {opsTabs.map(t => (
-                  <button key={t} onClick={() => { setOpsTab(t); setActivePage(1); }} style={{ padding: '10px 16px', background: 'none', border: 'none', borderBottom: opsTab === t ? '2px solid ' + c.lime : '2px solid transparent', color: opsTab === t ? c.lime : c.muted, cursor: 'pointer', fontSize: 13, fontWeight: opsTab === t ? 600 : 400, textTransform: 'capitalize', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
+                  <button key={t} onClick={() => setOpsTab(t)} style={{ padding: '10px 16px', background: 'none', border: 'none', borderBottom: opsTab === t ? '2px solid ' + c.lime : '2px solid transparent', color: opsTab === t ? c.lime : c.muted, cursor: 'pointer', fontSize: 13, fontWeight: opsTab === t ? 600 : 400, textTransform: 'capitalize', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
                     {t}{t === 'alerts' && alerts.length > 0 && <span style={{ marginLeft: 6, background: c.red, color: '#fff', fontSize: 10, padding: '1px 5px', borderRadius: 999 }}>{alerts.length}</span>}
                   </button>
                 ))}
@@ -350,131 +365,81 @@ export default function SuperAdminDashboard() {
                 </SectionErrorBoundary>
               )}
 
-              {opsTab === 'active' && (
-                <SectionErrorBoundary name="Active Conversations" onRetry={refetch}>
+              {/* ════════ LEADS CRM BOARD ════════ */}
+              {/* Grouped by status (columns) and filterable by
+                  tenant — replaces the old separate active /
+                  qualified / rejected / closed tabs, which forced
+                  admins to hop between tabs to see one business's
+                  full pipeline. */}
+              {opsTab === 'leads' && (
+                <SectionErrorBoundary name="Leads" onRetry={refetch}>
                   <div>
-                    <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>Active Conversations ({activeLeads.length})</h2>
-                    {activeLeads.length === 0 ? <div style={{ textAlign: 'center', padding: '60px 0', color: c.muted }}><p style={{ fontSize: 40, marginBottom: 16 }}>💬</p><p>No active conversations.</p></div>
-                      : <>
-                        {activeLeads.slice((activePage - 1) * ITEMS_PER_PAGE, activePage * ITEMS_PER_PAGE).map(lead => (
-                        <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} className="card-hover" style={{ background: c.card, border: '1px solid ' + (lead.isProspect ? c.lime + '44' : c.borderDim), borderRadius: 14, padding: '16px 20px', marginBottom: 10, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                              <strong>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
-                              {lead.isProspect && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: c.lime + '22', color: c.lime, fontWeight: 700 }}>🎯 {lead.prospectOutcome?.replace(/_/g, ' ') || 'Prospect'}</span>}
-                            </div>
-                            <p style={{ color: c.muted, fontSize: 13, marginTop: 2 }}>{lead.phone}</p>
-                            <p style={{ color: c.muted, fontSize: 12, marginTop: 2 }}>Stage: <span style={{ color: lead.isProspect ? c.lime : c.cyan }}>{lead.isProspect ? '👤 Agent takeover' : lead.workflowStatus?.replace(/_/g, ' ')}</span></p>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-                            <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 999, background: lead.isProspect ? c.lime + '18' : c.cyan + '18', color: lead.isProspect ? c.lime : c.cyan }}>{lead.isProspect ? 'Prospect' : 'Active'}</span>
-                            {lead.takenOver
-                              ? <button onClick={(e) => handleResume(e, lead._id)} style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, background: c.cyan + '22', color: c.cyan, border: 'none', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>🤖 Resume bot</button>
-                              : <button onClick={(e) => handleTakeover(e, lead._id)} style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, background: c.lime, color: '#06080A', border: 'none', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>✋ Take over</button>}
-                          </div>
-                        </div>
-                      ))}
-                      <Pagination
-                        currentPage={activePage}
-                        totalPages={Math.ceil(activeLeads.length / ITEMS_PER_PAGE)}
-                        onPageChange={setActivePage}
-                        showInfo
-                        totalItems={activeLeads.length}
-                        itemsPerPage={ITEMS_PER_PAGE}
-                      />
-                    </>}
-                  </div>
-                </SectionErrorBoundary>
-              )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+                      <h2 style={{ fontSize: 20, fontWeight: 700 }}>Leads</h2>
+                      <select
+                        value={leadsTenantFilter}
+                        onChange={e => setLeadsTenantFilter(e.target.value)}
+                        style={{ padding: '9px 14px', borderRadius: 10, background: c.card, border: '1px solid ' + c.borderDim, color: c.text, fontSize: 13, outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}
+                      >
+                        <option value="all">All businesses</option>
+                        {tenants.map(t => (
+                          <option key={t._id} value={t._id}>{t.businessName}</option>
+                        ))}
+                      </select>
+                    </div>
 
-              {opsTab === 'qualified' && (
-                <SectionErrorBoundary name="Qualified Leads" onRetry={refetch}>
-                  <div>
-                    <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>Qualified Leads ({qualifiedLeads.length})</h2>
-                    {qualifiedLeads.length === 0 ? <div style={{ textAlign: 'center', padding: '60px 0', color: c.muted }}><p style={{ fontSize: 40, marginBottom: 16 }}>✅</p><p>No qualified leads yet.</p></div>
-                      : qualifiedLeads.map(lead => {
-                        const tenant = tenants.find(t => t._id === lead.tenantId);
-                        const industry = tenant?.industry || 'appointment';
-                        const labels = {
-                          rental_agency: { f1: 'Property', f2: 'R' + (lead.monthlyBudget || '?') + '/mo', f3: 'Move-in' },
-                          property_sales: { f1: 'Property', f2: 'R' + (lead.monthlyBudget || '?'), f3: 'Timeline' },
-                          car_dealership: { f1: 'Vehicle', f2: 'R' + (lead.monthlyBudget || '?'), f3: 'Timeline' },
-                          law_firm: { f1: 'Matter', f2: 'Urgency: ' + (lead.monthlyBudget || '?'), f3: 'Prior consult' },
-                          medical: { f1: 'Appointment', f2: lead.monthlyBudget || '?', f3: 'Preferred date' },
-                          recruitment: { f1: 'Role', f2: 'R' + (lead.monthlyBudget || '?') + '/mo', f3: 'Available' },
-                          education: { f1: 'Programme', f2: lead.monthlyBudget || '?', f3: 'Funding' },
-                          order_taking: { f1: 'Order', f2: 'Qty: ' + (lead.monthlyBudget || '?'), f3: 'Delivery' },
-                          appointment: { f1: 'Service', f2: lead.monthlyBudget || '?', f3: 'Date' },
-                          driving_school: { f1: 'Lessons', f2: lead.monthlyBudget || '?', f3: 'Start' },
-                          salon: { f1: 'Service', f2: lead.monthlyBudget || '?', f3: 'When' },
-                          custom: { f1: 'Enquiry', f2: lead.monthlyBudget || '?', f3: 'Detail' },
-                        }[industry] || { f1: 'Enquiry', f2: lead.monthlyBudget || '?', f3: 'Detail' };
-                        return (
-                          <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} className="card-hover" style={{ background: c.card, border: '1px solid ' + (lead.aiSummary?.urgency === 'high' ? c.lime + '44' : c.borderDim), borderRadius: 14, padding: '18px 24px', marginBottom: 10, cursor: 'pointer' }}>
-                            <div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
-                                <strong style={{ fontSize: 16 }}>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
-                                {lead.aiSummary?.score && <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 999, fontWeight: 700, background: lead.aiSummary.score >= 8 ? c.lime + '22' : c.amber + '22', color: lead.aiSummary.score >= 8 ? c.lime : c.amber }}>🤖 {lead.aiSummary.score}/10 · {lead.aiSummary.scoreLabel}</span>}
-                              </div>
-                              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
-                                {lead.propertyInterest && <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 999, background: c.cyan + '22', color: c.cyan }}>{labels.f1}: {lead.propertyInterest}</span>}
-                                {lead.monthlyBudget && <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 999, background: c.lime + '22', color: c.lime }}>{labels.f2}</span>}
-                                {lead.moveInDate && <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 999, background: c.amber + '22', color: c.amber }}>{labels.f3}: {lead.moveInDate}</span>}
-                              </div>
-                              {lead.aiSummary?.summary && (
-                                <div style={{ marginTop: 10, background: 'rgba(184,240,64,0.04)', border: '1px solid ' + c.border, borderRadius: 10, padding: '10px 12px' }}>
-                                  <p style={{ color: c.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>🤖 AI Analysis</p>
-                                  <p style={{ color: c.text, fontSize: 13, lineHeight: 1.5, marginBottom: 4 }}>{lead.aiSummary.summary}</p>
-                                  {lead.aiSummary.recommendedAction && <p style={{ color: c.lime, fontSize: 12, fontWeight: 600 }}>→ {lead.aiSummary.recommendedAction}</p>}
+                    <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
+                      {leadColumns.map(col => (
+                        <div key={col.key} style={{ flex: '0 0 300px', width: 300 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                            <span style={{ fontSize: 15, fontWeight: 700 }}>{col.icon} {col.label}</span>
+                            <span style={{ fontSize: 11, padding: '2px 9px', borderRadius: 999, background: c.borderDim, color: c.muted, fontWeight: 700 }}>{col.items.length}</span>
+                          </div>
+                          <div style={{ maxHeight: 620, overflowY: 'auto', paddingRight: 4 }}>
+                            {col.items.length === 0 ? (
+                              <p style={{ color: c.muted, fontSize: 13, padding: '20px 0', textAlign: 'center' }}>None</p>
+                            ) : col.items.map(lead => {
+                              const business = tenantNameById[lead.tenantId];
+                              return (
+                                <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} className="card-hover" style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 12, padding: '12px 14px', marginBottom: 8, cursor: 'pointer' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
+                                    <strong style={{ fontSize: 13 }}>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
+                                  </div>
+                                  {business && <p style={{ color: c.cyan, fontSize: 11, marginBottom: 3 }}>{business}</p>}
+                                  <p style={{ color: c.muted, fontSize: 12, marginBottom: 6 }}>{lead.phone}</p>
+
+                                  {col.key === 'active' && (
+                                    <>
+                                      {lead.isProspect && <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 999, background: c.lime + '22', color: c.lime, fontWeight: 700, marginRight: 6 }}>🎯 Prospect</span>}
+                                      <div style={{ marginTop: 6 }}>
+                                        {lead.takenOver
+                                          ? <button onClick={(e) => handleResume(e, lead._id)} style={{ fontSize: 11, padding: '5px 12px', borderRadius: 8, background: c.cyan + '22', color: c.cyan, border: 'none', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit' }}>🤖 Resume bot</button>
+                                          : <button onClick={(e) => handleTakeover(e, lead._id)} style={{ fontSize: 11, padding: '5px 12px', borderRadius: 8, background: c.lime, color: '#06080A', border: 'none', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit' }}>✋ Take over</button>}
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {col.key === 'qualified' && lead.aiSummary?.score && (
+                                    <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 999, fontWeight: 700, background: lead.aiSummary.score >= 8 ? c.lime + '22' : c.amber + '22', color: lead.aiSummary.score >= 8 ? c.lime : c.amber }}>🤖 {lead.aiSummary.score}/10</span>
+                                  )}
+
+                                  {col.key === 'rejected' && (
+                                    <p style={{ color: c.red, fontSize: 11 }}>{lead.rejectionReason || 'Did not qualify'}</p>
+                                  )}
+
+                                  {col.key === 'closed' && (
+                                    <>
+                                      <p style={{ color: c.muted, fontSize: 11, marginBottom: 6 }}>{lead.closeReason || 'Manually closed'}{lead.closedAt ? ' · ' + new Date(lead.closedAt).toLocaleDateString('en-ZA') : ''}</p>
+                                      <button onClick={(e) => handleReopen(e, lead._id)} style={{ fontSize: 11, padding: '5px 12px', borderRadius: 8, background: c.lime + '22', color: c.lime, border: '1px solid ' + c.border, cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit' }}>🔓 Reopen</button>
+                                    </>
+                                  )}
                                 </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                </SectionErrorBoundary>
-              )}
-
-              {opsTab === 'rejected' && (
-                <SectionErrorBoundary name="Rejected Leads" onRetry={refetch}>
-                  <div>
-                    <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>Rejected Leads ({rejectedLeads.length})</h2>
-                    {rejectedLeads.length === 0 ? <div style={{ textAlign: 'center', padding: '60px 0', color: c.muted }}><p style={{ fontSize: 40, marginBottom: 16 }}>❌</p><p>No rejected leads.</p></div>
-                      : rejectedLeads.map(lead => (
-                        <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} className="card-hover" style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 12, padding: '14px 18px', marginBottom: 8, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div><strong>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong><p style={{ color: c.muted, fontSize: 12, marginTop: 2 }}>{lead.rejectionReason || 'Did not qualify'}</p></div>
-                          <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 999, background: c.red + '18', color: c.red }}>Rejected</span>
-                        </div>
-                      ))}
-                  </div>
-                </SectionErrorBoundary>
-              )}
-
-              {/* ════════ CLOSED ════════ */}
-              {/* NEW (29 June 2026): previously closed leads had no
-                  view anywhere in the dashboard — once closed, a
-                  lead was effectively unreachable. See
-                  adminOpsController.js / useDashboardData.js for the
-                  backend half of this fix. */}
-              {opsTab === 'closed' && (
-                <SectionErrorBoundary name="Closed Leads" onRetry={refetch}>
-                  <div>
-                    <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>Closed Leads ({closedLeads.length})</h2>
-                    {closedLeads.length === 0 ? <div style={{ textAlign: 'center', padding: '60px 0', color: c.muted }}><p style={{ fontSize: 40, marginBottom: 16 }}>🔒</p><p>No closed leads.</p></div>
-                      : closedLeads.map(lead => (
-                        <div key={lead._id} className="card-hover" style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 12, padding: '14px 18px', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div onClick={() => setLeadDetailId(lead._id)} style={{ cursor: 'pointer', flex: 1 }}>
-                            <strong>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
-                            <p style={{ color: c.muted, fontSize: 12, marginTop: 2 }}>{lead.closeReason || 'Manually closed'}{lead.closedAt ? ' · ' + new Date(lead.closedAt).toLocaleDateString('en-ZA') : ''}</p>
-                          </div>
-                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                            <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 999, background: c.muted + '18', color: c.muted }}>Closed</span>
-                            <button onClick={(e) => handleReopen(e, lead._id)} style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, background: c.lime + '22', color: c.lime, border: '1px solid ' + c.border, cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>🔓 Reopen</button>
-                            <button onClick={(e) => handleTakeover(e, lead._id)} style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, background: c.lime, color: '#06080A', border: 'none', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>✋ Reopen & Take over</button>
+                              );
+                            })}
                           </div>
                         </div>
                       ))}
+                    </div>
                   </div>
                 </SectionErrorBoundary>
               )}
