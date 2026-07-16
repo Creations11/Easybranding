@@ -45,6 +45,15 @@ export default function AdminClientModal({ client, onClose, onSave }) {
     welcomeMsg:      client?.messages?.welcome      || '',
     qualifiedMsg:    client?.messages?.qualified    || '',
     notQualifiedMsg: client?.messages?.notQualified || '',
+    // NEW: per-tenant paid top-ups, independent of plan. Reads any
+    // addons already switched on via the WhatsApp upsell flow, so
+    // saving here can't accidentally wipe one out.
+    addons: {
+      payments:  client?.addons?.payments  || false,
+      invoicing: client?.addons?.invoicing || false,
+      ownNumber: client?.addons?.ownNumber || false,
+      extraFlow: client?.addons?.extraFlow || false,
+    },
   });
   const [saving,     setSaving]     = useState(false);
   const [error,      setError]      = useState('');
@@ -55,6 +64,7 @@ export default function AdminClientModal({ client, onClose, onSave }) {
   const [testResult, setTestResult] = useState(null);
   const [testing,    setTesting]    = useState(false);
   const set = (f, v) => setForm(p => ({ ...p, [f]: v }));
+  const toggleAddon = (key) => setForm(p => ({ ...p, addons: { ...p.addons, [key]: !p.addons[key] } }));
 
   useEffect(() => {
     if (isEdit && tab === 'usage') {
@@ -87,6 +97,7 @@ export default function AdminClientModal({ client, onClose, onSave }) {
         plan: form.plan, monthlyFee: Number(form.monthlyFee), status: form.status, notes: form.notes,
         qualificationRules: { incomeMultiplier: Number(form.incomeMultiplier), allowUnemployed: form.allowUnemployed, minimumBudget: Number(form.minimumBudget), maximumBudget: Number(form.maximumBudget) },
         messages: { welcome: form.welcomeMsg || null, qualified: form.qualifiedMsg || null, notQualified: form.notQualifiedMsg || null },
+        addons: form.addons,
       };
       const method = isEdit ? 'put' : 'post';
       const path   = isEdit ? `/tenants/${client._id}` : '/tenants';
@@ -177,6 +188,7 @@ export default function AdminClientModal({ client, onClose, onSave }) {
             <div>
               <p style={{ color: colors.muted, fontSize: '12px', marginBottom: '6px' }}>Plan</p>
               <select value={form.plan} onChange={e => set('plan', e.target.value)} style={iStyle}>
+                <option value="r99">R99 - R99/mo (lead-gen)</option>
                 <option value="starter">Starter - R950/mo</option>
                 <option value="growth">Growth - R2,450/mo</option>
                 <option value="enterprise">Enterprise - Custom</option>
@@ -189,6 +201,26 @@ export default function AdminClientModal({ client, onClose, onSave }) {
                 <option value="suspended">Suspended</option>
                 <option value="cancelled">Cancelled</option>
               </select>
+
+              {/* NEW: Add-ons — per-tenant paid top-ups, independent of
+                  plan. What lets an R99 tenant unlock, say, invoicing
+                  without moving to a whole new plan. See hasFeature() in
+                  the backend's config/planLimits.js. */}
+              <p style={{ color: colors.muted, fontSize: '12px', marginTop: '16px', marginBottom: '4px' }}>Add-ons</p>
+              <p style={{ color: colors.muted, fontSize: '11px', marginBottom: '10px' }}>Paid top-ups this client has bought, on top of whatever their plan already includes.</p>
+              <div style={{ background: '#1C1C19', borderRadius: '10px', padding: '14px 16px', border: `1px solid ${colors.borderDim}`, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                {[
+                  { key: 'payments',  label: 'Payments' },
+                  { key: 'invoicing', label: 'Invoicing' },
+                  { key: 'ownNumber', label: 'Own WhatsApp Number' },
+                  { key: 'extraFlow', label: 'Extra Flow' },
+                ].map(({ key, label }) => (
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input type="checkbox" id={'admin-addon-' + key} checked={form.addons[key]} onChange={() => toggleAddon(key)} style={{ cursor: 'pointer', accentColor: colors.lime, width: '16px', height: '16px' }} />
+                    <label htmlFor={'admin-addon-' + key} style={{ color: colors.text, fontSize: '14px', cursor: 'pointer' }}>{label}</label>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

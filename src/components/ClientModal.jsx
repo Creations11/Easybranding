@@ -37,12 +37,23 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
     industry:       tenant?.industry       || 'rental_agency',
     ownerPhone:     tenant?.ownerPhone     || '',
     feeMode:        tenant?.paymentSettings?.convenienceFee?.type === 'gross_up' ? 'gross_up' : 'absorb',
+    // NEW: per-tenant paid top-ups, independent of plan — e.g. an R99
+    // tenant who buys invoicing separately. Reads any addons already
+    // switched on via the WhatsApp upsell flow, so saving here can't
+    // accidentally wipe one out.
+    addons: {
+      payments:  tenant?.addons?.payments  || false,
+      invoicing: tenant?.addons?.invoicing || false,
+      ownNumber: tenant?.addons?.ownNumber || false,
+      extraFlow: tenant?.addons?.extraFlow || false,
+    },
   });
   // NEW: custom questions, separate from `form` since this is a
   // nested array (customWorkflow.questions), not a flat field.
   const [questions, setQuestions] = useState(tenant?.customWorkflow?.questions || []);
 
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
+  const toggleAddon = (key) => setForm(prev => ({ ...prev, addons: { ...prev.addons, [key]: !prev.addons[key] } }));
 
   const iStyle = { width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid ' + c.borderDim, borderRadius: '10px', color: c.text, fontSize: '14px', outline: 'none', fontFamily: 'inherit', marginBottom: '14px' };
   const labelStyle = { color: c.muted, fontSize: '12px', marginBottom: '6px', display: 'block' };
@@ -133,8 +144,9 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
             <label style={labelStyle}>Plan</label>
             <select value={form.plan} onChange={e => {
               set('plan', e.target.value);
-              set('monthlyFee', e.target.value === 'starter' ? 950 : e.target.value === 'growth' ? 2450 : 0);
+              set('monthlyFee', e.target.value === 'r99' ? 99 : e.target.value === 'starter' ? 950 : e.target.value === 'growth' ? 2450 : 0);
             }} style={{ ...iStyle, marginBottom: 0 }}>
+              <option value="r99">R99 — R99/mo (lead-gen)</option>
               <option value="starter">Starter — R950/mo</option>
               <option value="growth">Growth — R2,450/mo</option>
               <option value="enterprise">Enterprise — Custom</option>
@@ -149,6 +161,27 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
+        </div>
+
+        {/* NEW: Add-ons — per-tenant paid top-ups, independent of plan.
+            This is what lets an R99 tenant unlock, say, invoicing without
+            moving to a whole new plan. See hasFeature() in the backend's
+            config/planLimits.js for how these combine with the plan's
+            own included features. */}
+        <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '4px' }}>Add-ons</p>
+        <p style={{ color: c.muted, fontSize: '12px', marginBottom: '10px' }}>Paid top-ups this client has bought, on top of whatever their plan already includes.</p>
+        <div style={{ background: c.surface, borderRadius: '12px', padding: '14px 16px', border: '1px solid ' + c.borderDim, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+          {[
+            { key: 'payments',  label: 'Payments' },
+            { key: 'invoicing', label: 'Invoicing' },
+            { key: 'ownNumber', label: 'Own WhatsApp Number' },
+            { key: 'extraFlow', label: 'Extra Flow' },
+          ].map(({ key, label }) => (
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input type="checkbox" id={'addon-' + key} checked={form.addons[key]} onChange={() => toggleAddon(key)} style={{ cursor: 'pointer', accentColor: c.lime, width: '16px', height: '16px' }} />
+              <label htmlFor={'addon-' + key} style={{ color: c.text, fontSize: '14px', cursor: 'pointer' }}>{label}</label>
+            </div>
+          ))}
         </div>
 
         <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '12px' }}>Workflow</p>
