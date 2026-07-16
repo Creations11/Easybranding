@@ -1,6 +1,7 @@
 // src/components/Nav.jsx — Mobile responsive with hamburger menu
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const t = {
   lime:    '#B8F040',
@@ -14,26 +15,21 @@ const t = {
 
 export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const token = localStorage.getItem('eb_token');
-  const user = (() => {
-    try { return JSON.parse(localStorage.getItem('eb_user') || '{}'); }
-    catch { return {}; }
-  })();
+  const { user, isAuthenticated, signOut } = useAuth();
 
-  const isSuperAdmin = ['super_admin', 'eb_manager'].includes(user.role);
-  const isAdmin      = user.role === 'admin';
-  const isAgent      = ['agent', 'admin', 'super_admin', 'eb_agent', 'eb_manager'].includes(user.role);
+  const isSuperAdmin = ['super_admin', 'eb_manager'].includes(user?.role);
+  const isAdmin      = user?.role === 'admin';
+  const isAgent      = ['agent', 'admin', 'super_admin', 'eb_agent', 'eb_manager'].includes(user?.role);
 
   const handleSignOut = () => {
-    localStorage.removeItem('eb_token');
-    localStorage.removeItem('eb_user');
-    window.location.href = '/';
+    setMenuOpen(false);
+    signOut();
   };
 
   const NavLinks = ({ mobile = false }) => (
     <>
       {/* ── Public Links ────────────────────────────────────── */}
-      {!token && (
+      {!isAuthenticated && (
         <>
           <Link to="/documentation" onClick={() => setMenuOpen(false)} style={{ 
             padding: mobile ? '14px 0' : '8px 16px', 
@@ -59,7 +55,7 @@ export default function Nav() {
       )}
 
       {/* ── Authenticated Links ────────────────────────────── */}
-      {token && isSuperAdmin && (
+      {isAuthenticated && isSuperAdmin && (
         <Link to="/superadmin" onClick={() => setMenuOpen(false)} style={{ 
           padding: mobile ? '14px 0' : '8px 16px', 
           color: t.lime, 
@@ -72,7 +68,7 @@ export default function Nav() {
           Dashboard
         </Link>
       )}
-      {token && isAdmin && (
+      {isAuthenticated && isAdmin && (
         <Link to="/admin" onClick={() => setMenuOpen(false)} style={{ 
           padding: mobile ? '14px 0' : '8px 16px', 
           color: t.cyan, 
@@ -85,7 +81,7 @@ export default function Nav() {
           Admin
         </Link>
       )}
-      {token && isAgent && !isSuperAdmin && (
+      {isAuthenticated && isAgent && !isSuperAdmin && (
         <Link to="/agent" onClick={() => setMenuOpen(false)} style={{ 
           padding: mobile ? '14px 0' : '8px 16px', 
           color: t.emerald, 
@@ -100,7 +96,7 @@ export default function Nav() {
       )}
 
       {/* ── Documentation & Help (Logged In) ────────────────── */}
-      {token && (
+      {isAuthenticated && (
         <>
           <Link to="/documentation" onClick={() => setMenuOpen(false)} style={{ 
             padding: mobile ? '14px 0' : '8px 16px', 
@@ -126,7 +122,7 @@ export default function Nav() {
       )}
 
       {/* ── Auth Actions ────────────────────────────────────── */}
-      {token ? (
+      {isAuthenticated ? (
         <button onClick={handleSignOut} style={{ 
           padding: mobile ? '14px 0' : '8px 18px', 
           background: 'none', 

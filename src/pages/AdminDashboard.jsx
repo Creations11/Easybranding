@@ -13,6 +13,7 @@ import api from '../api';
 import SuperAdminPanel from '../components/SuperAdminPanel';
 import LeadDetailModal from '../components/LeadDetailModal';
 import AgentManager from '../components/AgentManager';
+import { colors } from '../utils/theme';
 
 
 // Mobile responsive styles
@@ -28,21 +29,6 @@ const mobileStyles = `
   }
 `;
 
-
-const colors = {
-  lime:      '#a3e635',
-  emerald:   '#34d399',
-  cyan:      '#22d3ee',
-  amber:     '#fbbf24',
-  red:       '#f87171',
-  orange:    '#f97316',
-  text:      '#f5f5f0',
-  muted:     '#a1a1aa',
-  card:      '#121210',
-  surface:   '#0A0A08',
-  border:    'rgba(163,230,53,0.22)',
-  borderDim: 'rgba(255,255,255,0.08)',
-};
 
 const PLAN_COLORS   = { starter: colors.muted, growth: colors.lime, enterprise: colors.emerald };
 const STATUS_COLORS = { active: colors.lime, trial: colors.amber, suspended: colors.red, cancelled: colors.muted };
@@ -716,7 +702,7 @@ export default function AdminDashboard() {
                     <span style={{ fontSize: '13px', color: colors.muted }}>{stage.count} leads · {stage.percentage}%</span>
                   </div>
                   <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '999px', height: '6px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${stage.percentage}%`, background: stage.stage === 'qualified' ? '#a3e635' : stage.stage === 'not_qualified' ? '#f87171' : '#22d3ee', borderRadius: '999px', transition: 'width 0.5s ease' }} />
+                    <div style={{ height: '100%', width: `${stage.percentage}%`, background: stage.stage === 'qualified' ? colors.lime : stage.stage === 'not_qualified' ? colors.red : colors.cyan, borderRadius: '999px', transition: 'width 0.5s ease' }} />
                   </div>
                 </div>
               ))}
@@ -743,7 +729,7 @@ export default function AdminDashboard() {
                 <div style={{ textAlign: 'right' }}>
                   {v.viewingScheduledAt ? (
                     <>
-                      <p style={{ color: '#a3e635', fontWeight: '700' }}>{new Date(v.viewingScheduledAt).toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' })}</p>
+                      <p style={{ color: colors.lime, fontWeight: '700' }}>{new Date(v.viewingScheduledAt).toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' })}</p>
                       <p style={{ color: colors.muted, fontSize: '12px' }}>{new Date(v.viewingScheduledAt).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}</p>
                     </>
                   ) : (
@@ -766,7 +752,7 @@ export default function AdminDashboard() {
               <p style={{ color: colors.muted, textAlign: 'center', padding: '60px 0' }}>No messages yet.</p>
             ) : recentMessages.map((msg, i) => (
               <div key={i} onClick={() => setLeadDetailId(msg.leadId)} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '12px', padding: '14px 18px', marginBottom: '8px', cursor: 'pointer', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: msg.direction === 'inbound' ? 'rgba(34,211,238,0.15)' : 'rgba(163,230,53,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: msg.direction === 'inbound' ? 'rgba(34,211,238,0.15)' : colors.lime + '26', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>
                   {msg.direction === 'inbound' ? '📱' : '🤖'}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -776,7 +762,7 @@ export default function AdminDashboard() {
                   </div>
                   <p style={{ color: colors.muted, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.body}</p>
                 </div>
-                <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '999px', background: msg.direction === 'inbound' ? 'rgba(34,211,238,0.15)' : 'rgba(163,230,53,0.15)', color: msg.direction === 'inbound' ? '#22d3ee' : '#a3e635', flexShrink: 0 }}>
+                <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '999px', background: msg.direction === 'inbound' ? colors.cyan + '15' : colors.lime + '15', color: msg.direction === 'inbound' ? colors.cyan : colors.lime, flexShrink: 0 }}>
                   {msg.direction}
                 </span>
               </div>
@@ -854,7 +840,7 @@ export default function AdminDashboard() {
                       </p>
                     </div>
                     <div style={{ display: 'flex', gap: '8px', marginLeft: '16px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                      <div style={{ textAlign: 'center', padding: '6px 14px', background: 'rgba(163,230,53,0.08)', borderRadius: '8px' }}>
+                      <div style={{ textAlign: 'center', padding: '6px 14px', background: colors.lime + '14', borderRadius: '8px' }}>
                         <p style={{ color: colors.lime, fontWeight: '700', fontSize: '16px' }}>{client.totalLeads || 0}</p>
                         <p style={{ color: colors.muted, fontSize: '10px' }}>Leads</p>
                       </div>

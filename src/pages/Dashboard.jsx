@@ -2,32 +2,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
-
-const colors = {
-  lime:    '#a3e635',
-  emerald: '#34d399',
-  red:     '#f87171',
-  amber:   '#fbbf24',
-  text:    '#f5f5f0',
-  muted:   '#a1a1aa',
-  card:    '#121210',
-  surface: '#0A0A08',
-  border:  'rgba(163,230,53,0.22)',
-  borderDim: 'rgba(255,255,255,0.08)',
-};
+import { colors } from '../utils/theme';
 
 const STATUS_COLORS = {
-  qualified:                 '#a3e635',
-  not_qualified:             '#f87171',
-  taken_over:                '#f97316',
-  capture_name:              '#22d3ee',
-  capture_property_interest: '#22d3ee',
-  capture_budget:            '#22d3ee',
-  capture_move_in_date:      '#22d3ee',
-  capture_employment_type:   '#22d3ee',
-  capture_monthly_income:    '#22d3ee',
-  awaiting_menu:             '#fbbf24',
-  closed:                    '#a1a1aa',
+  qualified:                 colors.lime,
+  not_qualified:             colors.red,
+  taken_over:                colors.orange,
+  capture_name:              colors.cyan,
+  capture_property_interest: colors.cyan,
+  capture_budget:            colors.cyan,
+  capture_move_in_date:      colors.cyan,
+  capture_employment_type:   colors.cyan,
+  capture_monthly_income:    colors.cyan,
+  awaiting_menu:             colors.amber,
+  closed:                    colors.muted,
 };
 
 
@@ -229,7 +217,7 @@ export default function Dashboard() {
                         fontSize: '12px',
                         padding: '6px 14px',
                         borderRadius: '999px',
-                        background: isTakenOver ? '#f9731622' : '#a3e63522',
+                        background: isTakenOver ? '#f9731622' : colors.lime + '22',
                         color: isTakenOver ? '#f97316' : colors.lime,
                         fontWeight: '600',
                       }}>
@@ -260,7 +248,7 @@ export default function Dashboard() {
                           disabled={resuming}
                           style={{
                             padding: '8px 18px',
-                            background: 'rgba(163,230,53,0.15)',
+                            background: colors.lime + '26',
                             color: colors.lime,
                             border: `1px solid ${colors.border}`,
                             borderRadius: '10px',
@@ -339,7 +327,7 @@ export default function Dashboard() {
                         disabled={sending || !message.trim()}
                         style={{
                           padding: '14px 28px',
-                          background: sending || !message.trim() ? 'rgba(163,230,53,0.3)' : colors.lime,
+                          background: sending || !message.trim() ? colors.lime + '4D' : colors.lime,
                           color: '#050505',
                           border: 'none',
                           borderRadius: '999px',

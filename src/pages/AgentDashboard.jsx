@@ -2,21 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
-
-const colors = {
-  lime:      '#a3e635',
-  emerald:   '#34d399',
-  cyan:      '#22d3ee',
-  amber:     '#fbbf24',
-  red:       '#f87171',
-  orange:    '#f97316',
-  text:      '#f5f5f0',
-  muted:     '#a1a1aa',
-  card:      '#121210',
-  surface:   '#0A0A08',
-  border:    'rgba(163,230,53,0.22)',
-  borderDim: 'rgba(255,255,255,0.08)',
-};
+import { colors } from '../utils/theme';
 
 const STATUS_COLORS = {
   qualified:                 colors.lime,
