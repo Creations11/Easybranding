@@ -112,18 +112,33 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
   const [noteSavedAt,   setNoteSavedAt]   = useState(null);
   const bottomRef = useRef(null);
 
+  // FIX: these used to be fetched with Promise.all — if the takeover
+  // history call 403'd (e.g. a closed lead left with a dangling
+  // ActiveTakeover record from the WhatsApp CLOSE command), the whole
+  // load() rejected and setLead() never ran, so the modal opened
+  // completely blank with no indication of what went wrong. Fetching
+  // independently means a failed history call just leaves that section
+  // empty instead of hiding the entire lead.
   const load = async () => {
-    try {
-      const [timelineRes, historyRes] = await Promise.all([
-        api.get(`/admin-ops/leads/${leadId}/timeline`),
-        api.get(`/takeover/${leadId}/history`),
-      ]);
-      setLead(timelineRes.data.data?.lead);
-      setTimeline(timelineRes.data.data?.timeline || []);
-      setTakeoverHistory(historyRes.data.data?.takeoverHistory || []);
-    } catch (err) {
-      console.error('Lead detail load error', err);
-    } finally { setLoading(false); }
+    const [timelineResult, historyResult] = await Promise.allSettled([
+      api.get(`/admin-ops/leads/${leadId}/timeline`),
+      api.get(`/takeover/${leadId}/history`),
+    ]);
+
+    if (timelineResult.status === 'fulfilled') {
+      setLead(timelineResult.value.data.data?.lead);
+      setTimeline(timelineResult.value.data.data?.timeline || []);
+    } else {
+      console.error('Lead timeline load error', timelineResult.reason);
+    }
+
+    if (historyResult.status === 'fulfilled') {
+      setTakeoverHistory(historyResult.value.data.data?.takeoverHistory || []);
+    } else {
+      console.error('Takeover history load error', historyResult.reason);
+    }
+
+    setLoading(false);
   };
 
   useEffect(() => { load(); }, [leadId]);
