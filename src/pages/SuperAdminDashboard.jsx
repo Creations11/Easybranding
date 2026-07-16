@@ -18,6 +18,7 @@ import { useState, useMemo } from 'react';
 import api from '../api';
 import LeadDetailModal from '../components/LeadDetailModal';
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
+import StatCard from '../components/StatCard';
 import { useAuth } from '../context/AuthContext';
 import {
   useOverview, useAllLeads, useActiveLeads, useQualifiedLeads,
@@ -58,20 +59,6 @@ const STATUS_COLOR = {
 };
 
 const PLAN_COLOR = { starter: c.sage, growth: c.lime, enterprise: c.cyan };
-
-// ── StatCard ──────────────────────────────────────────────────
-function StatCard({ label, value, color, sub, icon }) {
-  return (
-    <div style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: '14px', padding: '18px 20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-        <p style={{ color: c.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</p>
-        {icon && <span style={{ fontSize: '16px', opacity: 0.6 }}>{icon}</span>}
-      </div>
-      <p style={{ fontSize: '32px', fontWeight: '800', color: color || c.text, lineHeight: 1, marginBottom: sub ? '4px' : 0, fontFamily: "'Fraunces', serif" }}>{value ?? '—'}</p>
-      {sub && <p style={{ color: c.muted, fontSize: '12px' }}>{sub}</p>}
-    </div>
-  );
-}
 
 // ── Main Component ────────────────────────────────────────────
 export default function SuperAdminDashboard() {
