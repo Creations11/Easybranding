@@ -43,10 +43,131 @@ function ConfigFlag({ ok, label }) {
   );
 }
 
+const input = {
+  width: '100%', background: c.surface, border: '1px solid ' + c.borderDim,
+  borderRadius: '8px', padding: '8px 10px', color: c.text, fontSize: '13px',
+  fontFamily: 'inherit', marginBottom: '8px', boxSizing: 'border-box',
+};
+const btn = (bg, color) => ({
+  padding: '7px 14px', background: bg, color, border: 'none', borderRadius: '8px',
+  fontWeight: 700, fontSize: '12px', cursor: 'pointer', marginRight: '8px',
+});
+
+// ── Agent config editor (PUT /admin-ops/automation/agents/:tenantId) ──
+function AgentConfigEditor({ agent, onSaved }) {
+  const [form, setForm] = useState({
+    mode: agent.mode, bookingUrl: agent.bookingUrl || '',
+    description: '', policies: '', catalogJson: '', faqJson: '',
+  });
+  const [msg, setMsg] = useState('');
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const save = async () => {
+    setMsg('');
+    const body = { mode: form.mode, bookingUrl: form.bookingUrl || undefined };
+    if (form.description) body.description = form.description;
+    if (form.policies) body.policies = form.policies;
+    try {
+      if (form.catalogJson) body.catalog = JSON.parse(form.catalogJson);
+      if (form.faqJson) body.faq = JSON.parse(form.faqJson);
+    } catch { setMsg('❌ Catalog/FAQ must be valid JSON'); return; }
+    try {
+      await api.put(`/admin-ops/automation/agents/${agent.tenantId}`, body);
+      setMsg('✅ Saved'); onSaved();
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Save failed')); }
+  };
+
+  return (
+    <div style={{ background: c.surface, borderRadius: '10px', padding: '12px', marginTop: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px' }}>
+        <select value={form.mode} onChange={set('mode')} style={input}>
+          <option value="shadow">shadow (drafts only)</option>
+          <option value="live">live (answers customers)</option>
+        </select>
+        <input placeholder="Booking link (Calendly etc.)" value={form.bookingUrl} onChange={set('bookingUrl')} style={input} />
+      </div>
+      <textarea placeholder="Business description (blank = keep current)" value={form.description} onChange={set('description')} rows={2} style={input} />
+      <textarea placeholder="Policies — delivery, payment, hours (blank = keep current)" value={form.policies} onChange={set('policies')} rows={2} style={input} />
+      <textarea placeholder='Catalog JSON, e.g. [{"name":"Plan A","category":"sub","price":99,"description":"..."}] (blank = keep current)' value={form.catalogJson} onChange={set('catalogJson')} rows={3} style={{ ...input, fontFamily: 'monospace' }} />
+      <textarea placeholder='FAQ JSON, e.g. [{"q":"Delivery?","a":"5 days"}] (blank = keep current)' value={form.faqJson} onChange={set('faqJson')} rows={2} style={{ ...input, fontFamily: 'monospace' }} />
+      <button onClick={save} style={btn(c.lime, '#080A06')}>Save config</button>
+      {msg && <span style={{ fontSize: '12px', color: msg.startsWith('✅') ? c.emerald : c.red }}>{msg}</span>}
+    </div>
+  );
+}
+
+// ── Flow builder (POST/PUT /admin-ops/automation/flows) ──────
+const FLOW_TEMPLATE = JSON.stringify({
+  n1: { type: 'send_message', config: { body: 'Hi {{name}}! Want to hear more? Reply YES or NO.' }, next: 'n2' },
+  n2: { type: 'wait_for_reply', config: { timeoutHours: 24, onTimeout: 'n_end' }, next: 'n3' },
+  n3: { type: 'decision', config: { branches: [{ when: { var: 'reply', matches: '^yes' }, next: 'n_yes' }], default: 'n_end' } },
+  n_yes: { type: 'send_message', config: { body: 'Great — tell me what you need!' }, next: 'n_end' },
+  n_end: { type: 'end', config: { outcome: 'done' } },
+}, null, 2);
+
+function FlowEditor({ tenants, existing, onSaved, onCancel }) {
+  const [form, setForm] = useState({
+    name: existing?.name || '',
+    tenantId: existing?.tenantId || tenants[0]?.tenantId || '',
+    keywords: existing ? '' : 'hello',
+    entryNodeId: 'n1',
+    nodesJson: FLOW_TEMPLATE,
+  });
+  const [errors, setErrors] = useState([]);
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const save = async () => {
+    setErrors([]);
+    let nodes;
+    try { nodes = JSON.parse(form.nodesJson); } catch { setErrors(['Nodes must be valid JSON']); return; }
+    const body = {
+      tenantId: form.tenantId, name: form.name, entryNodeId: form.entryNodeId, nodes,
+      trigger: { type: 'inbound_keyword', config: { keywords: form.keywords.split(',').map((k) => k.trim()).filter(Boolean) } },
+    };
+    try {
+      if (existing) await api.put(`/admin-ops/automation/flows/${existing.flowId}`, body);
+      else await api.post('/admin-ops/automation/flows', body);
+      onSaved();
+    } catch (e) {
+      setErrors(e.response?.data?.errors || [e.response?.data?.message || 'Save failed']);
+    }
+  };
+
+  return (
+    <div style={{ ...card, borderColor: c.cyan + '44' }}>
+      <strong style={{ color: c.text }}>{existing ? `Edit "${existing.name}" (v${existing.version} → v${existing.version + 1})` : 'New flow'}</strong>
+      {existing?.activeRuns > 0 && (
+        <div style={{ color: c.amber, fontSize: '12px', margin: '6px 0' }}>⚠ {existing.activeRuns} run(s) in flight read the live definition — edits affect them.</div>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr', gap: '10px', marginTop: '10px' }}>
+        <input placeholder="Flow name" value={form.name} onChange={set('name')} style={input} />
+        <select value={form.tenantId} onChange={set('tenantId')} style={input}>
+          {tenants.map((t) => <option key={t.tenantId} value={t.tenantId}>{t.businessName}</option>)}
+        </select>
+        <input placeholder="entry node" value={form.entryNodeId} onChange={set('entryNodeId')} style={input} />
+      </div>
+      <input placeholder="Trigger keywords, comma-separated" value={form.keywords} onChange={set('keywords')} style={input} />
+      <textarea value={form.nodesJson} onChange={set('nodesJson')} rows={14} style={{ ...input, fontFamily: 'monospace', fontSize: '12px' }} />
+      {errors.length > 0 && (
+        <div style={{ color: c.red, fontSize: '12px', marginBottom: '8px' }}>{errors.map((e, i) => <div key={i}>• {e}</div>)}</div>
+      )}
+      <button onClick={save} style={btn(c.lime, '#080A06')}>{existing ? 'Save new version' : 'Create draft'}</button>
+      <button onClick={onCancel} style={btn('transparent', c.muted)}>Cancel</button>
+    </div>
+  );
+}
+
 export default function AutomationPanel() {
   const [agents, setAgents] = useState(null);
   const [flows, setFlows] = useState(null);
   const [error, setError] = useState(null);
+  const [configOpen, setConfigOpen] = useState(null); // tenantId
+  const [flowEditor, setFlowEditor] = useState(null); // 'new' | flow object
+
+  const flowAction = async (flowId, action) => {
+    try { await api.post(`/admin-ops/automation/flows/${flowId}/${action}`); fetchAll(); }
+    catch (e) { alert((e.response?.data?.errors || [e.response?.data?.message || 'Action failed']).join('\n')); }
+  };
 
   const fetchAll = async () => {
     try {
@@ -92,10 +213,14 @@ export default function AutomationPanel() {
             <span>Catalog: <b style={{ color: c.text }}>{a.catalogSize}</b></span>
             <span>Failures: <b style={{ color: a.consecutiveFailures ? c.red : c.emerald }}>{a.consecutiveFailures}</b></span>
           </div>
-          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '8px', alignItems: 'center' }}>
             <ConfigFlag ok={!!a.bookingUrl} label="booking link" />
             <ConfigFlag ok={!!a.reengagementTemplateSid} label="re-engagement template" />
+            <button onClick={() => setConfigOpen(configOpen === a.tenantId ? null : a.tenantId)} style={btn('transparent', c.cyan)}>
+              {configOpen === a.tenantId ? 'Close config ▲' : 'Configure ▼'}
+            </button>
           </div>
+          {configOpen === a.tenantId && <AgentConfigEditor agent={a} onSaved={fetchAll} />}
           {(a.recentShadowDrafts || []).slice(0, 3).map((d, i) => (
             <div key={i} style={{ background: c.surface, borderLeft: '3px solid ' + c.cyan, borderRadius: '8px', padding: '8px 12px', margin: '6px 0' }}>
               <div style={{ color: c.text, fontSize: '13px', fontWeight: 600 }}>
@@ -112,16 +237,29 @@ export default function AutomationPanel() {
       ))}
 
       {/* ── Workflow Engine ─────────────────────────────────── */}
-      <h3 style={{ color: c.text, margin: '20px 0 12px', fontSize: '16px' }}>⚙️ Workflow Engine</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0 12px' }}>
+        <h3 style={{ color: c.text, margin: 0, fontSize: '16px' }}>⚙️ Workflow Engine</h3>
+        <button onClick={() => setFlowEditor(flowEditor === 'new' ? null : 'new')} style={btn(c.lime, '#080A06')}>
+          {flowEditor === 'new' ? 'Cancel' : '+ New flow'}
+        </button>
+      </div>
+      {flowEditor && (
+        <FlowEditor
+          tenants={agents}
+          existing={flowEditor === 'new' ? null : flowEditor}
+          onSaved={() => { setFlowEditor(null); fetchAll(); }}
+          onCancel={() => setFlowEditor(null)}
+        />
+      )}
       {flows.length === 0 && (
-        <div style={{ ...card, color: c.muted }}>No flows published yet.</div>
+        <div style={{ ...card, color: c.muted }}>No flows yet — create one above.</div>
       )}
       {flows.length > 0 && (
         <div style={{ ...card, overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
               <tr>
-                {['Flow', 'Status', 'Trigger', 'Nodes', 'Active', 'Today ✓/✗', 'Recent'].map((h) => (
+                {['Flow', 'Status', 'Trigger', 'Nodes', 'Active', 'Today ✓/✗', 'Recent', 'Actions'].map((h) => (
                   <th key={h} style={{ textAlign: 'left', padding: '7px 10px', color: c.muted, borderBottom: '1px solid ' + c.borderDim }}>{h}</th>
                 ))}
               </tr>
@@ -150,6 +288,12 @@ export default function AutomationPanel() {
                     </td>
                     <td style={{ padding: '7px 10px', color: c.muted, borderBottom: '1px solid ' + c.borderDim }}>
                       {(f.recentRuns || []).slice(0, 3).map((r) => r.status + (r.outcome ? `(${r.outcome})` : '')).join(', ') || '—'}
+                    </td>
+                    <td style={{ padding: '7px 10px', borderBottom: '1px solid ' + c.borderDim, whiteSpace: 'nowrap' }}>
+                      <button onClick={() => setFlowEditor(f)} style={btn('transparent', c.cyan)}>Edit</button>
+                      {f.status === 'draft' && <button onClick={() => flowAction(f.flowId, 'publish')} style={btn('transparent', c.emerald)}>Publish</button>}
+                      {f.status === 'published' && !paused && <button onClick={() => flowAction(f.flowId, 'pause')} style={btn('transparent', c.amber)}>Pause</button>}
+                      {paused && <button onClick={() => flowAction(f.flowId, 'resume')} style={btn('transparent', c.emerald)}>Resume</button>}
                     </td>
                   </tr>
                 );

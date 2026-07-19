@@ -157,10 +157,13 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
   const doAction = async (action, payload = {}, successMsg) => {
     setActionLoading(action); setActionMsg('');
     try {
-      // Force release uses takeover route not admin-ops
+      // Force release uses takeover route not admin-ops; followup and
+      // allocate live under the automation namespace (backend 2026-07-19)
       const url = action === 'force-release'
         ? `/takeover/${leadId}/force-release`
-        : `/admin-ops/leads/${leadId}/${action}`;
+        : action === 'followup' || action === 'allocate'
+          ? `/admin-ops/automation/leads/${leadId}/${action}`
+          : `/admin-ops/leads/${leadId}/${action}`;
       await api.post(url, payload);
       setActionMsg(`✅ ${successMsg}`);
       await load();
@@ -251,6 +254,14 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
                 {actionLoading === 'force-release' ? 'Releasing...' : '⚡ Force Release'}
               </button>
             )}
+            <button onClick={() => doAction('followup', { hours: 16 }, 'AI follow-up armed (~16h)')} disabled={actionLoading === 'followup'}
+              style={{ padding: '8px 16px', background: `${t.cyan}18`, color: t.cyan, border: `1px solid ${t.cyan}33`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px', opacity: actionLoading === 'followup' ? 0.6 : 1 }}>
+              {actionLoading === 'followup' ? 'Arming...' : '⏰ AI Follow-up'}
+            </button>
+            <button onClick={() => doAction('allocate', {}, 'Allocated to a sales rep — both messaged')} disabled={actionLoading === 'allocate'}
+              style={{ padding: '8px 16px', background: `${t.emerald}18`, color: t.emerald, border: `1px solid ${t.emerald}33`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px', opacity: actionLoading === 'allocate' ? 0.6 : 1 }}>
+              {actionLoading === 'allocate' ? 'Allocating...' : '🤝 Allocate Rep'}
+            </button>
             <button onClick={() => doAction('close', { reason: 'Closed by admin' }, 'Lead closed')} disabled={actionLoading === 'close'}
               style={{ padding: '8px 16px', background: `${t.red}18`, color: t.red, border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', opacity: actionLoading === 'close' ? 0.6 : 1 }}>
               {actionLoading === 'close' ? 'Closing...' : '✕ Close Lead'}
