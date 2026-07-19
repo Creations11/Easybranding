@@ -41,6 +41,7 @@ import AuditLog from '../components/AuditLog';
 import exportCSV from '../utils/exportCSV';
 // FIX: PACMembersPanel existed but was never imported.
 import PACMembersPanel from '../components/PACMembersPanel';
+import AutomationPanel from '../components/AutomationPanel';
 
 // ── Design tokens ─────────────────────────────────────────────
 const c = {
@@ -238,6 +239,7 @@ export default function SuperAdminDashboard() {
     if (isEBAgent)  { s.push({ id: 'agentstats', icon: '📊', label: 'My Stats', badge: 0 }); }
     if (!isEBAgent) { s.push({ id: 'ebteam',     icon: '👔', label: 'EB Team',   badge: 0 }); }
     if (!isEBAgent) { s.push({ id: 'users',      icon: '👤', label: 'Users',     badge: pendingUsers.length }); }
+    if (isSuperAdmin) { s.push({ id: 'automation', icon: '🤖', label: 'Automation', badge: 0 }); }
     if (isSuperAdmin) { s.push({ id: 'platform', icon: '⚙️', label: 'Platform', badge: 0 }); }
     return s;
   }, [isEBAgent, isSuperAdmin, alerts.length, pendingUsers.length]);
@@ -853,6 +855,19 @@ export default function SuperAdminDashboard() {
                   />
                 </>
               )}
+            </div>
+          </SectionErrorBoundary>
+        )}
+
+        {/* ════════ AUTOMATION (AI agents + workflow engine) ════════ */}
+        {section === 'automation' && isSuperAdmin && (
+          <SectionErrorBoundary name="Automation" onRetry={refetch}>
+            <div>
+              <div style={{ marginBottom: 28 }}>
+                <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4 }}>Automation</h1>
+                <p style={{ color: c.muted, fontSize: 15 }}>AI sales agents, shadow drafts, and workflow-engine flows</p>
+              </div>
+              <AutomationPanel />
             </div>
           </SectionErrorBoundary>
         )}
