@@ -286,6 +286,33 @@ We aim to respond to all queries within 1 business day.`}/>
   );
 }
 
+// ── DATA DELETION INSTRUCTIONS (Meta app requirement) ─────────
+export function DataDeletion() {
+  return (
+    <LegalLayout
+      title="Data Deletion Instructions"
+      subtitle="Last updated: 20 July 2026"
+      pageDescription="How to request deletion of your personal data from Easy Branding AI (WABOS), including data processed via WhatsApp and Meta platforms."
+    >
+      <Section title="1. Your Right to Deletion" body={`Under the Protection of Personal Information Act (POPIA), you may request that Easy Branding AI (Pty) Ltd delete the personal information we hold about you. This includes any data collected or processed through our WhatsApp automation platform (WABOS) and connected Meta / Facebook services.`}/>
+      <Section title="2. What Data We Hold" body={`Depending on your interaction with the Platform, we may hold: your name, phone number, WhatsApp messages exchanged with a business using our Platform, lead and enquiry details, appointment and order information, and payment records (payment card details are held by our payment processor, Paystack, not by us).`}/>
+      <Section title="3. How to Request Deletion" body={`To request deletion of your data, contact us using any of these methods with the phone number and/or name associated with your data:
+
+• Email: ayanda@easybranding.co.za with the subject line "Data Deletion Request"
+• WhatsApp: +27 84 654 9578
+• Reply STOP to any WhatsApp message to opt out immediately
+
+Please include the WhatsApp number the data relates to so we can locate and remove it.`}/>
+      <Section title="4. What Happens Next" body={`We will confirm receipt of your request within 1 business day and complete the deletion within 30 days, as required by POPIA. We will delete your personal information from our active systems and instruct our processors to do the same, except where we are legally required to retain certain records (for example, tax and financial records, which are kept only as long as the law requires).`}/>
+      <Section title="5. Business Customers (Tenants)" body={`If you are a business using WABOS to serve your own customers, you control your customers' data on the Platform. You may delete individual customer records at any time from your dashboard, and all your data is permanently deleted 30 days after you cancel your subscription. To delete your entire business account, email ayanda@easybranding.co.za.`}/>
+      <Section title="6. Contact Us" body={`Easy Branding AI (Pty) Ltd
+Email: ayanda@easybranding.co.za
+WhatsApp: +27 84 654 9578
+Website: easybranding.co.za`}/>
+    </LegalLayout>
+  );
+}
+
 // ── CONTACT PAGE ──────────────────────────────────────────────
 export function ContactPage() {
   return (

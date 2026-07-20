@@ -7,7 +7,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import Nav from './components/Nav';
 
 import Home               from './pages/Home';
-import { TermsOfUse, PrivacyPolicy, RefundPolicy, ContactPage } from './pages/Legal';
+import { TermsOfUse, PrivacyPolicy, RefundPolicy, ContactPage, DataDeletion } from './pages/Legal';
 import Login              from './pages/Login';
 import Register           from './pages/Register';
 import Dashboard          from './pages/Dashboard';
@@ -96,6 +96,7 @@ export default function App() {
               <Route path="/terms"          element={<TermsOfUse />} />
               <Route path="/privacy"        element={<PrivacyPolicy />} />
               <Route path="/refund-policy"  element={<RefundPolicy />} />
+              <Route path="/data-deletion"  element={<DataDeletion />} />
               <Route path="/contact"        element={<ContactPage />} />
 
               {/* ── Public Documentation & Help ───────────────────── */}
