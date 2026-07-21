@@ -114,6 +114,16 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
   // NEW: custom questions, separate from `form` since this is a
   // nested array (customWorkflow.questions), not a flat field.
   const [questions, setQuestions] = useState(tenant?.customWorkflow?.questions || []);
+  // Bot Messages — tenantWorkflowService.js's getMessage() reads
+  // tenant.customMessages.{welcome,qualified,rejected}, but no UI ever
+  // exposed them (found 2026-07-21: "no space to paste the greeting").
+  // Prefilled from the tenant so a save can't wipe an existing message.
+  const [botMsgs, setBotMsgs] = useState({
+    welcome:   tenant?.customMessages?.welcome   || '',
+    qualified: tenant?.customMessages?.qualified || '',
+    rejected:  tenant?.customMessages?.rejected  || '',
+  });
+  const setMsg = (k, v) => setBotMsgs(prev => ({ ...prev, [k]: v }));
 
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
   const toggleAddon = (key) => setForm(prev => ({ ...prev, addons: { ...prev.addons, [key]: !prev.addons[key] } }));
@@ -164,6 +174,11 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
       customWorkflow: {
         ...(tenant?.customWorkflow || {}),
         questions,
+      },
+      customMessages: {
+        welcome:   botMsgs.welcome.trim()   || null,
+        qualified: botMsgs.qualified.trim() || null,
+        rejected:  botMsgs.rejected.trim()  || null,
       },
     };
 
@@ -308,6 +323,22 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
             <input type="number" value={form.monthlyFee} onChange={e => set('monthlyFee', Number(e.target.value))} style={{ ...iStyle, marginBottom: 0 }} />
           </div>
         </div>
+
+        {/* Bot Messages — the greeting/qualified/rejected copy the bot
+            actually sends (tenant.customMessages). Leave blank to use
+            the industry template defaults. */}
+        <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '12px' }}>
+          Bot Messages
+        </p>
+        <p style={{ color: c.muted, fontSize: '12px', marginBottom: '10px' }}>
+          What the bot says at each stage. Blank = the built-in template for this industry. You can use <code style={{ color: c.text }}>{'{{name}}'}</code> and <code style={{ color: c.text }}>{'{{brand}}'}</code>.
+        </p>
+        <label style={labelStyle}>Welcome / Greeting (first message a customer gets)</label>
+        <textarea value={botMsgs.welcome} onChange={e => setMsg('welcome', e.target.value)} rows={5} placeholder="👋 Welcome to {{brand}}! …" style={{ ...iStyle, resize: 'vertical', minHeight: '90px' }} />
+        <label style={labelStyle}>Qualified (after all questions answered)</label>
+        <textarea value={botMsgs.qualified} onChange={e => setMsg('qualified', e.target.value)} rows={3} placeholder="Perfect, thanks {{name}}! ✅ …" style={{ ...iStyle, resize: 'vertical', minHeight: '60px' }} />
+        <label style={labelStyle}>Rejected / Not a fit (optional)</label>
+        <textarea value={botMsgs.rejected} onChange={e => setMsg('rejected', e.target.value)} rows={2} placeholder="No problem at all! …" style={{ ...iStyle, resize: 'vertical', minHeight: '48px' }} />
 
         {/* NEW: Custom Questions section — the actual fix. Every
             question's answer type is now a deliberate choice made
