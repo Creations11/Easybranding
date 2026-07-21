@@ -94,7 +94,12 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
         // Only send the subaccount when non-empty — the backend merges
         // paymentSettings subfields, so omitting it preserves whatever
         // is stored, while an empty string would overwrite it to "".
-        ...(form.paystackSubaccount?.trim() ? { paystackSubaccount: form.paystackSubaccount.trim() } : {}),
+        // subaccountActive must ride along: initializePayment requires
+        // BOTH fields before it attaches the split (code alone silently
+        // doesn't split).
+        ...(form.paystackSubaccount?.trim()
+          ? { paystackSubaccount: form.paystackSubaccount.trim(), subaccountActive: true }
+          : {}),
       },
       // NEW: persist questions under customWorkflow, alongside
       // whatever workflowMode/qualifyRules already exist there.
