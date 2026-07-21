@@ -37,6 +37,11 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
     industry:       tenant?.industry       || 'rental_agency',
     ownerPhone:     tenant?.ownerPhone     || '',
     feeMode:        tenant?.paymentSettings?.convenienceFee?.type === 'gross_up' ? 'gross_up' : 'absorb',
+    // Paystack subaccount for payment splits. This field MUST round-trip:
+    // before it existed, saving this form rebuilt paymentSettings without
+    // it and wiped the split (2026-07-20 — a live payment went 100% to
+    // the platform, tenant got R0).
+    paystackSubaccount: tenant?.paymentSettings?.paystackSubaccount || '',
     // NEW: per-tenant paid top-ups, independent of plan — e.g. an R99
     // tenant who buys invoicing separately. Reads any addons already
     // switched on via the WhatsApp upsell flow, so saving here can't
@@ -86,6 +91,10 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
           type:   form.feeMode === 'gross_up' ? 'gross_up' : 'absorb',
           paidBy: form.feeMode === 'gross_up' ? 'customer' : 'business',
         },
+        // Only send the subaccount when non-empty — the backend merges
+        // paymentSettings subfields, so omitting it preserves whatever
+        // is stored, while an empty string would overwrite it to "".
+        ...(form.paystackSubaccount?.trim() ? { paystackSubaccount: form.paystackSubaccount.trim() } : {}),
       },
       // NEW: persist questions under customWorkflow, alongside
       // whatever workflowMode/qualifyRules already exist there.
@@ -137,6 +146,10 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
           <option value="absorb">Business absorbs — customer pays exact price</option>
           <option value="gross_up">Pass to customer — customer covers all fees</option>
         </select>
+
+        <label style={labelStyle}>Paystack Subaccount (payment split)</label>
+        <p style={{ color: c.muted, fontSize: '12px', marginBottom: '8px' }}>The client's Paystack subaccount code (ACCT_...). Payments split to their bank automatically. Leave blank to keep the current value.</p>
+        <input value={form.paystackSubaccount || ''} onChange={e => set('paystackSubaccount', e.target.value)} placeholder="ACCT_xxxxxxxxxxxx" style={iStyle} />
 
         <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginBottom: '12px', marginTop: '8px' }}>Plan & Status</p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
