@@ -16,6 +16,23 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 
+// ── Tenant scope (super-admin only) ──────────────────────────
+// A super-admin sees every tenant by default, which mixes platform
+// oversight with working EasyBranding's own customers. The Operations
+// view can narrow to one tenant; scope flows through here so the query
+// key changes (React Query refetches) and the request carries ?tenantId.
+export const SCOPE_KEY = 'wabos.opsScope';
+export const getStoredScope = () => {
+  try { return localStorage.getItem(SCOPE_KEY) || ''; } catch { return ''; }
+};
+export const setStoredScope = (v) => {
+  try { v ? localStorage.setItem(SCOPE_KEY, v) : localStorage.removeItem(SCOPE_KEY); } catch { /* ignore */ }
+};
+const scopedUrl = (path, scope) => {
+  if (!scope) return path;
+  return path + (path.includes('?') ? '&' : '?') + 'tenantId=' + scope;
+};
+
 // ── Helper: only fetch for non-agent roles ───────────────────
 function useIfNotAgent(queryKey, queryFn, options = {}) {
   const { isEBAgent, isAuthenticated } = useAuth();
@@ -33,10 +50,10 @@ function useIfNotAgent(queryKey, queryFn, options = {}) {
 
 // ── Individual data hooks ────────────────────────────────────
 
-export function useOverview() {
+export function useOverview(scope = '') {
   return useIfNotAgent(
-    ['admin-ops', 'overview'],
-    () => api.get('/admin-ops/overview').then(r => r.data?.data?.overview),
+    ['admin-ops', 'overview', scope],
+    () => api.get(scopedUrl('/admin-ops/overview', scope)).then(r => r.data?.data?.overview),
     { staleTime: 20_000 }
   );
 }
@@ -53,67 +70,67 @@ export function useAllLeads() {
   );
 }
 
-export function useActiveLeads() {
+export function useActiveLeads(scope = '') {
   return useIfNotAgent(
-    ['admin-ops', 'conversations', 'active'],
-    () => api.get('/admin-ops/conversations/active').then(r => r.data?.data?.leads || []),
+    ['admin-ops', 'conversations', 'active', scope],
+    () => api.get(scopedUrl('/admin-ops/conversations/active', scope)).then(r => r.data?.data?.leads || []),
     { staleTime: 15_000 }
   );
 }
 
-export function useQualifiedLeads() {
+export function useQualifiedLeads(scope = '') {
   return useIfNotAgent(
-    ['admin-ops', 'leads', 'qualified'],
-    () => api.get('/admin-ops/leads/qualified').then(r => r.data?.data?.leads || []),
+    ['admin-ops', 'leads', 'qualified', scope],
+    () => api.get(scopedUrl('/admin-ops/leads/qualified', scope)).then(r => r.data?.data?.leads || []),
     { staleTime: 30_000 }
   );
 }
 
-export function useRejectedLeads() {
+export function useRejectedLeads(scope = '') {
   return useIfNotAgent(
-    ['admin-ops', 'leads', 'rejected'],
-    () => api.get('/admin-ops/leads/rejected').then(r => r.data?.data?.leads || []),
+    ['admin-ops', 'leads', 'rejected', scope],
+    () => api.get(scopedUrl('/admin-ops/leads/rejected', scope)).then(r => r.data?.data?.leads || []),
     { staleTime: 30_000 }
   );
 }
 
 // NEW (29 June 2026): closed leads — see file header.
-export function useClosedLeads() {
+export function useClosedLeads(scope = '') {
   return useIfNotAgent(
-    ['admin-ops', 'leads', 'closed'],
-    () => api.get('/admin-ops/leads/closed').then(r => r.data?.data?.leads || []),
+    ['admin-ops', 'leads', 'closed', scope],
+    () => api.get(scopedUrl('/admin-ops/leads/closed', scope)).then(r => r.data?.data?.leads || []),
     { staleTime: 30_000 }
   );
 }
 
-export function useStages() {
+export function useStages(scope = '') {
   return useIfNotAgent(
-    ['admin-ops', 'stages'],
-    () => api.get('/admin-ops/stages').then(r => r.data?.data?.stages || []),
+    ['admin-ops', 'stages', scope],
+    () => api.get(scopedUrl('/admin-ops/stages', scope)).then(r => r.data?.data?.stages || []),
     { staleTime: 60_000 }
   );
 }
 
-export function useViewings() {
+export function useViewings(scope = '') {
   return useIfNotAgent(
-    ['admin-ops', 'viewings'],
-    () => api.get('/admin-ops/viewings').then(r => r.data?.data?.viewings || []),
+    ['admin-ops', 'viewings', scope],
+    () => api.get(scopedUrl('/admin-ops/viewings', scope)).then(r => r.data?.data?.viewings || []),
     { staleTime: 30_000 }
   );
 }
 
-export function useMessages() {
+export function useMessages(scope = '') {
   return useIfNotAgent(
-    ['admin-ops', 'messages', 'recent'],
-    () => api.get('/admin-ops/messages/recent').then(r => r.data?.data?.messages || []),
+    ['admin-ops', 'messages', 'recent', scope],
+    () => api.get(scopedUrl('/admin-ops/messages/recent', scope)).then(r => r.data?.data?.messages || []),
     { staleTime: 15_000 }
   );
 }
 
-export function useAlerts() {
+export function useAlerts(scope = '') {
   return useIfNotAgent(
-    ['admin-ops', 'alerts'],
-    () => api.get('/admin-ops/alerts').then(r => r.data?.data?.alerts || []),
+    ['admin-ops', 'alerts', scope],
+    () => api.get(scopedUrl('/admin-ops/alerts', scope)).then(r => r.data?.data?.alerts || []),
     { staleTime: 15_000 }
   );
 }
@@ -150,10 +167,10 @@ export function usePendingUsers() {
   );
 }
 
-export function useAgents() {
+export function useAgents(scope = '') {
   return useIfNotAgent(
-    ['admin-ops', 'agents'],
-    () => api.get('/admin-ops/agents').then(r => r.data?.data?.agents || []),
+    ['admin-ops', 'agents', scope],
+    () => api.get(scopedUrl('/admin-ops/agents', scope)).then(r => r.data?.data?.agents || []),
     { staleTime: 60_000 }
   );
 }

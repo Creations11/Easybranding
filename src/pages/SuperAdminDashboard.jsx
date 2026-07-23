@@ -25,7 +25,7 @@ import {
   useRejectedLeads, useClosedLeads, useStages, useViewings,
   useMessages, useAlerts, useTenants, useTenantStats,
   useUsers, usePendingUsers, useAgents, useHealth,
-  useRefetchAll,
+  useRefetchAll, getStoredScope, setStoredScope,
 } from '../hooks/useDashboardData';
 import ProspectingPanel from '../components/ProspectingPanel';
 import AgentStatsPanel from '../components/AgentStatsPanel';
@@ -65,17 +65,24 @@ const PLAN_COLOR = { starter: c.sage, growth: c.lime, enterprise: c.cyan };
 export default function SuperAdminDashboard() {
   const { user, isSuperAdmin, isEBAgent, signOut } = useAuth();
 
+  // ── Tenant scope ──────────────────────────────────────────
+  // As super-admin every list spans all tenants, which mixes platform
+  // oversight with working EasyBranding's own customers. Scope narrows
+  // Operations to one tenant; the choice persists across reloads.
+  const [opsScope, setOpsScope] = useState(() => getStoredScope());
+  const changeScope = (v) => { setStoredScope(v); setOpsScope(v); };
+
   // ── React Query data ──────────────────────────────────────
-  const overview     = useOverview().data;
+  const overview     = useOverview(opsScope).data;
   const allLeads     = useAllLeads().data || [];
-  const activeLeads  = useActiveLeads().data || [];
-  const qualifiedLeads = useQualifiedLeads().data || [];
-  const rejectedLeads  = useRejectedLeads().data || [];
-  const closedLeads    = useClosedLeads().data || [];
-  const stages       = useStages().data || [];
-  const viewings     = useViewings().data || [];
-  const messages     = useMessages().data || [];
-  const alerts       = useAlerts().data || [];
+  const activeLeads  = useActiveLeads(opsScope).data || [];
+  const qualifiedLeads = useQualifiedLeads(opsScope).data || [];
+  const rejectedLeads  = useRejectedLeads(opsScope).data || [];
+  const closedLeads    = useClosedLeads(opsScope).data || [];
+  const stages       = useStages(opsScope).data || [];
+  const viewings     = useViewings(opsScope).data || [];
+  const messages     = useMessages(opsScope).data || [];
+  const alerts       = useAlerts(opsScope).data || [];
   const tenants      = useTenants().data || [];
   const tenantStats  = useTenantStats().data;
   const allUsers     = useUsers().data || [];
@@ -332,9 +339,33 @@ export default function SuperAdminDashboard() {
         {section === 'operations' && (
           <SectionErrorBoundary name="Operations" onRetry={refetch}>
             <div>
-              <div style={{ marginBottom: 28 }}>
-                <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4 }}>Operations</h1>
-                <p style={{ color: c.muted, fontSize: 15 }}>Real-time WhatsApp pipeline across all agencies</p>
+              <div style={{ marginBottom: 28, display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                <div>
+                  <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4 }}>Operations</h1>
+                  <p style={{ color: c.muted, fontSize: 15 }}>
+                    {opsScope
+                      ? (tenants.find(t => t._id === opsScope)?.businessName || 'Selected client') + ' — pipeline'
+                      : 'All clients — platform-wide pipeline'}
+                  </p>
+                </div>
+                {/* Super-admin sees every tenant by default, which mixes
+                    platform oversight with working our own customers.
+                    Narrow to one client to work their pipeline cleanly. */}
+                {isSuperAdmin && tenants.length > 0 && (
+                  <div>
+                    <label style={{ color: c.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>Viewing</label>
+                    <select
+                      value={opsScope}
+                      onChange={e => changeScope(e.target.value)}
+                      style={{ padding: '9px 14px', background: opsScope ? c.lime + '18' : 'rgba(255,255,255,0.04)', border: '1px solid ' + (opsScope ? c.lime + '55' : c.borderDim), borderRadius: 10, color: opsScope ? c.lime : c.text, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', minWidth: 220 }}
+                    >
+                      <option value="">🌍 All clients (platform view)</option>
+                      {tenants.map(t => (
+                        <option key={t._id} value={t._id}>{t.businessName}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
               <div style={{ display: 'flex', gap: 4, marginBottom: 28, borderBottom: '1px solid ' + c.borderDim, overflowX: 'auto' }}>
                 {opsTabs.map(t => (
