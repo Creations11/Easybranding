@@ -73,7 +73,12 @@ export function useAllLeads() {
 export function useActiveLeads(scope = '') {
   return useIfNotAgent(
     ['admin-ops', 'conversations', 'active', scope],
-    () => api.get(scopedUrl('/admin-ops/conversations/active', scope)).then(r => r.data?.data?.leads || []),
+    // limit=100: the Leads board's Active column has no per-column pagination,
+    // so fetch enough that its count matches the overview "Active" stat (both
+    // now use the same not-terminal definition server-side). Fine at current
+    // scale; this view needs real pagination if one tenant's active count
+    // grows large.
+    () => api.get(scopedUrl('/admin-ops/conversations/active?limit=100', scope)).then(r => r.data?.data?.leads || []),
     { staleTime: 15_000 }
   );
 }

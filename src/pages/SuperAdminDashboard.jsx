@@ -167,9 +167,15 @@ export default function SuperAdminDashboard() {
     return ids;
   }, [activeLeads, qualifiedLeads, rejectedLeads, closedLeads]);
 
+  // allLeads (GET /leads) is NOT scoped by the Operations "Viewing" selector
+  // — that endpoint doesn't honor ?tenantId (it scopes only via the
+  // x-tenant-id header, which the dashboard doesn't send) — so when a
+  // super-admin narrows to one client, filter the "Other" column here to
+  // match the scoped status columns. Without this, "Other" showed every
+  // tenant's uncategorized leads while the rest of the board was scoped.
   const otherLeads = useMemo(
-    () => allLeads.filter(l => !categorizedIds.has(l._id)),
-    [allLeads, categorizedIds]
+    () => allLeads.filter(l => !categorizedIds.has(l._id) && (!opsScope || l.tenantId === opsScope)),
+    [allLeads, categorizedIds, opsScope]
   );
 
   const leadColumns = useMemo(() => {
