@@ -1,0 +1,5 @@
+# Run the test suite before every push. The frontend CI (.github/workflows/
+# ci.yml) gates on `npm test`, but there was no local gate — so a commit that
+# broke the SuperAdminDashboard tests was pushed and only caught by a red CI
+# run (2026-07-23). This blocks that push locally, matching the backend repo.
+npm test
