@@ -31,7 +31,11 @@ const ROUTE_DEFAULTS = {
 const mockApiGet = (overrides = {}) => {
   const routes = { ...ROUTE_DEFAULTS, ...overrides }
   api.get.mockImplementation((url) => {
-    if (url in routes) return Promise.resolve(routes[url])
+    // Match by PATH, ignoring the query string, so a hook adding params
+    // (e.g. ?limit=100 on active conversations, or ?tenantId= from the
+    // scope selector) doesn't require re-keying every mocked route.
+    const path = url.split('?')[0]
+    if (path in routes) return Promise.resolve(routes[path])
     throw new Error(`Unmocked api.get call in test: ${url}`)
   })
 }
