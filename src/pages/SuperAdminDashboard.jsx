@@ -229,6 +229,11 @@ export default function SuperAdminDashboard() {
     try { await api.post('/users/' + u._id + '/reject', { reason: 'Application rejected' }); refetch(); }
     catch { alert('Failed to reject user'); }
   };
+  const handleDeleteUser = async (u) => {
+    if (!confirm('Delete ' + (u.fullName || u.email) + '? They will lose access and disappear from this list.')) return;
+    try { await api.delete('/users/' + u._id); refetch(); }
+    catch (err) { alert(err.response?.data?.message || 'Failed to delete user'); }
+  };
   const generateInvite = async (tenant) => {
     try {
       const res = await api.post('/invites/' + tenant._id + '/generate');
@@ -879,6 +884,9 @@ export default function SuperAdminDashboard() {
                           : <select defaultValue={u.role} onChange={async (e) => { try { await api.put('/users/' + u._id, { role: e.target.value }); refetch(); } catch (err) { alert(err.response?.data?.message || 'Failed'); e.target.value = u.role; } }} style={{ padding: '4px 8px', background: c.cyan + '18', border: '1px solid ' + c.cyan + '33', color: c.cyan, borderRadius: 8, fontSize: 12, cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}>
                             <option value="borrower">borrower</option><option value="agent">agent</option><option value="admin">admin</option><option value="eb_agent">eb_agent</option><option value="eb_manager">eb_manager</option>{isSuperAdmin && <option value="super_admin">super_admin</option>}
                           </select>}
+                        {!(u.role === 'super_admin' || u._id === user.id) && (
+                          <button onClick={() => handleDeleteUser(u)} title="Delete user" style={{ padding: '5px 10px', background: c.red + '18', color: c.red, border: '1px solid ' + c.red + '33', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>🗑 Delete</button>
+                        )}
                       </div>
                     </div>
                   ))}
