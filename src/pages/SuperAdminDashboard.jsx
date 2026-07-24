@@ -25,7 +25,7 @@ import {
   useRejectedLeads, useClosedLeads, useStages, useViewings,
   useMessages, useAlerts, useTenants, useTenantStats,
   useUsers, usePendingUsers, useAgents, useHealth,
-  useRefetchAll, getStoredScope, setStoredScope,
+  useRefetchAll, getStoredScope, setStoredScope, useFlowTemplates,
 } from '../hooks/useDashboardData';
 import ProspectingPanel from '../components/ProspectingPanel';
 import AgentStatsPanel from '../components/AgentStatsPanel';
@@ -89,6 +89,7 @@ export default function SuperAdminDashboard() {
   const pendingUsers = usePendingUsers().data || [];
   const agents       = useAgents().data || [];
   const health       = useHealth().data;
+  const flowTemplates = useFlowTemplates().data || [];
   const refetch      = useRefetchAll();
 
   const isLoading = !isEBAgent && (!overview && !tenants.length && !activeLeads.length);
@@ -110,6 +111,7 @@ export default function SuperAdminDashboard() {
   const [inviteUrl,    setInviteUrl]    = useState('');
   const [bulkModal,    setBulkModal]    = useState(false);
   const [selectedClientIds, setSelectedClientIds] = useState([]);
+  const [flowChoice,   setFlowChoice]   = useState({}); // tenantId → templateId (Allocate picker)
 
   // ── Pagination & Search ───────────────────────────────────
   const [clientsPage, setClientsPage] = useState(1);
@@ -223,6 +225,19 @@ export default function SuperAdminDashboard() {
     if (!confirm('Delete ' + tenant.businessName + '?')) return;
     try { await api.delete('/tenants/' + tenant._id); refetch(); }
     catch (err) { alert(err.response?.data?.message || 'Delete failed'); }
+  };
+  // Allocate an industry flow template as the client's LIVE bot (inbound_any
+  // on their number). The picker's value is tracked per-tenant in flowChoice.
+  const handleAllocateFlow = async (tenant) => {
+    const templateId = flowChoice[tenant._id] || flowTemplates[0]?.id;
+    if (!templateId) { alert('No flow templates available'); return; }
+    const tmpl = flowTemplates.find(t => t.id === templateId);
+    if (!confirm(`Allocate the "${tmpl?.label || templateId}" flow to ${tenant.businessName}?\n\nIt becomes their live WhatsApp bot (answers every message on their number).`)) return;
+    try {
+      await api.post(`/admin-ops/automation/tenants/${tenant._id}/allocate-flow`, { templateId });
+      refetch();
+      alert(`✅ "${tmpl?.label || 'Flow'}" allocated to ${tenant.businessName}`);
+    } catch (err) { alert(err.response?.data?.message || 'Failed to allocate flow'); }
   };
   const handleRejectUser = async (u) => {
     if (!confirm('Reject ' + u.fullName + '?')) return;
@@ -749,6 +764,14 @@ export default function SuperAdminDashboard() {
                             <button onClick={() => setClientModal(tenant)} style={{ padding: '7px 14px', background: c.lime + '22', color: c.lime, border: '1px solid ' + c.border, borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>Edit</button>
                             <button onClick={() => generateInvite(tenant)} style={{ padding: '7px 14px', background: c.cyan + '22', color: c.cyan, border: '1px solid ' + c.cyan + '33', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>🔗 Invite</button>
                             {isSuperAdmin && <button onClick={() => handleDeleteClient(tenant)} style={{ padding: '7px 14px', background: c.red + '22', color: c.red, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>Delete</button>}
+                            {isSuperAdmin && flowTemplates.length > 0 && (
+                              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                <select value={flowChoice[tenant._id] || flowTemplates[0].id} onChange={e => setFlowChoice(prev => ({ ...prev, [tenant._id]: e.target.value }))} title="Industry flow template" style={{ padding: '7px 8px', background: c.moss + '22', color: c.sage, border: '1px solid ' + c.moss + '55', borderRadius: 8, fontSize: 12, cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}>
+                                  {flowTemplates.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                                </select>
+                                <button onClick={() => handleAllocateFlow(tenant)} title="Allocate this flow as the client's live bot" style={{ padding: '7px 12px', background: c.lime + '22', color: c.lime, border: '1px solid ' + c.border, borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' }}>⚡ Allocate</button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>

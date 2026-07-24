@@ -26,6 +26,7 @@ const ROUTE_DEFAULTS = {
   '/users': { data: { data: { users: [] } } },
   '/users/pending': { data: { data: { users: [] } } },
   '/admin-ops/agents': { data: { data: { agents: [] } } },
+  '/admin-ops/automation/flow-templates': { data: { data: { templates: [] } } },
 }
 
 const mockApiGet = (overrides = {}) => {

@@ -164,6 +164,16 @@ export function useUsers() {
   );
 }
 
+// Industry flow templates available to allocate to a client (Clients tab
+// Allocate button). Static-ish list — cache generously.
+export function useFlowTemplates() {
+  return useIfNotAgent(
+    ['admin-ops', 'flow-templates'],
+    () => api.get('/admin-ops/automation/flow-templates').then(r => r.data?.data?.templates || []),
+    { staleTime: 300_000 }
+  );
+}
+
 export function usePendingUsers() {
   return useIfNotAgent(
     ['users', 'pending'],
