@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, waitFor, fireEvent } from '@testing-library/react'
+import { screen, waitFor, fireEvent, within } from '@testing-library/react'
 import { renderWithProviders } from '../test-utils'
 import api from '../../src/api'
 import SuperAdminDashboard from '../../src/pages/SuperAdminDashboard'
@@ -130,5 +130,83 @@ describe('SuperAdminDashboard', () => {
     fireEvent.click(screen.getByText('✋ Take over'))
 
     await waitFor(() => expect(alertSpy).toHaveBeenCalledWith('Takeover failed: cap reached'))
+  })
+
+  // The Allocate control on the Clients tab turns an industry template into a
+  // client's live bot. It renders whatever /flow-templates returns, so these
+  // pin that the picker lists every template the API sends (the default mock
+  // is an empty array, which hides the control entirely) and that the button
+  // posts the SELECTED id — not the first one.
+  describe('Allocate flow (Clients tab)', () => {
+    const TEMPLATES = [
+      { id: 'retail', label: 'Retail / E-commerce', demoKeywords: ['shop'] },
+      { id: 'salon', label: 'Hair & Beauty Salon', demoKeywords: ['salon'] },
+      { id: 'medical', label: 'Medical / Clinic', demoKeywords: ['clinic'] },
+      { id: 'home', label: 'Home & Furniture', demoKeywords: ['furniture'] },
+    ]
+    const withClients = () => mockApiGet({
+      '/admin-ops/overview': { data: { data: { overview: { totalLeads: 1, activeConversations: 0, qualifiedLeads: 0, rejectedLeads: 0, todayLeads: 0, qualificationRate: 0 } } } },
+      '/tenants': { data: { data: { tenants: [
+        { _id: 'ten1', businessName: 'Glow Salon', contactEmail: 'glow@example.com', status: 'active', plan: 'starter', monthlyFee: 999, whatsappNumber: '+27650001111' },
+      ] } } },
+      '/admin-ops/automation/flow-templates': { data: { data: { templates: TEMPLATES } } },
+    })
+
+    const openClients = async () => {
+      renderWithProviders(<SuperAdminDashboard />)
+      await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
+      fireEvent.click(screen.getByRole('button', { name: /clients/i }))
+      await waitFor(() => expect(screen.getByText('Glow Salon')).toBeInTheDocument())
+    }
+
+    it('lists every template the API returns as a picker option', async () => {
+      withClients()
+      await openClients()
+
+      const picker = screen.getByTitle('Industry flow template')
+      expect(within(picker).getAllByRole('option')).toHaveLength(TEMPLATES.length)
+      TEMPLATES.forEach(t => expect(within(picker).getByRole('option', { name: t.label })).toBeInTheDocument())
+    })
+
+    it('allocates the SELECTED template, not the first in the list', async () => {
+      withClients()
+      api.post.mockResolvedValue({ data: { success: true } })
+      vi.spyOn(window, 'confirm').mockReturnValue(true)
+      vi.spyOn(window, 'alert').mockImplementation(() => {})
+      await openClients()
+
+      // Pick the fourth template, so a bug that posts flowTemplates[0] fails.
+      fireEvent.change(screen.getByTitle('Industry flow template'), { target: { value: 'home' } })
+      fireEvent.click(screen.getByText('⚡ Allocate'))
+
+      await waitFor(() => expect(api.post).toHaveBeenCalledWith(
+        '/admin-ops/automation/tenants/ten1/allocate-flow',
+        { templateId: 'home' },
+      ))
+    })
+
+    it('cancelling the confirm does not allocate', async () => {
+      withClients()
+      api.post.mockResolvedValue({ data: { success: true } })
+      vi.spyOn(window, 'confirm').mockReturnValue(false)
+      await openClients()
+
+      fireEvent.click(screen.getByText('⚡ Allocate'))
+
+      await waitFor(() => expect(screen.getByText('⚡ Allocate')).toBeInTheDocument())
+      expect(api.post).not.toHaveBeenCalled()
+    })
+
+    it('surfaces the API error message when allocation fails', async () => {
+      withClients()
+      api.post.mockRejectedValue({ response: { data: { message: 'Unknown flow template' } } })
+      vi.spyOn(window, 'confirm').mockReturnValue(true)
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+      await openClients()
+
+      fireEvent.click(screen.getByText('⚡ Allocate'))
+
+      await waitFor(() => expect(alertSpy).toHaveBeenCalledWith('Unknown flow template'))
+    })
   })
 })
