@@ -83,10 +83,21 @@ export function useActiveLeads(scope = '') {
   );
 }
 
+// These three endpoints default to limit=20 server-side. The Leads board has
+// no per-column pagination, and SuperAdminDashboard puts any lead the four
+// status calls DIDN'T return into an "Other" column — so a truncated response
+// doesn't look like truncation, it looks like the lead is uncategorised.
+// Confirmed in production 2026-07-27: 70 closed leads, 20 returned, 50 sitting
+// under "Other" as if nobody had closed them.
+//
+// 200 is headroom, not a fix for scale — `closed` accumulates forever, so this
+// board needs real per-column pagination before that count approaches it.
+const BOARD_LIMIT = 200;
+
 export function useQualifiedLeads(scope = '') {
   return useIfNotAgent(
     ['admin-ops', 'leads', 'qualified', scope],
-    () => api.get(scopedUrl('/admin-ops/leads/qualified', scope)).then(r => r.data?.data?.leads || []),
+    () => api.get(scopedUrl(`/admin-ops/leads/qualified?limit=${BOARD_LIMIT}`, scope)).then(r => r.data?.data?.leads || []),
     { staleTime: 30_000 }
   );
 }
@@ -94,7 +105,7 @@ export function useQualifiedLeads(scope = '') {
 export function useRejectedLeads(scope = '') {
   return useIfNotAgent(
     ['admin-ops', 'leads', 'rejected', scope],
-    () => api.get(scopedUrl('/admin-ops/leads/rejected', scope)).then(r => r.data?.data?.leads || []),
+    () => api.get(scopedUrl(`/admin-ops/leads/rejected?limit=${BOARD_LIMIT}`, scope)).then(r => r.data?.data?.leads || []),
     { staleTime: 30_000 }
   );
 }
@@ -103,7 +114,7 @@ export function useRejectedLeads(scope = '') {
 export function useClosedLeads(scope = '') {
   return useIfNotAgent(
     ['admin-ops', 'leads', 'closed', scope],
-    () => api.get(scopedUrl('/admin-ops/leads/closed', scope)).then(r => r.data?.data?.leads || []),
+    () => api.get(scopedUrl(`/admin-ops/leads/closed?limit=${BOARD_LIMIT}`, scope)).then(r => r.data?.data?.leads || []),
     { staleTime: 30_000 }
   );
 }

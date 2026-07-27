@@ -132,6 +132,25 @@ describe('SuperAdminDashboard', () => {
     await waitFor(() => expect(alertSpy).toHaveBeenCalledWith('Takeover failed: cap reached'))
   })
 
+  // The four status endpoints default to limit=20 server-side, and the Leads
+  // board has no per-column pagination — anything they don't return lands in
+  // the "Other" column, so truncation looks like miscategorisation rather than
+  // truncation. Production had 70 closed leads, 20 returned, and 50 showing as
+  // uncategorised (2026-07-27).
+  it('asks for more than the default 20 on every status column', async () => {
+    mockApiGet()
+    renderWithProviders(<SuperAdminDashboard />)
+    await waitFor(() => expect(api.get).toHaveBeenCalled())
+
+    const urls = api.get.mock.calls.map(c => c[0])
+    for (const path of ['/admin-ops/leads/closed', '/admin-ops/leads/qualified', '/admin-ops/leads/rejected', '/admin-ops/conversations/active']) {
+      const call = urls.find(u => u.startsWith(path))
+      expect(call, `${path} was never requested`).toBeTruthy()
+      const limit = Number(new URLSearchParams(call.split('?')[1] || '').get('limit'))
+      expect(limit, `${path} must request more than the server default of 20`).toBeGreaterThan(20)
+    }
+  })
+
   // The Allocate control on the Clients tab turns an industry template into a
   // client's live bot. It renders whatever /flow-templates returns, so these
   // pin that the picker lists every template the API sends (the default mock
