@@ -25,6 +25,7 @@ const KIND_LABEL = {
   invoice_overdue:  'Invoice',
   takeover_idle:    'Takeover',
   send_failed:      'Delivery',
+  awaiting_reply:   'Unanswered',
 };
 
 export default function ActionRail({ query, colors, onOpenLead }) {
@@ -83,7 +84,7 @@ export default function ActionRail({ query, colors, onOpenLead }) {
         padding: '12px 16px', background: c.card, border: '1px solid ' + c.borderDim,
         borderRadius: 12, fontSize: 13, color: c.sage,
       }}>
-        Nothing outstanding — no unconfirmed payments, overdue invoices, idle takeovers or failed sends.
+        Nothing outstanding — no unanswered customers, unconfirmed payments, overdue invoices, idle takeovers or failed sends.
       </div>
     );
   }

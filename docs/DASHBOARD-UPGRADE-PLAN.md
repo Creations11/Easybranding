@@ -82,15 +82,23 @@ The shift: from *"here is everything"* to *"here is what needs you"*.
   24h, and outbox sends that failed. Each row with a lead is one click into
   the thread.
 
-  Two signals from the original list are deliberately **not** in it yet.
-  "Customer waiting on a reply" needs `recordOutboundMessage()` wired into
-  every send path first — today it covers four, so the rail would report
-  "nobody answered" for conversations the bot handled. "Promise made with no
-  follow-up" needs intent read out of message text, which is the sales agent's
-  job, not a keyword match's. A work queue that cries wolf gets ignored, and
-  the real rows get ignored with it — which is the same silent lie this plan
-  exists to remove. **Completing outbound recording is the highest-value next
-  step in this phase**, because it unlocks the single best row.
+  A fifth signal — **"customer waiting on a reply"** — shipped after the
+  first four, once outbound recording was complete enough to support it. It
+  was held back initially and that was the right call: it reads
+  `Lead.messages`, and roughly two thirds of `queueMessage()` call sites never
+  passed a `leadId`, so the rail would have reported "nobody answered" for
+  conversations the bot handled. The fix was to close the gap, not lower the
+  bar — the outbox now resolves a lead from the recipient number (exact match,
+  tenant-scoped) and the direct-to-Twilio template sends record explicitly.
+
+  **If you add a send path that reaches a customer, it must record on the
+  lead.** Nothing will fail if you don't; the signal will just quietly start
+  lying again.
+
+  Still out: **"promise made with no follow-up"** ("I'll send that tomorrow")
+  needs intent read out of message text — the sales agent's job, not a keyword
+  match's, which would be wrong often enough to be noise. A work queue that
+  cries wolf gets ignored, and the real rows get ignored with it.
 - **Money on the screen.** MRR, collected this month, outstanding invoices,
   and payments stuck in `pending` — that last one alone would have surfaced the
   R400 that never arrived.
