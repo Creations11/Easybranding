@@ -75,10 +75,17 @@ export default function SuperAdminDashboard() {
   // ── React Query data ──────────────────────────────────────
   const overview     = useOverview(opsScope).data;
   const allLeads     = useAllLeads().data || [];
-  const activeLeads  = useActiveLeads(opsScope).data || [];
-  const qualifiedLeads = useQualifiedLeads(opsScope).data || [];
-  const rejectedLeads  = useRejectedLeads(opsScope).data || [];
-  const closedLeads    = useClosedLeads(opsScope).data || [];
+  // Keep the whole query, not just the rows: a column must be able to tell
+  // "empty" from "still loading" from "the request failed" — they looked
+  // identical before, all rendering as "None".
+  const activeQ    = useActiveLeads(opsScope);
+  const qualifiedQ = useQualifiedLeads(opsScope);
+  const rejectedQ  = useRejectedLeads(opsScope);
+  const closedQ    = useClosedLeads(opsScope);
+  const activeLeads    = activeQ.data?.leads || [];
+  const qualifiedLeads = qualifiedQ.data?.leads || [];
+  const rejectedLeads  = rejectedQ.data?.leads || [];
+  const closedLeads    = closedQ.data?.leads || [];
   const stages       = useStages(opsScope).data || [];
   const viewings     = useViewings(opsScope).data || [];
   const messages     = useMessages(opsScope).data || [];
@@ -186,16 +193,17 @@ export default function SuperAdminDashboard() {
       : list.filter(l => l.tenantId === leadsTenantFilter);
 
     const cols = [
-      { key: 'active',    label: 'Active',    icon: '💬', items: byTenant(activeLeads) },
-      { key: 'qualified', label: 'Qualified', icon: '✅', items: byTenant(qualifiedLeads) },
-      { key: 'rejected',  label: 'Rejected',  icon: '❌', items: byTenant(rejectedLeads) },
-      { key: 'closed',    label: 'Closed',    icon: '🔒', items: byTenant(closedLeads) },
+      { key: 'active',    label: 'Active',    icon: '💬', items: byTenant(activeLeads),    q: activeQ },
+      { key: 'qualified', label: 'Qualified', icon: '✅', items: byTenant(qualifiedLeads), q: qualifiedQ },
+      { key: 'rejected',  label: 'Rejected',  icon: '❌', items: byTenant(rejectedLeads),  q: rejectedQ },
+      { key: 'closed',    label: 'Closed',    icon: '🔒', items: byTenant(closedLeads),    q: closedQ },
     ];
     if (otherLeads.length > 0) {
       cols.push({ key: 'other', label: 'Other', icon: '❔', items: byTenant(otherLeads) });
     }
     return cols;
-  }, [activeLeads, qualifiedLeads, rejectedLeads, closedLeads, otherLeads, leadsTenantFilter]);
+  }, [activeLeads, qualifiedLeads, rejectedLeads, closedLeads, otherLeads, leadsTenantFilter,
+      activeQ, qualifiedQ, rejectedQ, closedQ]);
 
   // ── Mutations ──────────────────────────────────────────────
   const handleSuspendToggle = async (tenant) => {
@@ -488,12 +496,31 @@ export default function SuperAdminDashboard() {
                     >
                       {leadColumns.map(col => (
                         <div key={col.key} style={{ flex: '0 0 300px', width: 300 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 15, fontWeight: 700 }}>{col.icon} {col.label}</span>
                             <span style={{ fontSize: 11, padding: '2px 9px', borderRadius: 999, background: c.borderDim, color: c.muted, fontWeight: 700 }}>{col.items.length}</span>
+                            {/* Say so when the server holds more than arrived. A column
+                                that silently showed its first 20 of 70 is what put 50
+                                closed leads under "Other" (fixed 2026-07-27). */}
+                            {col.q?.data?.total > col.items.length && leadsTenantFilter === 'all' && (
+                              <span title={`Showing ${col.items.length} of ${col.q.data.total}`}
+                                style={{ fontSize: 10, padding: '2px 7px', borderRadius: 999, background: c.amber + '22', color: c.amber, fontWeight: 700 }}>
+                                of {col.q.data.total}
+                              </span>
+                            )}
                           </div>
                           <div className="lead-column-scroll" style={{ maxHeight: 620, overflowY: 'auto', paddingRight: 4 }}>
-                            {col.items.length === 0 ? (
+                            {/* Three distinct states. They all rendered as "None" before,
+                                so a failed fetch was indistinguishable from an empty
+                                column — the board's most misleading behaviour. */}
+                            {col.q?.isError ? (
+                              <div style={{ padding: '18px 0', textAlign: 'center' }}>
+                                <p style={{ color: c.red, fontSize: 13, marginBottom: 8 }}>Couldn't load this column</p>
+                                <button onClick={() => col.q.refetch?.()} style={{ padding: '5px 12px', background: c.red + '22', color: c.red, border: '1px solid ' + c.red + '44', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>Retry</button>
+                              </div>
+                            ) : col.q?.isLoading ? (
+                              <p style={{ color: c.muted, fontSize: 13, padding: '20px 0', textAlign: 'center' }}>Loading…</p>
+                            ) : col.items.length === 0 ? (
                               <p style={{ color: c.muted, fontSize: 13, padding: '20px 0', textAlign: 'center' }}>None</p>
                             ) : col.items.map(lead => {
                               const business = tenantNameById[lead.tenantId];

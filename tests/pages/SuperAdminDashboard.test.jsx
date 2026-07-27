@@ -151,6 +151,68 @@ describe('SuperAdminDashboard', () => {
     }
   })
 
+  // Phase 1 of the dashboard plan: the board must never mislead. A column that
+  // is truncated, still loading, or failed to load must each look different
+  // from a column that is genuinely empty — all four rendered as "None".
+  describe('columns are honest about their state', () => {
+    const openLeads = async () => {
+      renderWithProviders(<SuperAdminDashboard />)
+      await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
+      fireEvent.click(screen.getByRole('button', { name: 'leads' }))
+    }
+
+    it('says how many exist when the server holds more than it returned', async () => {
+      mockApiGet({
+        '/admin-ops/overview': { data: { data: { overview: { totalLeads: 70, activeConversations: 0, qualifiedLeads: 0, rejectedLeads: 0, todayLeads: 0, qualificationRate: 0 } } } },
+        // 2 rows returned, 70 exist — exactly the shape of the real bug.
+        '/admin-ops/leads/closed': { data: { data: { total: 70, leads: [
+          { _id: 'c1', name: 'Closed One', phone: '+27820000001', workflowStatus: 'closed' },
+          { _id: 'c2', name: 'Closed Two', phone: '+27820000002', workflowStatus: 'closed' },
+        ] } } },
+      })
+      await openLeads()
+
+      await waitFor(() => expect(screen.getByText('Closed One')).toBeInTheDocument())
+      expect(screen.getByText('of 70')).toBeInTheDocument()
+    })
+
+    it('shows an error with a retry when a column fails, not "None"', async () => {
+      const routes = { ...ROUTE_DEFAULTS,
+        '/admin-ops/overview': { data: { data: { overview: { totalLeads: 1, activeConversations: 0, qualifiedLeads: 0, rejectedLeads: 0, todayLeads: 0, qualificationRate: 0 } } } },
+      }
+      api.get.mockImplementation((url) => {
+        const path = url.split('?')[0]
+        if (path === '/admin-ops/leads/closed') return Promise.reject(new Error('boom'))
+        if (path in routes) return Promise.resolve(routes[path])
+        throw new Error(`Unmocked api.get call in test: ${url}`)
+      })
+      await openLeads()
+
+      // useIfNotAgent sets retry: 2 per query, which overrides the test
+      // client's retry: false — so the column legitimately retries with
+      // backoff before surfacing an error. That is the right production
+      // behaviour (a blip shouldn't flash red), so wait it out rather than
+      // weakening the retry.
+      await waitFor(() => expect(screen.getByText("Couldn't load this column")).toBeInTheDocument(), { timeout: 8000 })
+      expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+    })
+
+    it('does not claim a column is empty while it is still loading', async () => {
+      const routes = { ...ROUTE_DEFAULTS,
+        '/admin-ops/overview': { data: { data: { overview: { totalLeads: 1, activeConversations: 0, qualifiedLeads: 0, rejectedLeads: 0, todayLeads: 0, qualificationRate: 0 } } } },
+      }
+      api.get.mockImplementation((url) => {
+        const path = url.split('?')[0]
+        if (path === '/admin-ops/leads/closed') return new Promise(() => {}) // never resolves
+        if (path in routes) return Promise.resolve(routes[path])
+        throw new Error(`Unmocked api.get call in test: ${url}`)
+      })
+      await openLeads()
+
+      await waitFor(() => expect(screen.getByText('Loading…')).toBeInTheDocument())
+    })
+  })
+
   // The Allocate control on the Clients tab turns an industry template into a
   // client's live bot. It renders whatever /flow-templates returns, so these
   // pin that the picker lists every template the API sends (the default mock

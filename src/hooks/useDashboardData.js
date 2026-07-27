@@ -78,7 +78,7 @@ export function useActiveLeads(scope = '') {
     // now use the same not-terminal definition server-side). Fine at current
     // scale; this view needs real pagination if one tenant's active count
     // grows large.
-    () => api.get(scopedUrl('/admin-ops/conversations/active?limit=100', scope)).then(r => r.data?.data?.leads || []),
+    () => api.get(scopedUrl(`/admin-ops/conversations/active?limit=${BOARD_LIMIT}`, scope)).then(rows),
     { staleTime: 15_000 }
   );
 }
@@ -94,10 +94,18 @@ export function useActiveLeads(scope = '') {
 // board needs real per-column pagination before that count approaches it.
 const BOARD_LIMIT = 200;
 
+// Keep the server's `total` alongside the rows. Discarding it is what made the
+// truncation invisible: the board had no way to know 20 of 70 had arrived, so
+// it drew a column of 20 and looked complete.
+const rows = (r) => ({
+  leads: r.data?.data?.leads || [],
+  total: r.data?.data?.total ?? null, // null = endpoint didn't report one
+});
+
 export function useQualifiedLeads(scope = '') {
   return useIfNotAgent(
     ['admin-ops', 'leads', 'qualified', scope],
-    () => api.get(scopedUrl(`/admin-ops/leads/qualified?limit=${BOARD_LIMIT}`, scope)).then(r => r.data?.data?.leads || []),
+    () => api.get(scopedUrl(`/admin-ops/leads/qualified?limit=${BOARD_LIMIT}`, scope)).then(rows),
     { staleTime: 30_000 }
   );
 }
@@ -105,7 +113,7 @@ export function useQualifiedLeads(scope = '') {
 export function useRejectedLeads(scope = '') {
   return useIfNotAgent(
     ['admin-ops', 'leads', 'rejected', scope],
-    () => api.get(scopedUrl(`/admin-ops/leads/rejected?limit=${BOARD_LIMIT}`, scope)).then(r => r.data?.data?.leads || []),
+    () => api.get(scopedUrl(`/admin-ops/leads/rejected?limit=${BOARD_LIMIT}`, scope)).then(rows),
     { staleTime: 30_000 }
   );
 }
@@ -114,7 +122,7 @@ export function useRejectedLeads(scope = '') {
 export function useClosedLeads(scope = '') {
   return useIfNotAgent(
     ['admin-ops', 'leads', 'closed', scope],
-    () => api.get(scopedUrl(`/admin-ops/leads/closed?limit=${BOARD_LIMIT}`, scope)).then(r => r.data?.data?.leads || []),
+    () => api.get(scopedUrl(`/admin-ops/leads/closed?limit=${BOARD_LIMIT}`, scope)).then(rows),
     { staleTime: 30_000 }
   );
 }
