@@ -153,7 +153,7 @@ misleading one is lipstick.
   colour — a chip, a rule, a weight — so what needs attention reads at a glance
   and survives a colourblind viewer and a bad phone screen.
 - **Density with hierarchy.** Summary first, detail on demand. ✅ Partly done —
-   is the two-second answer, above every panel.
+  `components/TodayVerdict.jsx` is the two-second answer, above every panel.
   It may only say "Today is fine" when every check it summarises actually
   SUCCEEDED: a verdict is a claim about the whole system, so an all-clear
   derived from failed requests is a lie with a green dot next to it, and worse
@@ -166,7 +166,7 @@ misleading one is lipstick.
   should be usable there, not merely responsive.
 - **Split the file.** SuperAdminDashboard.jsx becomes a route with panel
   components. Do this WITH the redesign, not as a separate refactor nobody
-  schedules. 🚧 In progress —  extracted (the largest single
+  schedules. 🚧 In progress — `LeadsBoard` extracted (the largest single
   block, ~120 lines, clean boundary). The page is 1066 → 967 lines. The
   Operations section as a whole is the next candidate but is coupled to ~20
   locals, so it wants doing alongside the layout work rather than as a
