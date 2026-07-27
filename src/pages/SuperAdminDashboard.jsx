@@ -27,6 +27,7 @@ import TodayVerdict from '../components/TodayVerdict';
 import LeadsBoard from '../components/LeadsBoard';
 import RevenueTrend from '../components/RevenueTrend';
 import LeadTrend from '../components/LeadTrend';
+import LadderConversion from '../components/LadderConversion';
 import { useAuth } from '../context/AuthContext';
 import {
   useOverview, useAllLeads, useActiveLeads, useQualifiedLeads,
@@ -34,7 +35,7 @@ import {
   useMessages, useAlerts, useTenants, useTenantStats,
   useUsers, usePendingUsers, useAgents, useHealth,
   useRefetchAll, getStoredScope, setStoredScope, useFlowTemplates,
-  useOwedWork, useMoneyView, useHealthWarnings, useLeadTrend,
+  useOwedWork, useMoneyView, useHealthWarnings, useLeadTrend, useLadderConversion,
 } from '../hooks/useDashboardData';
 import ProspectingPanel from '../components/ProspectingPanel';
 import AgentStatsPanel from '../components/AgentStatsPanel';
@@ -87,6 +88,7 @@ export default function SuperAdminDashboard() {
   const moneyQ       = useMoneyView(opsScope);
   const healthQ      = useHealthWarnings(opsScope);
   const leadTrendQ   = useLeadTrend(opsScope);
+  const ladderQ      = useLadderConversion(opsScope);
   const overview     = overviewQ.data;
   const allLeads     = useAllLeads().data || [];
   // Keep the whole query, not just the rows: a column must be able to tell
@@ -440,6 +442,8 @@ export default function SuperAdminDashboard() {
               <RevenueTrend query={moneyQ} colors={c} />
 
               <LeadTrend query={leadTrendQ} colors={c} />
+
+              <LadderConversion query={ladderQ} colors={c} />
 
               <HealthWarnings query={healthQ} colors={c} />
 

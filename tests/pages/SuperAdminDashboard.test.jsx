@@ -36,6 +36,7 @@ const ROUTE_DEFAULTS = {
   '/admin-ops/money': { data: { data: null } },
   '/admin-ops/health-warnings': { data: { data: { warnings: [], total: 0 } } },
   '/admin-ops/lead-trend': { data: { data: null } },
+  '/admin-ops/ladder-conversion': { data: { data: null } },
   '/tenants': { data: { data: { tenants: [] } } },
   '/tenants/stats': { data: { data: { stats: null } } },
   '/users': { data: { data: { users: [] } } },
@@ -928,5 +929,83 @@ describe('SuperAdminDashboard — lead trend', () => {
     // in this fixture, so it cannot be the signal that the page has loaded.
     await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
     expect(screen.queryByText('New leads, 14 days')).not.toBeInTheDocument()
+  })
+})
+
+// ── Ladder conversion (Phase 3, third chart) ───────────────────────────
+describe('SuperAdminDashboard — ladder conversion', () => {
+  const rung = (tier, label, quoted, won, wonValue) =>
+    ({ tier, label, quoted, won, wonValue, winRate: quoted ? Math.round((won / quoted) * 100) : null })
+
+  const withLadder = (data) =>
+    mockApiGet({
+      '/admin-ops/overview': { data: { data: { overview: {
+        totalLeads: 1, activeConversations: 1, qualifiedLeads: 0,
+        rejectedLeads: 0, todayLeads: 0, qualificationRate: 0,
+      } } } },
+      '/admin-ops/ladder-conversion': { data: { data } },
+    })
+
+  const LADDER = {
+    windowDays: 90,
+    rungs: [
+      rung('entry', 'Entry', 8, 6, 594),
+      rung('growth', 'Growth', 4, 1, 499),
+      rung('business', 'Business', 2, 0, 0),
+      rung('industry', 'Industry', 0, 0, 0),
+      rung('premium', 'Premium', 0, 0, 0),
+    ],
+    unmatched: { tier: 'unmatched', label: 'Unattributed', quoted: 0, won: 0, wonValue: 0, winRate: null },
+  }
+
+  it('shows the win rate for each rung that was actually quoted', async () => {
+    withLadder(LADDER)
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() => expect(screen.getByText('Ladder conversion')).toBeInTheDocument())
+    expect(screen.getByText('75%')).toBeInTheDocument()  // entry
+    expect(screen.getByText('25%')).toBeInTheDocument()  // growth
+    // The overview stat cards also render a "0%" qualification rate, so this
+    // has to tolerate more than one match rather than assert uniqueness — and
+    // the business rung's real 0% is pinned by '0/2 · R0' in the next test.
+    expect(screen.getAllByText('0%').length).toBeGreaterThan(0)
+  })
+
+  // "Nobody bought at Premium" and "nobody was OFFERED Premium" are different
+  // findings, and the second is usually the actionable one.
+  it('distinguishes a rung nobody bought from a rung nobody was offered', async () => {
+    withLadder(LADDER)
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() => expect(screen.getByText('Ladder conversion')).toBeInTheDocument())
+    // Business was quoted twice and won none — a real 0%.
+    expect(screen.getByText('0/2 · R0')).toBeInTheDocument()
+    // Industry and Premium were never offered — not 0%.
+    expect(screen.getAllByText('not offered')).toHaveLength(2)
+  })
+
+  // An invoice that can't be attributed is a fact about the data, not a
+  // rounding error — and it points at a catalog rename worth fixing.
+  it('says when invoices could not be attributed to any rung', async () => {
+    withLadder({
+      ...LADDER,
+      unmatched: { tier: 'unmatched', label: 'Unattributed', quoted: 3, won: 2, wonValue: 1500, winRate: 67 },
+    })
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() =>
+      expect(screen.getByText(/3 invoices couldn't be matched to a\s+catalog product/)).toBeInTheDocument())
+  })
+
+  it('stays hidden when nothing was quoted in the window', async () => {
+    withLadder({
+      windowDays: 90,
+      rungs: LADDER.rungs.map(r => ({ ...r, quoted: 0, won: 0, wonValue: 0, winRate: null })),
+      unmatched: { tier: 'unmatched', label: 'Unattributed', quoted: 0, won: 0, wonValue: 0, winRate: null },
+    })
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
+    expect(screen.queryByText('Ladder conversion')).not.toBeInTheDocument()
   })
 })

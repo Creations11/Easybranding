@@ -169,6 +169,15 @@ export function useLeadTrend(scope = '') {
   );
 }
 
+// Quoted vs won per rung of the product ladder.
+export function useLadderConversion(scope = '') {
+  return useIfNotAgent(
+    ['admin-ops', 'ladder-conversion', scope],
+    () => api.get(scopedUrl('/admin-ops/ladder-conversion', scope)).then(r => r.data?.data),
+    { staleTime: 300_000 }
+  );
+}
+
 export function useStages(scope = '') {
   return useIfNotAgent(
     ['admin-ops', 'stages', scope],

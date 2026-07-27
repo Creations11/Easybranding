@@ -187,9 +187,25 @@ misleading one is lipstick.
   headline rate excludes today, which would otherwise drag it down every
   morning purely because the day is young.
 
-  Still to come: conversion by rung of the product ladder. That one needs a
-  definition first — the ladder lives in PRODUCT-STRATEGY.md but nothing in
-  the data records which rung a lead converted at.
+  ✅ Third built — `components/LadderConversion.jsx`, fed by
+  `GET /admin-ops/ladder-conversion`. Quoted vs won per rung over 90 days.
+
+  **The join is the fragile part and the chart says so.** There is no
+  product_id on an invoice line; quotes are raised from
+  `tenant.aiSalesAgent.catalog` by NAME, so a rung is recovered by matching
+  the line description back to the catalog. Renaming a catalog entry orphans
+  every invoice raised under the old name — and the agent's own prompt warns
+  that catalogs get renamed. Those invoices go into an explicit
+  `unmatched` bucket the chart displays rather than being dropped (which
+  would understate every rung) or bucketed by price (which would invent
+  data). A multi-line quote is attributed to its highest-value line, so the
+  rung totals still sum to the number of deals.
+
+  A rung with no quotes renders "—", not 0%: "nobody bought at Premium" and
+  "nobody was offered Premium" are different findings, and the second is
+  usually the actionable one. `TIER_ORDER` now lives in
+  `config/productTiers.js`, shared with the sales agent, so the chart cannot
+  order the ladder differently from the way it is sold.
 - **Keyboard and mobile.** 🚧 Mobile started — the leads board becomes a
   single full-width column behind a status picker under 768px
   (`hooks/useMediaQuery.js`). The multi-column board was a horizontal scroll
