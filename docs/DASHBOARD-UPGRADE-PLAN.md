@@ -134,10 +134,15 @@ The shift: from *"here is everything"* to *"here is what needs you"*.
   incident, an outbox that stopped draining. Idle takeovers live on the rail
   instead, since they are a task rather than a state.
 
-  **"Agent circuit-breaker trips" was dropped: there is no circuit breaker in
-  this codebase.** That plan item described something that does not exist, and
-  a warning that can never fire is worse than an absent one — it reads as a
-  working check.
+  **Correction (27 July 2026):** this previously said "Agent circuit-breaker
+  trips" had been dropped because no circuit breaker existed. That was wrong.
+  `salesAgentService` has one — three consecutive infrastructure failures set
+  `aiSalesAgent.pausedUntil` thirty minutes out, and customers fall back to the
+  rule-based flow meanwhile. The original search looked for the NAME
+  ("circuitBreaker", "breakerOpen") and mistook its absence for the absence of
+  the mechanism. Both warnings now exist: `agent_paused` when the breaker has
+  tripped, and `agent_failing` for failures before it does — the trip lasts
+  only thirty minutes and is easy to miss entirely.
 
   A clean result renders as one quiet line, not a card. A panel that takes
   real estate to say "all good" trains you to stop reading it.
