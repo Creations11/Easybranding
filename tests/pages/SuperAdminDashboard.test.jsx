@@ -37,6 +37,7 @@ const ROUTE_DEFAULTS = {
   '/admin-ops/health-warnings': { data: { data: { warnings: [], total: 0 } } },
   '/admin-ops/lead-trend': { data: { data: null } },
   '/admin-ops/ladder-conversion': { data: { data: null } },
+  '/admin-ops/sales-funnel': { data: { data: null } },
   '/tenants': { data: { data: { tenants: [] } } },
   '/tenants/stats': { data: { data: { stats: null } } },
   '/users': { data: { data: { users: [] } } },
@@ -1067,5 +1068,72 @@ describe('SuperAdminDashboard — what greets you on Operations', () => {
     fireEvent.click(screen.getByRole('button', { name: 'trends' }))
 
     await waitFor(() => expect(screen.getByText('Collected, 6 months')).toBeInTheDocument())
+  })
+})
+
+// ── Sales funnel (where deals stall) ───────────────────────────────────
+describe('SuperAdminDashboard — sales funnel', () => {
+  const step = (stage, owner, count, pctOfEntered, pctOfPrevious, dropped, secs) =>
+    ({ stage, owner, count, used: count > 0, pctOfEntered, pctOfPrevious,
+       droppedFromPrevious: dropped, medianSecondsFromPrevious: secs })
+
+  const FUNNEL = {
+    windowDays: 30, entered: 20, committed: 6, paid: 3, commitmentToCashPct: 50,
+    biggestDropOff: { stage: 'commitment', lost: 6, keptPct: 50 },
+    funnel: [
+      step('greeting', 'ai', 20, 100, null, 0, null),
+      step('discovery', 'ai', 18, 90, 90, 2, 120),
+      step('qualification', 'ai', 0, 0, null, 0, null),   // never used here
+      step('recommendation', 'ai', 12, 60, 67, 6, 900),
+      step('commitment', 'ai', 6, 30, 50, 6, 1800),
+      step('quote_generated', 'system', 5, 25, 83, 1, 30),
+      step('payment_confirmed', 'system', 3, 15, 60, 2, 7200),
+    ],
+  }
+
+  const withFunnel = (data) =>
+    mockApiGet({
+      '/admin-ops/overview': { data: { data: { overview: {
+        totalLeads: 1, activeConversations: 1, qualifiedLeads: 0,
+        rejectedLeads: 0, todayLeads: 0, qualificationRate: 0,
+      } } } },
+      '/admin-ops/sales-funnel': { data: { data } },
+    })
+
+  it('names where deals stall before showing the table', async () => {
+    withFunnel(FUNNEL)
+    await openTrends()
+
+    await waitFor(() => expect(screen.getByText('Sales funnel')).toBeInTheDocument())
+    expect(screen.getByText(/Biggest drop-off at/)).toBeInTheDocument()
+    // Named twice on purpose: once in the banner as the thing to act on, once
+    // in the table as the evidence for it.
+    expect(screen.getAllByText('They said yes')).toHaveLength(2)
+  })
+
+  // Forward transitions are free, so conversations skip stages. A row of
+  // zeroes at a stage this business never uses reads as total failure.
+  it('hides stages this pipeline never uses', async () => {
+    withFunnel(FUNNEL)
+    await openTrends()
+
+    await waitFor(() => expect(screen.getByText('Discovery')).toBeInTheDocument())
+    expect(screen.queryByText('Qualified')).not.toBeInTheDocument()
+  })
+
+  it('answers what share of agreements turned into money', async () => {
+    withFunnel(FUNNEL)
+    await openTrends()
+
+    await waitFor(() =>
+      expect(screen.getByText(/50% of the 6 customers who agreed/)).toBeInTheDocument())
+  })
+
+  it('stays hidden until there are conversations to describe', async () => {
+    withFunnel({ ...FUNNEL, entered: 0, funnel: [] })
+    await openTrends()
+
+    await waitFor(() => expect(screen.getByText('trends')).toBeInTheDocument())
+    expect(screen.queryByText('Sales funnel')).not.toBeInTheDocument()
   })
 })

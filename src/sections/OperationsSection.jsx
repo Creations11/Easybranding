@@ -27,7 +27,7 @@ import { useMemo, useState } from 'react';
 import api from '../api';
 import {
   useOverview, useOwedWork, useMoneyView, useHealthWarnings, useLeadTrend,
-  useLadderConversion, useActiveLeads, useQualifiedLeads, useRejectedLeads,
+  useLadderConversion, useSalesFunnel, useActiveLeads, useQualifiedLeads, useRejectedLeads,
   useClosedLeads, useStages, useViewings, useMessages, useAlerts,
   useRefetchAll,
 } from '../hooks/useDashboardData';
@@ -42,6 +42,7 @@ import LeadsBoard from '../components/LeadsBoard';
 import RevenueTrend from '../components/RevenueTrend';
 import LeadTrend from '../components/LeadTrend';
 import LadderConversion from '../components/LadderConversion';
+import SalesFunnel from '../components/SalesFunnel';
 
 const STATUS_COLOR_KEYS = {
   qualified: 'lime', not_qualified: 'red', taken_over: 'orange',
@@ -73,6 +74,7 @@ export default function OperationsSection({
   const healthQ      = useHealthWarnings(opsScope);
   const leadTrendQ   = useLeadTrend(opsScope);
   const ladderQ      = useLadderConversion(opsScope);
+  const funnelQ      = useSalesFunnel(opsScope);
   const overview     = overviewQ.data;
 
   // Keep the whole query, not just the rows: a column must be able to tell
@@ -311,6 +313,7 @@ export default function OperationsSection({
           <div>
             <RevenueTrend query={moneyQ} colors={c} />
             <LeadTrend query={leadTrendQ} colors={c} />
+            <SalesFunnel query={funnelQ} colors={c} />
             <LadderConversion query={ladderQ} colors={c} />
           </div>
         </SectionErrorBoundary>

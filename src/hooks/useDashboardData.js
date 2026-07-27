@@ -178,6 +178,15 @@ export function useLadderConversion(scope = '') {
   );
 }
 
+// Milestone conversion and where deals stall.
+export function useSalesFunnel(scope = '') {
+  return useIfNotAgent(
+    ['admin-ops', 'sales-funnel', scope],
+    () => api.get(scopedUrl('/admin-ops/sales-funnel', scope)).then(r => r.data?.data),
+    { staleTime: 120_000 }
+  );
+}
+
 export function useStages(scope = '') {
   return useIfNotAgent(
     ['admin-ops', 'stages', scope],
