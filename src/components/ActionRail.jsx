@@ -1,0 +1,139 @@
+// src/components/ActionRail.jsx
+//
+// "What needs you today", at the top of Operations.
+//
+// Phase 2 of the dashboard plan. Every other panel on this screen reports
+// STATE — how many leads, in which column, at what stage — and leaves the
+// prioritisation to whoever is reading it. This one reports WORK, ranked, so
+// the board can answer "is today fine?" before you have read a single row.
+//
+// Ranking, thresholds and wording all come from the server
+// (services/owedWorkService.js) so the same judgement applies wherever this
+// is rendered, and so the rules live next to the data they interrogate.
+
+const SEVERITY = {
+  high:   { label: 'Now',   key: 'red' },
+  medium: { label: 'Soon',  key: 'amber' },
+  low:    { label: 'Later', key: 'muted' },
+};
+
+// Severity is carried by the chip TEXT as well as its colour. A red dot alone
+// fails a colourblind viewer and a washed-out phone screen in sunlight, which
+// is where this board is actually read.
+const KIND_LABEL = {
+  payment_pending:  'Payment',
+  invoice_overdue:  'Invoice',
+  takeover_idle:    'Takeover',
+  send_failed:      'Delivery',
+};
+
+export default function ActionRail({ query, colors, onOpenLead }) {
+  const c = colors;
+  const { data, isLoading, isError, refetch } = query || {};
+  const items = data?.items || [];
+  const total = data?.total ?? 0;
+
+  const shell = (children) => (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
+        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: c.text }}>Needs you</h3>
+        {total > items.length && (
+          <span style={{ fontSize: 12, color: c.amber }}>
+            showing {items.length} of {total}
+          </span>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+
+  if (isLoading) {
+    return shell(<div style={{ fontSize: 13, color: c.muted }}>Checking what needs attention…</div>);
+  }
+
+  // Same three-state discipline as the leads columns: a failed check must not
+  // look like a clean board. "Nothing needs you" is the single most reassuring
+  // thing this panel can say, so it must never be said on missing data.
+  if (isError) {
+    return shell(
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
+        background: c.red + '11', border: '1px solid ' + c.red + '33', borderRadius: 12,
+      }}>
+        <span style={{ fontSize: 13, color: c.red }}>
+          Couldn't check for outstanding work — this is not an all-clear.
+        </span>
+        <button
+          onClick={() => refetch?.()}
+          style={{
+            padding: '5px 12px', background: c.red + '22', color: c.red,
+            border: '1px solid ' + c.red + '44', borderRadius: 8,
+            cursor: 'pointer', fontSize: 12, fontFamily: 'inherit',
+          }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (!items.length) {
+    return shell(
+      <div style={{
+        padding: '12px 16px', background: c.card, border: '1px solid ' + c.borderDim,
+        borderRadius: 12, fontSize: 13, color: c.sage,
+      }}>
+        Nothing outstanding — no unconfirmed payments, overdue invoices, idle takeovers or failed sends.
+      </div>
+    );
+  }
+
+  return shell(
+    <div>
+      {items.map((item) => {
+        const sev = SEVERITY[item.severity] || SEVERITY.low;
+        const tone = c[sev.key] || c.muted;
+        const clickable = Boolean(item.leadId && onOpenLead);
+
+        return (
+          <div
+            key={item.id}
+            onClick={clickable ? () => onOpenLead(item.leadId) : undefined}
+            className={clickable ? 'card-hover' : undefined}
+            style={{
+              display: 'flex', alignItems: 'flex-start', gap: 14,
+              background: c.card,
+              // A left rule carries severity as FORM, not just colour, and
+              // survives being read at a glance from across a desk.
+              borderLeft: '3px solid ' + tone,
+              border: '1px solid ' + c.borderDim,
+              borderLeftWidth: 3, borderLeftColor: tone,
+              borderRadius: 12, padding: '13px 16px', marginBottom: 8,
+              cursor: clickable ? 'pointer' : 'default',
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                <span style={{
+                  fontSize: 10, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase',
+                  color: tone, background: tone + '1a', border: '1px solid ' + tone + '33',
+                  borderRadius: 6, padding: '2px 7px',
+                }}>
+                  {sev.label}
+                </span>
+                <span style={{ fontSize: 11, color: c.muted }}>{KIND_LABEL[item.kind] || item.kind}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{item.title}</span>
+              </div>
+              <div style={{ fontSize: 12, color: c.muted, lineHeight: 1.5 }}>{item.detail}</div>
+            </div>
+            {clickable && (
+              <span style={{ fontSize: 11, color: c.lime, whiteSpace: 'nowrap', paddingTop: 2 }}>
+                Open →
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}

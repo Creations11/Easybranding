@@ -127,6 +127,21 @@ export function useClosedLeads(scope = '') {
   );
 }
 
+// The action rail — what needs a human, ranked server-side.
+// Short staleTime: this is the panel you glance at to decide whether today is
+// fine, so it being a minute out of date defeats the point.
+export function useOwedWork(scope = '') {
+  return useIfNotAgent(
+    ['admin-ops', 'owed-work', scope],
+    () => api.get(scopedUrl('/admin-ops/owed-work', scope)).then(r => ({
+      items: r.data?.data?.items || [],
+      total: r.data?.data?.total ?? 0,
+      counts: r.data?.data?.counts || {},
+    })),
+    { staleTime: 15_000 }
+  );
+}
+
 export function useStages(scope = '') {
   return useIfNotAgent(
     ['admin-ops', 'stages', scope],

@@ -20,6 +20,7 @@ import LeadDetailModal from '../components/LeadDetailModal';
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
 import StatCard from '../components/StatCard';
 import DataFreshness from '../components/DataFreshness';
+import ActionRail from '../components/ActionRail';
 import { useAuth } from '../context/AuthContext';
 import {
   useOverview, useAllLeads, useActiveLeads, useQualifiedLeads,
@@ -27,6 +28,7 @@ import {
   useMessages, useAlerts, useTenants, useTenantStats,
   useUsers, usePendingUsers, useAgents, useHealth,
   useRefetchAll, getStoredScope, setStoredScope, useFlowTemplates,
+  useOwedWork,
 } from '../hooks/useDashboardData';
 import ProspectingPanel from '../components/ProspectingPanel';
 import AgentStatsPanel from '../components/AgentStatsPanel';
@@ -75,6 +77,7 @@ export default function SuperAdminDashboard() {
 
   // ── React Query data ──────────────────────────────────────
   const overviewQ    = useOverview(opsScope);
+  const owedWorkQ    = useOwedWork(opsScope);
   const overview     = overviewQ.data;
   const allLeads     = useAllLeads().data || [];
   // Keep the whole query, not just the rows: a column must be able to tell
@@ -412,6 +415,11 @@ export default function SuperAdminDashboard() {
                   </div>
                 )}
               </div>
+              {/* Above the tabs on purpose: owed work is not one view among
+                  several, it is the answer to "is today fine?" — so it must
+                  not be something you have to navigate to in order to see. */}
+              <ActionRail query={owedWorkQ} colors={c} onOpenLead={setLeadDetailId} />
+
               <div style={{ display: 'flex', gap: 4, marginBottom: 28, borderBottom: '1px solid ' + c.borderDim, overflowX: 'auto' }}>
                 {opsTabs.map(t => (
                   <button key={t} onClick={() => setOpsTab(t)} style={{ padding: '10px 16px', background: 'none', border: 'none', borderBottom: opsTab === t ? '2px solid ' + c.lime : '2px solid transparent', color: opsTab === t ? c.lime : c.muted, cursor: 'pointer', fontSize: 13, fontWeight: opsTab === t ? 600 : 400, textTransform: 'capitalize', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>

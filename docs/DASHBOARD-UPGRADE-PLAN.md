@@ -38,6 +38,19 @@ health polling. That is more than most agency dashboards have.
 
 ---
 
+## Status
+
+- **Phase 1 — done** (27 July 2026). Truncation badges, three distinct
+  panel states, `DataFreshness` on Operations, and the count reconciliation
+  asserted in `tests/integration/adminOpsCrossTenant.test.js` — including the
+  case where `total` degrades into "length of this page", which is the original
+  bug seen from the other side.
+- **Phase 2 — action rail done** (27 July 2026). `GET /admin-ops/owed-work`
+  + `ActionRail`. Money view, lead timeline and stale-state warnings still open.
+- **Phase 3 — not started.**
+
+---
+
 ## Phase 1 — Make it honest (highest value, lowest risk)
 
 Nothing here is cosmetic. Each item removes a way the board can mislead.
@@ -63,10 +76,21 @@ board that still lies is worse, because it is more convincing.
 
 The shift: from *"here is everything"* to *"here is what needs you"*.
 
-- **An action rail at the top.** Owed work, computed server-side, ranked:
-  quotes sent with no payment, promises made with no follow-up ("I'll send a
-  demo tomorrow"), leads in a takeover with no reply for 24h, applications
-  submitted but unactioned. Each row is one click into the thread.
+- **An action rail at the top.** ✅ Built — `services/owedWorkService.js`,
+  `GET /admin-ops/owed-work`, `components/ActionRail.jsx`. Four signals ship:
+  payments pending past the settle window, invoices past due, takeovers idle
+  24h, and outbox sends that failed. Each row with a lead is one click into
+  the thread.
+
+  Two signals from the original list are deliberately **not** in it yet.
+  "Customer waiting on a reply" needs `recordOutboundMessage()` wired into
+  every send path first — today it covers four, so the rail would report
+  "nobody answered" for conversations the bot handled. "Promise made with no
+  follow-up" needs intent read out of message text, which is the sales agent's
+  job, not a keyword match's. A work queue that cries wolf gets ignored, and
+  the real rows get ignored with it — which is the same silent lie this plan
+  exists to remove. **Completing outbound recording is the highest-value next
+  step in this phase**, because it unlocks the single best row.
 - **Money on the screen.** MRR, collected this month, outstanding invoices,
   and payments stuck in `pending` — that last one alone would have surfaced the
   R400 that never arrived.

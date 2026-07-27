@@ -21,6 +21,7 @@ const ROUTE_DEFAULTS = {
   '/admin-ops/viewings': { data: { data: { viewings: [] } } },
   '/admin-ops/messages/recent': { data: { data: { messages: [] } } },
   '/admin-ops/alerts': { data: { data: { alerts: [] } } },
+  '/admin-ops/owed-work': { data: { data: { items: [], total: 0, counts: {} } } },
   '/tenants': { data: { data: { tenants: [] } } },
   '/tenants/stats': { data: { data: { stats: null } } },
   '/users': { data: { data: { users: [] } } },
@@ -49,6 +50,10 @@ beforeEach(() => {
   // isSuperAdmin — stub it so the default super_admin fixture user
   // doesn't trigger a real network call.
   vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ status: 'ok' }) })))
+  // jsdom implements no layout, so scrollIntoView doesn't exist. LeadDetailModal
+  // scrolls its thread to the bottom on open — without this, any test that
+  // opens a lead dies inside an effect rather than at its own assertion.
+  Element.prototype.scrollIntoView = vi.fn()
 })
 
 describe('SuperAdminDashboard', () => {
@@ -301,5 +306,127 @@ describe('SuperAdminDashboard', () => {
 
       await waitFor(() => expect(alertSpy).toHaveBeenCalledWith('Unknown flow template'))
     })
+  })
+})
+
+// ── The action rail (Phase 2) ──────────────────────────────────────────
+// The board's job is to answer "is today fine?" before you read a row. The
+// rail is the only panel that answers it, which makes its failure modes
+// unusually costly: a wrong "nothing outstanding" is worse than no panel.
+describe('SuperAdminDashboard — action rail', () => {
+  const withOwedWork = (payload) =>
+    mockApiGet({
+      '/admin-ops/overview': { data: { data: { overview: {
+        totalLeads: 1, activeConversations: 1, qualifiedLeads: 0,
+        rejectedLeads: 0, todayLeads: 0, qualificationRate: 0,
+      } } } },
+      '/admin-ops/owed-work': { data: { data: payload } },
+    })
+
+  it('lists what needs a human, most severe first, in the server’s order', async () => {
+    withOwedWork({
+      total: 2,
+      counts: { payment_pending: 1, takeover_idle: 1 },
+      items: [
+        {
+          id: 'payment:1', kind: 'payment_pending', severity: 'high',
+          title: 'Payment not confirmed — R400',
+          detail: 'Muhumo started a R400 payment 3h ago and it is still pending.',
+          leadId: 'lead1', ageHours: 3,
+        },
+        {
+          id: 'takeover:1', kind: 'takeover_idle', severity: 'medium',
+          title: 'Takeover idle — bot still paused',
+          detail: 'Naledi has been in a manual takeover with no activity for 30h ago.',
+          leadId: 'lead2', ageHours: 30,
+        },
+      ],
+    })
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() =>
+      expect(screen.getByText('Payment not confirmed — R400')).toBeInTheDocument())
+    expect(screen.getByText('Takeover idle — bot still paused')).toBeInTheDocument()
+    // Severity reads as text, not only as colour — the board gets used on a
+    // phone in daylight, and colour alone does not survive that.
+    expect(screen.getByText('Now')).toBeInTheDocument()
+    expect(screen.getByText('Soon')).toBeInTheDocument()
+  })
+
+  it('says explicitly that nothing is outstanding when the check succeeded and found nothing', async () => {
+    withOwedWork({ items: [], total: 0, counts: {} })
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() =>
+      expect(screen.getByText(/Nothing outstanding/)).toBeInTheDocument())
+  })
+
+  // The whole point of the rail is that silence means "you are clear". A
+  // failed request must therefore never render as silence — otherwise the
+  // most reassuring thing on the board is also the least trustworthy.
+  it('does not pass a failed check off as an all-clear', async () => {
+    const routes = {
+      ...ROUTE_DEFAULTS,
+      '/admin-ops/overview': { data: { data: { overview: {
+        totalLeads: 1, activeConversations: 1, qualifiedLeads: 0,
+        rejectedLeads: 0, todayLeads: 0, qualificationRate: 0,
+      } } } },
+    }
+    api.get.mockImplementation((url) => {
+      const path = url.split('?')[0]
+      if (path === '/admin-ops/owed-work') return Promise.reject(new Error('boom'))
+      return Promise.resolve(routes[path] ?? { data: { data: {} } })
+    })
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(
+      () => expect(screen.getByText(/not an all-clear/)).toBeInTheDocument(),
+      { timeout: 8000 }, // useIfNotAgent retries twice with backoff
+    )
+    expect(screen.queryByText(/Nothing outstanding/)).not.toBeInTheDocument()
+  }, 10000)
+
+  it('opens the lead behind a row', async () => {
+    mockApiGet({
+      '/admin-ops/overview': { data: { data: { overview: {
+        totalLeads: 1, activeConversations: 1, qualifiedLeads: 0,
+        rejectedLeads: 0, todayLeads: 0, qualificationRate: 0,
+      } } } },
+      '/admin-ops/owed-work': { data: { data: {
+        total: 1, counts: { payment_pending: 1 },
+        items: [{
+          id: 'payment:1', kind: 'payment_pending', severity: 'high',
+          title: 'Payment not confirmed — R400',
+          detail: 'Muhumo started a R400 payment 3h ago.',
+          leadId: 'lead1', ageHours: 3,
+        }],
+      } } },
+      '/admin-ops/leads/lead1/timeline': { data: { data: { lead: null, timeline: [] } } },
+      // LeadDetailModal fetches timeline and takeover history in parallel.
+      '/takeover/lead1/history': { data: { data: { history: [] } } },
+    })
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() =>
+      expect(screen.getByText('Payment not confirmed — R400')).toBeInTheDocument())
+    fireEvent.click(screen.getByText('Payment not confirmed — R400'))
+
+    // The row is a way INTO the conversation, not a dead notification —
+    // clicking it must open that lead's thread, not just dismiss a badge.
+    await waitFor(() =>
+      expect(api.get).toHaveBeenCalledWith('/admin-ops/leads/lead1/timeline'))
+  })
+
+  it('admits when it is only showing part of the list', async () => {
+    withOwedWork({
+      total: 12, counts: { payment_pending: 12 },
+      items: [{
+        id: 'payment:1', kind: 'payment_pending', severity: 'high',
+        title: 'Payment not confirmed — R400', detail: 'x', leadId: null, ageHours: 3,
+      }],
+    })
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() => expect(screen.getByText('showing 1 of 12')).toBeInTheDocument())
   })
 })
