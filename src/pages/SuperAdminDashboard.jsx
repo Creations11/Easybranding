@@ -21,6 +21,7 @@ import SectionErrorBoundary from '../components/SectionErrorBoundary';
 import StatCard from '../components/StatCard';
 import DataFreshness from '../components/DataFreshness';
 import ActionRail from '../components/ActionRail';
+import MoneyPanel from '../components/MoneyPanel';
 import { useAuth } from '../context/AuthContext';
 import {
   useOverview, useAllLeads, useActiveLeads, useQualifiedLeads,
@@ -28,7 +29,7 @@ import {
   useMessages, useAlerts, useTenants, useTenantStats,
   useUsers, usePendingUsers, useAgents, useHealth,
   useRefetchAll, getStoredScope, setStoredScope, useFlowTemplates,
-  useOwedWork,
+  useOwedWork, useMoneyView,
 } from '../hooks/useDashboardData';
 import ProspectingPanel from '../components/ProspectingPanel';
 import AgentStatsPanel from '../components/AgentStatsPanel';
@@ -78,6 +79,7 @@ export default function SuperAdminDashboard() {
   // ── React Query data ──────────────────────────────────────
   const overviewQ    = useOverview(opsScope);
   const owedWorkQ    = useOwedWork(opsScope);
+  const moneyQ       = useMoneyView(opsScope);
   const overview     = overviewQ.data;
   const allLeads     = useAllLeads().data || [];
   // Keep the whole query, not just the rows: a column must be able to tell
@@ -419,6 +421,8 @@ export default function SuperAdminDashboard() {
                   several, it is the answer to "is today fine?" — so it must
                   not be something you have to navigate to in order to see. */}
               <ActionRail query={owedWorkQ} colors={c} onOpenLead={setLeadDetailId} />
+
+              <MoneyPanel query={moneyQ} colors={c} />
 
               <div style={{ display: 'flex', gap: 4, marginBottom: 28, borderBottom: '1px solid ' + c.borderDim, overflowX: 'auto' }}>
                 {opsTabs.map(t => (

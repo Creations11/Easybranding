@@ -22,6 +22,7 @@ const ROUTE_DEFAULTS = {
   '/admin-ops/messages/recent': { data: { data: { messages: [] } } },
   '/admin-ops/alerts': { data: { data: { alerts: [] } } },
   '/admin-ops/owed-work': { data: { data: { items: [], total: 0, counts: {} } } },
+  '/admin-ops/money': { data: { data: null } },
   '/tenants': { data: { data: { tenants: [] } } },
   '/tenants/stats': { data: { data: { stats: null } } },
   '/users': { data: { data: { users: [] } } },
@@ -429,4 +430,86 @@ describe('SuperAdminDashboard — action rail', () => {
 
     await waitFor(() => expect(screen.getByText('showing 1 of 12')).toBeInTheDocument())
   })
+})
+
+// ── The money panel (Phase 2) ──────────────────────────────────────────
+describe('SuperAdminDashboard — money panel', () => {
+  const withMoney = (money) =>
+    mockApiGet({
+      '/admin-ops/overview': { data: { data: { overview: {
+        totalLeads: 1, activeConversations: 1, qualifiedLeads: 0,
+        rejectedLeads: 0, todayLeads: 0, qualificationRate: 0,
+      } } } },
+      '/admin-ops/money': { data: { data: money } },
+    })
+
+  const MONEY = {
+    currency: 'ZAR', month: '2026-07',
+    collected: { thisMonth: 12500, samePeriodLastMonth: 10000, changePct: 25, count: 7, platformFees: 312 },
+    unconfirmed: { amount: 400, count: 1 },
+    outstanding: { invoiced: 3000, count: 2, overdueAmount: 2000, overdueCount: 1 },
+    recurring: { mrr: 2850, tenants: 3 },
+  }
+
+  // en-ZA formats thousands with a NON-BREAKING space (U+00A0) — the correct
+  // South African convention, and not something a plain string literal in a
+  // test will match. Normalise before comparing so these assertions say what
+  // a person would actually read on the screen.
+  const shows = (text) =>
+    screen.getByText((_, el) =>
+      el?.children.length === 0 && el.textContent.replace(/ /g, ' ') === text)
+
+  it('puts the month’s figures on the screen', async () => {
+    withMoney(MONEY)
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() => expect(shows('R12 500')).toBeInTheDocument())
+    expect(screen.getByText('+25% vs same point last month')).toBeInTheDocument()
+    expect(shows('R2 850/mo')).toBeInTheDocument()
+    expect(shows('R2 000 overdue')).toBeInTheDocument()
+  })
+
+  // Unconfirmed money is shown as its own figure and never rolled into
+  // collected — the moment it joins the revenue number, the revenue number
+  // stops being trustworthy.
+  it('keeps unconfirmed money out of the collected figure', async () => {
+    withMoney(MONEY)
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() => expect(screen.getByText('R400')).toBeInTheDocument())
+    expect(screen.getByText('1 payment not confirmed')).toBeInTheDocument()
+    // 12500 + 400 would be 12900 — that number must not appear anywhere.
+    expect(screen.queryByText((_, el) => el?.textContent?.replace(/ /g,' ') === 'R12 900')).not.toBeInTheDocument()
+  })
+
+  it('says nothing about change when there is no baseline to compare against', async () => {
+    withMoney({ ...MONEY, collected: { ...MONEY.collected, samePeriodLastMonth: 0, changePct: null, count: 7 } })
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() => expect(screen.getByText('7 payments')).toBeInTheDocument())
+    expect(screen.queryByText(/vs same point last month/)).not.toBeInTheDocument()
+  })
+
+  // A zero here is indistinguishable from a bad month, which is exactly the
+  // kind of confident wrong number this whole plan exists to remove.
+  it('does not render a failed load as R0', async () => {
+    const routes = {
+      ...ROUTE_DEFAULTS,
+      '/admin-ops/overview': { data: { data: { overview: {
+        totalLeads: 1, activeConversations: 1, qualifiedLeads: 0,
+        rejectedLeads: 0, todayLeads: 0, qualificationRate: 0,
+      } } } },
+    }
+    api.get.mockImplementation((url) => {
+      const path = url.split('?')[0]
+      if (path === '/admin-ops/money') return Promise.reject(new Error('boom'))
+      return Promise.resolve(routes[path] ?? { data: { data: {} } })
+    })
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(
+      () => expect(screen.getByText(/this is not R0/)).toBeInTheDocument(),
+      { timeout: 8000 },
+    )
+  }, 10000)
 })

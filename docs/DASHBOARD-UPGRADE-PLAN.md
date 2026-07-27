@@ -45,8 +45,10 @@ health polling. That is more than most agency dashboards have.
   asserted in `tests/integration/adminOpsCrossTenant.test.js` — including the
   case where `total` degrades into "length of this page", which is the original
   bug seen from the other side.
-- **Phase 2 — action rail done** (27 July 2026). `GET /admin-ops/owed-work`
-  + `ActionRail`. Money view, lead timeline and stale-state warnings still open.
+- **Phase 2 — action rail and money view done** (27 July 2026). The rail
+  carries five signals including the unanswered-customer row, which shipped
+  only after outbound recording was made complete enough to support it.
+  Per-lead timeline and stale-state warnings still open.
 - **Phase 3 — not started.**
 
 ---
@@ -99,9 +101,18 @@ The shift: from *"here is everything"* to *"here is what needs you"*.
   needs intent read out of message text — the sales agent's job, not a keyword
   match's, which would be wrong often enough to be noise. A work queue that
   cries wolf gets ignored, and the real rows get ignored with it.
-- **Money on the screen.** MRR, collected this month, outstanding invoices,
-  and payments stuck in `pending` — that last one alone would have surfaced the
-  R400 that never arrived.
+- **Money on the screen.** ✅ Built — `services/moneyViewService.js`,
+  `GET /admin-ops/money`, `components/MoneyPanel.jsx`. Collected this month,
+  recurring, owed to us, and unconfirmed.
+
+  Three judgements worth keeping: collected is bucketed by **`paidAt`, not
+  `createdAt`** (a payment started on the 31st and confirmed on the 1st belongs
+  to the month the money landed); the comparison is against **the same point**
+  in the previous month, so an early-month figure isn't automatically a
+  collapse; and **`pending` is never folded into collected**, however old it
+  is — the moment money that may not exist joins a revenue figure, the figure
+  stops being trustworthy. A failed load says so rather than rendering R0,
+  which would be indistinguishable from a bad month.
 - **Per-lead timeline.** The conversation, quotes, payments and status changes
   in one column. This exists in the data already; it has never been rendered.
 - **Stale-state warnings.** Takeovers open beyond 24h, agent circuit-breaker

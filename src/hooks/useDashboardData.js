@@ -142,6 +142,15 @@ export function useOwedWork(scope = '') {
   );
 }
 
+// Collected this month, unconfirmed, outstanding, MRR.
+export function useMoneyView(scope = '') {
+  return useIfNotAgent(
+    ['admin-ops', 'money', scope],
+    () => api.get(scopedUrl('/admin-ops/money', scope)).then(r => r.data?.data),
+    { staleTime: 60_000 }
+  );
+}
+
 export function useStages(scope = '') {
   return useIfNotAgent(
     ['admin-ops', 'stages', scope],
