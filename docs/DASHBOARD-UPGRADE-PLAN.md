@@ -1,0 +1,121 @@
+# Dashboard — plan to make it world class
+
+Written 27 July 2026, after fixing a bug that is the best argument for the
+whole plan: 70 closed leads, 20 fetched, and 50 silently filed under "Other"
+as though nobody had closed them. Nothing errored. Nothing looked wrong. The
+board just quietly lied for weeks.
+
+That is the theme. The dashboard's problem is not that it looks dated — it is
+that **it does not tell you when it is wrong**, and it makes you hunt for what
+should be handed to you.
+
+---
+
+## Where it actually stands
+
+Honest read, having worked in it:
+
+**Good already.** Real multi-tenant scoping, a genuine Kanban of lead states,
+takeover from the browser, allocation of industry flows in one click, live
+health polling. That is more than most agency dashboards have.
+
+**The problems, in order of how much they cost you:**
+
+1. **It shows state, not work.** You open it and see counts. It never says
+   "these five need you today". Every prioritisation decision is yours to make
+   by reading rows — which is exactly what this session's lead review had to do
+   by hand, and found ~R2 146/month sitting uncollected.
+2. **Silent truncation and silent staleness.** The pagination bug is one
+   instance. Nothing on the page distinguishes "zero" from "not loaded" from
+   "only the first 20".
+3. **No money view.** Invoices, payments, MRR and who owes what are absent.
+   The one number that decides whether a month was good is not on the screen.
+4. **No conversation view.** You can take over a chat, but you cannot read the
+   thread that led there without a query. The richest data in the system —
+   what customers actually said — is invisible.
+5. **Everything is one page.** SuperAdminDashboard.jsx carries every tab,
+   inline styles and all. It works, but it resists change.
+
+---
+
+## Phase 1 — Make it honest (highest value, lowest risk)
+
+Nothing here is cosmetic. Each item removes a way the board can mislead.
+
+- **Never truncate silently.** Every list shows "showing 20 of 70" with a
+  "load all" action, or fetches everything. If a column is capped, say so on
+  the column.
+- **Distinguish empty from failed from loading.** Three visibly different
+  states per panel. Today a failed fetch and a genuinely empty column look
+  identical.
+- **Surface data age.** A quiet "updated 2 min ago" per panel, and a visible
+  marker when a refetch fails, so a stale board cannot masquerade as a live one.
+- **Reconcile the counts.** The overview stat and the column header for the
+  same concept must come from one definition. They diverged once already and
+  were unified server-side — assert it in a test rather than trusting it.
+
+**Why first:** these are the failures that cost real money silently. A prettier
+board that still lies is worse, because it is more convincing.
+
+---
+
+## Phase 2 — Make it a work queue, not a report
+
+The shift: from *"here is everything"* to *"here is what needs you"*.
+
+- **An action rail at the top.** Owed work, computed server-side, ranked:
+  quotes sent with no payment, promises made with no follow-up ("I'll send a
+  demo tomorrow"), leads in a takeover with no reply for 24h, applications
+  submitted but unactioned. Each row is one click into the thread.
+- **Money on the screen.** MRR, collected this month, outstanding invoices,
+  and payments stuck in `pending` — that last one alone would have surfaced the
+  R400 that never arrived.
+- **Per-lead timeline.** The conversation, quotes, payments and status changes
+  in one column. This exists in the data already; it has never been rendered.
+- **Stale-state warnings.** Takeovers open beyond 24h, agent circuit-breaker
+  trips, flows unpublished on a paying tenant. All are knowable now and all
+  currently reach you only as WhatsApp alerts, if at all.
+
+---
+
+## Phase 3 — Make it feel world class
+
+Only once the above is true. Polish on an honest board compounds; polish on a
+misleading one is lipstick.
+
+- **Information design over decoration.** Severity encoded in form as well as
+  colour — a chip, a rule, a weight — so what needs attention reads at a glance
+  and survives a colourblind viewer and a bad phone screen.
+- **Density with hierarchy.** Summary first, detail on demand. The board should
+  answer "is today fine?" in two seconds and "why not?" in two clicks.
+- **Real charts, few of them.** Leads per day by tenant, conversion by rung of
+  the product ladder, revenue trend. Three good charts beat a wall of tiles.
+- **Keyboard and mobile.** You run this business from a phone — the board
+  should be usable there, not merely responsive.
+- **Split the file.** SuperAdminDashboard.jsx becomes a route with panel
+  components. Do this WITH the redesign, not as a separate refactor nobody
+  schedules.
+
+---
+
+## What I would not do
+
+- **A component library or design-system rewrite.** The styling is not the
+  bottleneck; the missing information is.
+- **Real-time sockets.** Polling with visible freshness is enough at three
+  tenants and far less to maintain.
+- **A build-your-own-report feature.** You do not need flexible reporting. You
+  need five specific answers, fast.
+
+---
+
+## Suggested order
+
+1. Phase 1 in one pass — it is small, and it stops the board misleading you.
+2. The action rail and the money view. Those two change how you work daily.
+3. The lead timeline.
+4. Polish, and split the file while doing it.
+
+Phase 1 is roughly a day. The action rail is the one worth building carefully,
+because it is the piece that turns the dashboard from something you check into
+something that tells you what to do.
