@@ -152,7 +152,14 @@ misleading one is lipstick.
 - **Information design over decoration.** Severity encoded in form as well as
   colour — a chip, a rule, a weight — so what needs attention reads at a glance
   and survives a colourblind viewer and a bad phone screen.
-- **Density with hierarchy.** Summary first, detail on demand. ✅ Partly done —
+- **Density with hierarchy.** Summary first, detail on demand. ✅ Done.
+  Operations opens with four things: the verdict, what needs you, the money,
+  and anything misconfigured. The three charts moved behind a **Trends** tab —
+  stacked above the tab strip they pushed the board most of a phone screen
+  down and buried the two things the header exists for. Charts answer "why?",
+  which is the question you ask second. A test pins the ordering, because it
+  is the kind of decision a later change undoes by accident.
+
   `components/TodayVerdict.jsx` is the two-second answer, above every panel.
   It may only say "Today is fine" when every check it summarises actually
   SUCCEEDED: a verdict is a claim about the whole system, so an all-clear

@@ -57,6 +57,14 @@ const mockApiGet = (overrides = {}) => {
   })
 }
 
+// The three charts live behind the Trends tab — they answer "why?", which is
+// the question you ask second. Open it before asserting on them.
+const openTrends = async () => {
+  renderWithProviders(<SuperAdminDashboard />)
+  await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: 'trends' }))
+}
+
 beforeEach(() => {
   localStorage.clear()
   api.get.mockReset()
@@ -818,7 +826,7 @@ describe('SuperAdminDashboard — revenue trend', () => {
 
   it('draws every month, including ones with no revenue', async () => {
     withTrend(SIX)
-    renderWithProviders(<SuperAdminDashboard />)
+    await openTrends()
 
     await waitFor(() => expect(screen.getByText('Collected, 6 months')).toBeInTheDocument())
     for (const label of ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul']) {
@@ -833,7 +841,7 @@ describe('SuperAdminDashboard — revenue trend', () => {
   // entirely accurate data.
   it('marks the current month as incomplete', async () => {
     withTrend(SIX)
-    renderWithProviders(<SuperAdminDashboard />)
+    await openTrends()
 
     await waitFor(() => expect(screen.getByText('so far')).toBeInTheDocument())
   })
@@ -841,7 +849,7 @@ describe('SuperAdminDashboard — revenue trend', () => {
   // "Best month" must not be beaten by a part-month that only looks smaller.
   it('compares against the best COMPLETE month', async () => {
     withTrend(SIX)
-    renderWithProviders(<SuperAdminDashboard />)
+    await openTrends()
 
     await waitFor(() =>
       expect(screen.getByText((_, el) =>
@@ -851,7 +859,7 @@ describe('SuperAdminDashboard — revenue trend', () => {
 
   it('renders nothing at all when there is no trend to draw', async () => {
     withTrend([])
-    renderWithProviders(<SuperAdminDashboard />)
+    await openTrends()
 
     await waitFor(() => expect(screen.getByText('Money')).toBeInTheDocument())
     expect(screen.queryByText('Collected, 6 months')).not.toBeInTheDocument()
@@ -887,7 +895,7 @@ describe('SuperAdminDashboard — lead trend', () => {
 
   it('summarises the fortnight as a conversion rate', async () => {
     withTrend(FOURTEEN)
-    renderWithProviders(<SuperAdminDashboard />)
+    await openTrends()
 
     await waitFor(() => expect(screen.getByText('New leads, 14 days')).toBeInTheDocument())
     expect(screen.getByText('11 of 33 qualified · 33%')).toBeInTheDocument()
@@ -897,7 +905,7 @@ describe('SuperAdminDashboard — lead trend', () => {
   // the wrong conclusion to invite and the easiest one to reach.
   it('says which bar is still counting', async () => {
     withTrend(FOURTEEN)
-    renderWithProviders(<SuperAdminDashboard />)
+    await openTrends()
 
     await waitFor(() => expect(screen.getByText('today, still counting')).toBeInTheDocument())
     expect(screen.getByText('arrived')).toBeInTheDocument()
@@ -911,7 +919,7 @@ describe('SuperAdminDashboard — lead trend', () => {
       days: FOURTEEN.days.map(d => ({ ...d, leads: 0, qualified: 0 })),
       totals: { leads: 0, qualified: 0, qualifiedPct: null, dayCount: 13 },
     })
-    renderWithProviders(<SuperAdminDashboard />)
+    await openTrends()
 
     await waitFor(() =>
       expect(screen.getByText('No new leads in the last two weeks.')).toBeInTheDocument())
@@ -923,11 +931,11 @@ describe('SuperAdminDashboard — lead trend', () => {
 
   it('renders nothing before the data arrives', async () => {
     withTrend(null)
-    renderWithProviders(<SuperAdminDashboard />)
+    await openTrends()
 
-    // Wait on something the page always renders — the money panel is absent
-    // in this fixture, so it cannot be the signal that the page has loaded.
-    await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
+    // openTrends already waited for the page to load before switching tabs,
+    // and 'Total Leads' belongs to the Overview tab we just left — so there is
+    // nothing further to wait for. The chart is absent because its data is.
     expect(screen.queryByText('New leads, 14 days')).not.toBeInTheDocument()
   })
 })
@@ -960,7 +968,7 @@ describe('SuperAdminDashboard — ladder conversion', () => {
 
   it('shows the win rate for each rung that was actually quoted', async () => {
     withLadder(LADDER)
-    renderWithProviders(<SuperAdminDashboard />)
+    await openTrends()
 
     await waitFor(() => expect(screen.getByText('Ladder conversion')).toBeInTheDocument())
     expect(screen.getByText('75%')).toBeInTheDocument()  // entry
@@ -975,7 +983,7 @@ describe('SuperAdminDashboard — ladder conversion', () => {
   // findings, and the second is usually the actionable one.
   it('distinguishes a rung nobody bought from a rung nobody was offered', async () => {
     withLadder(LADDER)
-    renderWithProviders(<SuperAdminDashboard />)
+    await openTrends()
 
     await waitFor(() => expect(screen.getByText('Ladder conversion')).toBeInTheDocument())
     // Business was quoted twice and won none — a real 0%.
@@ -991,7 +999,7 @@ describe('SuperAdminDashboard — ladder conversion', () => {
       ...LADDER,
       unmatched: { tier: 'unmatched', label: 'Unattributed', quoted: 3, won: 2, wonValue: 1500, winRate: 67 },
     })
-    renderWithProviders(<SuperAdminDashboard />)
+    await openTrends()
 
     await waitFor(() =>
       expect(screen.getByText(/3 invoices couldn't be matched to a\s+catalog product/)).toBeInTheDocument())
@@ -1003,9 +1011,53 @@ describe('SuperAdminDashboard — ladder conversion', () => {
       rungs: LADDER.rungs.map(r => ({ ...r, quoted: 0, won: 0, wonValue: 0, winRate: null })),
       unmatched: { tier: 'unmatched', label: 'Unattributed', quoted: 0, won: 0, wonValue: 0, winRate: null },
     })
+    await openTrends()
+
+    // Same reasoning as the lead-trend case: the tab we switched away from
+    // owns 'Total Leads', and openTrends already waited for the load.
+    expect(screen.queryByText('Ladder conversion')).not.toBeInTheDocument()
+  })
+})
+
+// ── Summary first, detail on demand (Phase 3) ──────────────────────────
+// Six panels stacked above the tab strip pushed the board most of a phone
+// screen down and buried the two things the header is FOR: what needs you,
+// and whether the month is paying. The charts answer "why?", which is a
+// question you ask second.
+describe('SuperAdminDashboard — what greets you on Operations', () => {
+  const loaded = () =>
+    mockApiGet({
+      '/admin-ops/overview': { data: { data: { overview: {
+        totalLeads: 1, activeConversations: 1, qualifiedLeads: 0,
+        rejectedLeads: 0, todayLeads: 0, qualificationRate: 0,
+      } } } },
+      '/admin-ops/money': { data: { data: {
+        collected: { thisMonth: 700, samePeriodLastMonth: 0, changePct: null, count: 2, platformFees: 0 },
+        unconfirmed: { amount: 0, count: 0 },
+        outstanding: { invoiced: 0, count: 0, overdueAmount: 0, overdueCount: 0 },
+        recurring: { mrr: 0, tenants: 0 },
+        trend: [{ month: '2026-07', label: 'Jul', collected: 700, partial: true }],
+      } } },
+    })
+
+  it('leads with the verdict, the work and the money — not the charts', async () => {
+    loaded()
     renderWithProviders(<SuperAdminDashboard />)
 
+    await waitFor(() => expect(screen.getByText('Today is fine')).toBeInTheDocument())
+    expect(screen.getByText('Needs you')).toBeInTheDocument()
+    expect(screen.getByText('Money')).toBeInTheDocument()
+    // The charts are one click away, not in the way.
+    expect(screen.queryByText('Collected, 6 months')).not.toBeInTheDocument()
+  })
+
+  it('puts the charts one click away under Trends', async () => {
+    loaded()
+    renderWithProviders(<SuperAdminDashboard />)
     await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
-    expect(screen.queryByText('Ladder conversion')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'trends' }))
+
+    await waitFor(() => expect(screen.getByText('Collected, 6 months')).toBeInTheDocument())
   })
 })

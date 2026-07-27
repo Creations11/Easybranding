@@ -301,7 +301,7 @@ export default function SuperAdminDashboard() {
     return s;
   }, [isEBAgent, isSuperAdmin, alerts.length, pendingUsers.length]);
 
-  const opsTabs = ['overview', 'leads', 'funnel', 'viewings', 'messages', 'alerts'];
+  const opsTabs = ['overview', 'leads', 'trends', 'funnel', 'viewings', 'messages', 'alerts'];
 
   // ── Loading ────────────────────────────────────────────────
   if (isLoading) {
@@ -439,13 +439,14 @@ export default function SuperAdminDashboard() {
 
               <MoneyPanel query={moneyQ} colors={c} />
 
-              <RevenueTrend query={moneyQ} colors={c} />
-
-              <LeadTrend query={leadTrendQ} colors={c} />
-
-              <LadderConversion query={ladderQ} colors={c} />
-
               <HealthWarnings query={healthQ} colors={c} />
+
+              {/* The three charts used to sit here. Stacked, they pushed the
+                  board most of a phone screen down and buried the two things
+                  this header is FOR — what needs you, and whether the month is
+                  paying. They answer "why?", which is a question you ask
+                  second, so they moved behind the Trends tab. Summary first,
+                  detail on demand. */}
 
               <div style={{ display: 'flex', gap: 4, marginBottom: 28, borderBottom: '1px solid ' + c.borderDim, overflowX: 'auto' }}>
                 {opsTabs.map(t => (
@@ -508,6 +509,18 @@ export default function SuperAdminDashboard() {
                     onReopen={handleReopen}
                     colors={c}
                   />
+                </SectionErrorBoundary>
+              )}
+
+              {/* Trends: the three charts. Detail on demand — see the note
+                  where they used to live, above the tab strip. */}
+              {opsTab === 'trends' && (
+                <SectionErrorBoundary name="Trends" onRetry={refetch}>
+                  <div>
+                    <RevenueTrend query={moneyQ} colors={c} />
+                    <LeadTrend query={leadTrendQ} colors={c} />
+                    <LadderConversion query={ladderQ} colors={c} />
+                  </div>
                 </SectionErrorBoundary>
               )}
 
