@@ -642,3 +642,74 @@ describe('SuperAdminDashboard — health warnings', () => {
     expect(screen.queryByText('Configuration checks passed')).not.toBeInTheDocument()
   }, 10000)
 })
+
+// ── Today's verdict (Phase 3) ──────────────────────────────────────────
+// One line, read in two seconds, before any of the detail. Its whole value
+// depends on never being wrong in the reassuring direction.
+describe('SuperAdminDashboard — today’s verdict', () => {
+  const base = {
+    '/admin-ops/overview': { data: { data: { overview: {
+      totalLeads: 1, activeConversations: 1, qualifiedLeads: 0,
+      rejectedLeads: 0, todayLeads: 0, qualificationRate: 0,
+    } } } },
+  }
+
+  it('says today is fine only when nothing is outstanding or misconfigured', async () => {
+    mockApiGet(base)
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() => expect(screen.getByText('Today is fine')).toBeInTheDocument())
+    expect(screen.getByText('Nothing needs you, and nothing is misconfigured.')).toBeInTheDocument()
+  })
+
+  it('counts what needs doing instead', async () => {
+    mockApiGet({
+      ...base,
+      '/admin-ops/owed-work': { data: { data: {
+        total: 3, counts: {},
+        items: [{ id: 'p1', kind: 'payment_pending', severity: 'high', title: 'Payment not confirmed — R400', detail: 'x' }],
+      } } },
+      '/admin-ops/health-warnings': { data: { data: {
+        warnings: [{ kind: 'no_flows', severity: 'medium', title: 'Acme has no flows at all', detail: 'y' }],
+        total: 1,
+      } } },
+    })
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() =>
+      expect(screen.getByText('3 things need you · 1 thing misconfigured')).toBeInTheDocument())
+    expect(screen.queryByText('Today is fine')).not.toBeInTheDocument()
+  })
+
+  it('uses singular wording for a single item', async () => {
+    mockApiGet({
+      ...base,
+      '/admin-ops/owed-work': { data: { data: {
+        total: 1, counts: {},
+        items: [{ id: 'p1', kind: 'payment_pending', severity: 'medium', title: 'x', detail: 'y' }],
+      } } },
+    })
+    renderWithProviders(<SuperAdminDashboard />)
+    await waitFor(() => expect(screen.getByText('1 thing needs you')).toBeInTheDocument())
+  })
+
+  // The failure that matters most on this component. A verdict is a claim
+  // about the whole system, so an incomplete picture must never produce an
+  // all-clear — a reassuring summary stops you reading the detail that would
+  // have corrected it.
+  it('refuses to declare all-clear when a check failed to load', async () => {
+    const routes = { ...ROUTE_DEFAULTS, ...base }
+    api.get.mockImplementation((url) => {
+      const path = url.split('?')[0]
+      if (path === '/admin-ops/owed-work') return Promise.reject(new Error('boom'))
+      return Promise.resolve(routes[path] ?? { data: { data: {} } })
+    })
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(
+      () => expect(screen.getByText("Can't tell right now")).toBeInTheDocument(),
+      { timeout: 8000 },
+    )
+    expect(screen.queryByText('Today is fine')).not.toBeInTheDocument()
+  }, 10000)
+})

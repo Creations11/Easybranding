@@ -49,7 +49,7 @@ health polling. That is more than most agency dashboards have.
   carries five signals including the unanswered-customer row, which shipped
   only after outbound recording was made complete enough to support it.
   Per-lead timeline and stale-state warnings done. Phase 2 complete.
-- **Phase 3 — not started.**
+- **Phase 3 — started** (27 July 2026). TodayVerdict answers "is today fine?" in one line; LeadsBoard extracted from the page. Charts, mobile and the rest of the split still open.
 
 ---
 
@@ -152,15 +152,25 @@ misleading one is lipstick.
 - **Information design over decoration.** Severity encoded in form as well as
   colour — a chip, a rule, a weight — so what needs attention reads at a glance
   and survives a colourblind viewer and a bad phone screen.
-- **Density with hierarchy.** Summary first, detail on demand. The board should
-  answer "is today fine?" in two seconds and "why not?" in two clicks.
+- **Density with hierarchy.** Summary first, detail on demand. ✅ Partly done —
+   is the two-second answer, above every panel.
+  It may only say "Today is fine" when every check it summarises actually
+  SUCCEEDED: a verdict is a claim about the whole system, so an all-clear
+  derived from failed requests is a lie with a green dot next to it, and worse
+  than any single panel failing because a reassuring summary stops you reading
+  the detail. Loading reads "Checking…", any error reads "Can't tell right
+  now".
 - **Real charts, few of them.** Leads per day by tenant, conversion by rung of
   the product ladder, revenue trend. Three good charts beat a wall of tiles.
 - **Keyboard and mobile.** You run this business from a phone — the board
   should be usable there, not merely responsive.
 - **Split the file.** SuperAdminDashboard.jsx becomes a route with panel
   components. Do this WITH the redesign, not as a separate refactor nobody
-  schedules.
+  schedules. 🚧 In progress —  extracted (the largest single
+  block, ~120 lines, clean boundary). The page is 1066 → 967 lines. The
+  Operations section as a whole is the next candidate but is coupled to ~20
+  locals, so it wants doing alongside the layout work rather than as a
+  mechanical move.
 
 ---
 
