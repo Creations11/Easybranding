@@ -35,6 +35,7 @@ const ROUTE_DEFAULTS = {
   '/admin-ops/owed-work': { data: { data: { items: [], total: 0, counts: {} } } },
   '/admin-ops/money': { data: { data: null } },
   '/admin-ops/health-warnings': { data: { data: { warnings: [], total: 0 } } },
+  '/admin-ops/lead-trend': { data: { data: null } },
   '/tenants': { data: { data: { tenants: [] } } },
   '/tenants/stats': { data: { data: { stats: null } } },
   '/users': { data: { data: { users: [] } } },
@@ -853,5 +854,79 @@ describe('SuperAdminDashboard — revenue trend', () => {
 
     await waitFor(() => expect(screen.getByText('Money')).toBeInTheDocument())
     expect(screen.queryByText('Collected, 6 months')).not.toBeInTheDocument()
+  })
+})
+
+// ── Lead trend chart (Phase 3) ─────────────────────────────────────────
+describe('SuperAdminDashboard — lead trend', () => {
+  const day = (date, weekday, leads, qualified, partial = false) =>
+    ({ date, label: date, weekday, leads, qualified, partial })
+
+  const withTrend = (data) =>
+    mockApiGet({
+      '/admin-ops/overview': { data: { data: { overview: {
+        totalLeads: 1, activeConversations: 1, qualifiedLeads: 0,
+        rejectedLeads: 0, todayLeads: 0, qualificationRate: 0,
+      } } } },
+      '/admin-ops/lead-trend': { data: { data } },
+    })
+
+  const FOURTEEN = {
+    days: [
+      day('2026-07-02', 'T', 3, 1), day('2026-07-03', 'F', 5, 2),
+      day('2026-07-04', 'S', 0, 0), day('2026-07-05', 'S', 0, 0),
+      day('2026-07-06', 'M', 4, 1), day('2026-07-07', 'T', 2, 0),
+      day('2026-07-08', 'W', 6, 3), day('2026-07-09', 'T', 1, 0),
+      day('2026-07-10', 'F', 3, 1), day('2026-07-11', 'S', 0, 0),
+      day('2026-07-12', 'S', 0, 0), day('2026-07-13', 'M', 5, 2),
+      day('2026-07-14', 'T', 4, 1), day('2026-07-15', 'W', 1, 0, true),
+    ],
+    totals: { leads: 33, qualified: 11, qualifiedPct: 33, dayCount: 13 },
+  }
+
+  it('summarises the fortnight as a conversion rate', async () => {
+    withTrend(FOURTEEN)
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() => expect(screen.getByText('New leads, 14 days')).toBeInTheDocument())
+    expect(screen.getByText('11 of 33 qualified · 33%')).toBeInTheDocument()
+  })
+
+  // The legend has to name the incomplete bar, because "today is lower" is
+  // the wrong conclusion to invite and the easiest one to reach.
+  it('says which bar is still counting', async () => {
+    withTrend(FOURTEEN)
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() => expect(screen.getByText('today, still counting')).toBeInTheDocument())
+    expect(screen.getByText('arrived')).toBeInTheDocument()
+    expect(screen.getByText('qualified')).toBeInTheDocument()
+  })
+
+  // "0% conversion" and "no leads yet" are different facts. Rendering the
+  // former when the latter is true invents a failure that didn't happen.
+  it('does not claim 0% conversion when nothing has arrived to convert', async () => {
+    withTrend({
+      days: FOURTEEN.days.map(d => ({ ...d, leads: 0, qualified: 0 })),
+      totals: { leads: 0, qualified: 0, qualifiedPct: null, dayCount: 13 },
+    })
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() =>
+      expect(screen.getByText('No new leads in the last two weeks.')).toBeInTheDocument())
+    // Scoped to the chart's own summary: the overview stat cards legitimately
+    // render a "0%" qualification rate, and matching that would make this
+    // assertion pass for the wrong reason.
+    expect(screen.queryByText(/qualified ·/)).not.toBeInTheDocument()
+  })
+
+  it('renders nothing before the data arrives', async () => {
+    withTrend(null)
+    renderWithProviders(<SuperAdminDashboard />)
+
+    // Wait on something the page always renders — the money panel is absent
+    // in this fixture, so it cannot be the signal that the page has loaded.
+    await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
+    expect(screen.queryByText('New leads, 14 days')).not.toBeInTheDocument()
   })
 })

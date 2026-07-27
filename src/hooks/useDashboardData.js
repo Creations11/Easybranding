@@ -160,6 +160,15 @@ export function useHealthWarnings(scope = '') {
   );
 }
 
+// New leads per day for the last two weeks, with each day's qualified share.
+export function useLeadTrend(scope = '') {
+  return useIfNotAgent(
+    ['admin-ops', 'lead-trend', scope],
+    () => api.get(scopedUrl('/admin-ops/lead-trend', scope)).then(r => r.data?.data),
+    { staleTime: 60_000 }
+  );
+}
+
 export function useStages(scope = '') {
   return useIfNotAgent(
     ['admin-ops', 'stages', scope],

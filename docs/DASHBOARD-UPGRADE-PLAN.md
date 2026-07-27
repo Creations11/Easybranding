@@ -173,7 +173,23 @@ misleading one is lipstick.
   months are included rather than skipped, otherwise the gap between bars
   silently changes meaning. "Best month" compares only COMPLETE months.
 
-  Still to come: leads per day by tenant, conversion by rung of the ladder.
+  ✅ Second built — `components/LeadTrend.jsx`, fed by
+  `GET /admin-ops/lead-trend`. New leads per day for two weeks with the
+  qualified share **stacked inside** each bar, not beside it: qualified leads
+  are a SUBSET of that day's arrivals, and side-by-side bars would let a day
+  with 4 leads and 4 qualified read as 8 arrivals. It follows RevenueTrend's
+  rules exactly — every day present at zero, today drawn hollow — because two
+  charts on one page with different conventions for gaps and part-periods
+  would be a worse problem than either chart solves.
+
+  `qualified` counts each day's own intake that has SINCE qualified, not
+  qualifications dated that day, so both series describe the same people. The
+  headline rate excludes today, which would otherwise drag it down every
+  morning purely because the day is young.
+
+  Still to come: conversion by rung of the product ladder. That one needs a
+  definition first — the ladder lives in PRODUCT-STRATEGY.md but nothing in
+  the data records which rung a lead converted at.
 - **Keyboard and mobile.** 🚧 Mobile started — the leads board becomes a
   single full-width column behind a status picker under 768px
   (`hooks/useMediaQuery.js`). The multi-column board was a horizontal scroll
