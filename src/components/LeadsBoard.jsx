@@ -11,6 +11,9 @@
 // its first 20 of 70 looked complete. That is what put 50 closed leads under
 // "Other" as though nobody had closed them.
 
+import { useState } from 'react';
+import useMediaQuery, { MOBILE_QUERY } from '../hooks/useMediaQuery';
+
 export default function LeadsBoard({
   columns,
   allLeadsCount,
@@ -24,6 +27,18 @@ export default function LeadsBoard({
   onReopen,
   colors: c,
 }) {
+  const isMobile = useMediaQuery(MOBILE_QUERY);
+  const [mobileKey, setMobileKey] = useState(null);
+
+  // Default to the first column, but follow the data: if the columns change
+  // (a tenant filter that removes "Other", say) a stale selection would show
+  // an empty board with no indication why.
+  const shownKey = columns.some((col) => col.key === mobileKey)
+    ? mobileKey
+    : columns[0]?.key;
+
+  const visible = isMobile ? columns.filter((col) => col.key === shownKey) : columns;
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
@@ -40,9 +55,38 @@ export default function LeadsBoard({
         </select>
       </div>
 
-      <p style={{ color: c.muted, fontSize: 12, marginBottom: 12 }}>
-        Scroll sideways (mouse wheel, trackpad, or drag the scrollbar below) to see Qualified, Rejected, Closed{columns.some(c2 => c2.key === 'other') ? ', and Other' : ''} →
-      </p>
+      {/* On a phone the multi-column board is the worst thing on the screen:
+          a horizontal scroll containing columns that each scroll vertically,
+          so a thumb-drag is ambiguous and most of the board is undiscoverable.
+          Narrow viewports get a status picker and ONE full-width column —
+          same data, one axis of movement. */}
+      {isMobile ? (
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8, marginBottom: 14 }}>
+          {columns.map(col => {
+            const on = col.key === shownKey;
+            return (
+              <button
+                key={col.key}
+                onClick={() => setMobileKey(col.key)}
+                style={{
+                  flex: 'none', padding: '7px 13px', borderRadius: 999,
+                  background: on ? c.lime + '22' : 'transparent',
+                  border: '1px solid ' + (on ? c.lime + '55' : c.borderDim),
+                  color: on ? c.lime : c.muted, fontSize: 13,
+                  fontWeight: on ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {col.icon} {col.label} {col.items.length}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <p style={{ color: c.muted, fontSize: 12, marginBottom: 12 }}>
+          Scroll sideways (mouse wheel, trackpad, or drag the scrollbar below) to see Qualified, Rejected, Closed{columns.some(c2 => c2.key === 'other') ? ', and Other' : ''} →
+        </p>
+      )}
 
       {/* onWheel: a horizontal-scroll-only row is easy to miss —
           without this, columns past the first are only reachable
@@ -68,10 +112,10 @@ export default function LeadsBoard({
           e.currentTarget.scrollLeft += e.deltaY;
           e.preventDefault();
         }}
-        style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}
+        style={{ display: 'flex', gap: 16, overflowX: isMobile ? 'visible' : 'auto', paddingBottom: 8 }}
       >
-        {columns.map(col => (
-          <div key={col.key} style={{ flex: '0 0 300px', width: 300 }}>
+        {visible.map(col => (
+          <div key={col.key} style={isMobile ? { flex: 1, minWidth: 0 } : { flex: '0 0 300px', width: 300 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 15, fontWeight: 700 }}>{col.icon} {col.label}</span>
               <span style={{ fontSize: 11, padding: '2px 9px', borderRadius: 999, background: c.borderDim, color: c.muted, fontWeight: 700 }}>{col.items.length}</span>
@@ -85,7 +129,13 @@ export default function LeadsBoard({
                 </span>
               )}
             </div>
-            <div className="lead-column-scroll" style={{ maxHeight: 620, overflowY: 'auto', paddingRight: 4 }}>
+            {/* The 620px inner scroll makes several columns comparable side by
+                side on a desktop. On a phone showing ONE column it just nests a
+                scroll inside a scroll, so the page scrolls instead. */}
+            <div
+              className="lead-column-scroll"
+              style={isMobile ? { paddingRight: 4 } : { maxHeight: 620, overflowY: 'auto', paddingRight: 4 }}
+            >
               {/* Three distinct states. They all rendered as "None" before,
                   so a failed fetch was indistinguishable from an empty
                   column — the board's most misleading behaviour. */}

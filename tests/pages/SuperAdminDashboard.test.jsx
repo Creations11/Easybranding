@@ -4,6 +4,17 @@ import { renderWithProviders } from '../test-utils'
 import api from '../../src/api'
 import SuperAdminDashboard from '../../src/pages/SuperAdminDashboard'
 
+// Drive useMediaQuery from a test. Desktop unless a test says otherwise.
+const setViewport = (mobile) =>
+  vi.stubGlobal('matchMedia', vi.fn((query) => ({
+    matches: mobile && query.includes('max-width'),
+    media: query,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+  })))
+
 vi.mock('../../src/api', () => ({
   default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
 }))
@@ -56,6 +67,9 @@ beforeEach(() => {
   // scrolls its thread to the bottom on open — without this, any test that
   // opens a lead dies inside an effect rather than at its own assertion.
   Element.prototype.scrollIntoView = vi.fn()
+  // jsdom has no matchMedia. useMediaQuery already falls back to false without
+  // it, but stubbing explicitly lets a test choose the viewport.
+  setViewport(false)
 })
 
 describe('SuperAdminDashboard', () => {
@@ -712,4 +726,64 @@ describe('SuperAdminDashboard — today’s verdict', () => {
     )
     expect(screen.queryByText('Today is fine')).not.toBeInTheDocument()
   }, 10000)
+})
+
+// ── Mobile leads board (Phase 3) ───────────────────────────────────────
+// This business is run from a phone. The multi-column board is the worst
+// thing on a small screen: a horizontal scroll containing columns that each
+// scroll vertically, so a thumb-drag is ambiguous and most of the board is
+// undiscoverable.
+describe('LeadsBoard — on a phone', () => {
+  const withLeads = () =>
+    mockApiGet({
+      '/admin-ops/overview': { data: { data: { overview: {
+        totalLeads: 2, activeConversations: 1, qualifiedLeads: 1,
+        rejectedLeads: 0, todayLeads: 0, qualificationRate: 50,
+      } } } },
+      '/admin-ops/conversations/active': { data: { data: { leads: [
+        { _id: 'lead1', name: 'Sipho', phone: '+27822222222', workflowStatus: 'new' },
+      ] } } },
+      '/admin-ops/leads/qualified': { data: { data: { leads: [
+        { _id: 'lead2', name: 'Naledi', phone: '+27823333333', workflowStatus: 'qualified' },
+      ] } } },
+    })
+
+  const openLeads = async () => {
+    renderWithProviders(<SuperAdminDashboard />)
+    await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'leads' }))
+  }
+
+  it('shows every column side by side on a desktop', async () => {
+    setViewport(false)
+    withLeads()
+    await openLeads()
+
+    await waitFor(() => expect(screen.getByText('Sipho')).toBeInTheDocument())
+    expect(screen.getByText('Naledi')).toBeInTheDocument() // a different column
+  })
+
+  it('shows one column at a time behind a status picker on a phone', async () => {
+    setViewport(true)
+    withLeads()
+    await openLeads()
+
+    await waitFor(() => expect(screen.getByText('Sipho')).toBeInTheDocument())
+    // Only the selected column's leads render — no horizontal hunting.
+    expect(screen.queryByText('Naledi')).not.toBeInTheDocument()
+    // And the sideways-scroll instruction is gone, because there is none.
+    expect(screen.queryByText(/Scroll sideways/)).not.toBeInTheDocument()
+  })
+
+  it('switches column when a status chip is tapped', async () => {
+    setViewport(true)
+    withLeads()
+    await openLeads()
+
+    await waitFor(() => expect(screen.getByText('Sipho')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /Qualified 1/ }))
+
+    await waitFor(() => expect(screen.getByText('Naledi')).toBeInTheDocument())
+    expect(screen.queryByText('Sipho')).not.toBeInTheDocument()
+  })
 })
