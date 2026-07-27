@@ -513,3 +513,71 @@ describe('SuperAdminDashboard — money panel', () => {
     )
   }, 10000)
 })
+
+// ── Merged lead timeline (Phase 2) ─────────────────────────────────────
+// The thread used to show only what was SAID. A customer who "went quiet"
+// then reads as lost interest, when the record may show they paid and the
+// webhook never landed, or that a takeover parked their bot for a week.
+describe('LeadDetailModal — merged timeline', () => {
+  const openLeadWith = (events) =>
+    mockApiGet({
+      '/admin-ops/overview': { data: { data: { overview: {
+        totalLeads: 1, activeConversations: 1, qualifiedLeads: 0,
+        rejectedLeads: 0, todayLeads: 0, qualificationRate: 0,
+      } } } },
+      '/admin-ops/conversations/active': { data: { data: { leads: [
+        { _id: 'lead1', name: 'Muhumo', phone: '+27821111111', workflowStatus: 'new' },
+      ] } } },
+      '/admin-ops/leads/lead1/timeline': { data: { data: {
+        lead: { _id: 'lead1', name: 'Muhumo', phone: '+27821111111', workflowStatus: 'new' },
+        timeline: [],
+        events,
+      } } },
+      '/takeover/lead1/history': { data: { data: { history: [] } } },
+    })
+
+  const open = async () => {
+    renderWithProviders(<SuperAdminDashboard />)
+    await waitFor(() => expect(screen.getByText('Muhumo')).toBeInTheDocument())
+    fireEvent.click(screen.getByText('Muhumo'))
+  }
+
+  it('shows payments and takeovers inline with the conversation', async () => {
+    openLeadWith([
+      { at: '2026-07-20T09:00:00Z', type: 'message_in',  title: 'Customer', detail: "I'll pay now" },
+      { at: '2026-07-20T11:00:00Z', type: 'payment',     title: 'Payment started — R400', tone: 'info' },
+      { at: '2026-07-20T11:00:00Z', type: 'payment',     title: 'Still unconfirmed — R400', tone: 'warn',
+        detail: 'Never reached success. Either abandoned, or paid without the webhook landing.' },
+      { at: '2026-07-20T12:00:00Z', type: 'takeover',    title: 'Bot paused — conversation taken over', tone: 'warn' },
+      { at: '2026-07-20T14:00:00Z', type: 'message_in',  title: 'Customer', detail: 'Did it go through?' },
+    ])
+    await open()
+
+    await waitFor(() => expect(screen.getByText("I'll pay now")).toBeInTheDocument())
+    expect(screen.getByText('Payment started — R400')).toBeInTheDocument()
+    expect(screen.getByText('Still unconfirmed — R400')).toBeInTheDocument()
+    expect(screen.getByText('Bot paused — conversation taken over')).toBeInTheDocument()
+    expect(screen.getByText('Did it go through?')).toBeInTheDocument()
+  })
+
+  it('falls back to the messages-only thread when the API sends no events', async () => {
+    mockApiGet({
+      '/admin-ops/overview': { data: { data: { overview: {
+        totalLeads: 1, activeConversations: 1, qualifiedLeads: 0,
+        rejectedLeads: 0, todayLeads: 0, qualificationRate: 0,
+      } } } },
+      '/admin-ops/conversations/active': { data: { data: { leads: [
+        { _id: 'lead1', name: 'Muhumo', phone: '+27821111111', workflowStatus: 'new' },
+      ] } } },
+      '/admin-ops/leads/lead1/timeline': { data: { data: {
+        lead: { _id: 'lead1', name: 'Muhumo', phone: '+27821111111', workflowStatus: 'new' },
+        timeline: [{ direction: 'inbound', body: 'Legacy message', timestamp: '2026-07-20T09:00:00Z' }],
+        // no `events` — an older backend
+      } } },
+      '/takeover/lead1/history': { data: { data: { history: [] } } },
+    })
+    await open()
+
+    await waitFor(() => expect(screen.getByText('Legacy message')).toBeInTheDocument())
+  })
+})

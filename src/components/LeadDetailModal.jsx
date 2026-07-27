@@ -101,6 +101,10 @@ function ViewingScheduler({ lead, onScheduled, onClose }) {
 export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
   const [lead,          setLead]          = useState(null);
   const [timeline,      setTimeline]      = useState([]);
+  // The merged view: conversation PLUS payments, invoices, takeovers and admin
+  // actions, in one chronological list. Falls back to the messages-only
+  // `timeline` when the API hasn't got `events` (older deploy).
+  const [events,        setEvents]        = useState(null);
   const [takeoverHistory, setTakeoverHistory] = useState([]);
   const [message,       setMessage]       = useState('');
   const [activeTab,     setActiveTab]     = useState('conversation');
@@ -128,6 +132,7 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
     if (timelineResult.status === 'fulfilled') {
       setLead(timelineResult.value.data.data?.lead);
       setTimeline(timelineResult.value.data.data?.timeline || []);
+      setEvents(timelineResult.value.data.data?.events || null);
     } else {
       console.error('Lead timeline load error', timelineResult.reason);
     }
@@ -152,7 +157,7 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
     saveNote(leadId, noteText);
     setNoteSavedAt(noteText.trim() ? new Date().toISOString() : null);
   };
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [timeline]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [timeline, events]);
 
   const doAction = async (action, payload = {}, successMsg) => {
     setActionLoading(action); setActionMsg('');
@@ -296,7 +301,58 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '200px' }}>
 
           {/* ── Conversation tab ─── */}
-          {activeTab === 'conversation' && (
+          {/* When the API sends `events`, the thread shows what HAPPENED to
+              this lead, not only what was said: the payment they started, the
+              invoice they were sent, the moment their bot was paused. Reading
+              a thread without those is misleading — a customer who "went
+              quiet" reads as lost interest when the record may show they paid
+              and the webhook never landed. */}
+          {activeTab === 'conversation' && events && (
+            events.length === 0 ? (
+              <p style={{ color: t.muted, textAlign: 'center', marginTop: '40px' }}>Nothing recorded yet.</p>
+            ) : events.map((e, i) => {
+              const isMessage = e.type === 'message_in' || e.type === 'message_out';
+              const outbound = e.type === 'message_out';
+
+              // Non-message events, and system notices, read as centred markers
+              // in the flow — they are things that happened, not things said.
+              if (!isMessage || e.system) {
+                const tone = { good: t.lime, warn: t.orange, bad: t.red }[e.tone] || t.muted;
+                const label = isMessage ? (e.detail || '').replace('[SYSTEM] ', '') : e.title;
+                return (
+                  <div key={i} style={{ textAlign: 'center', width: '100%', alignSelf: 'center', margin: '2px 0' }}>
+                    <span style={{
+                      fontSize: '11px', color: tone, background: t.borderDim,
+                      padding: '3px 12px', borderRadius: '999px', display: 'inline-block',
+                    }}>
+                      {label}
+                      {!isMessage && e.detail && <span style={{ color: t.muted }}> · {e.detail}</span>}
+                    </span>
+                  </div>
+                );
+              }
+
+              return (
+                <div key={i} style={{ alignSelf: outbound ? 'flex-end' : 'flex-start', maxWidth: '75%' }}>
+                  <div style={{
+                    padding: '10px 14px',
+                    borderRadius: outbound ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                    background: outbound ? '#005c4b' : '#1C1C19', color: t.text,
+                    fontSize: '13px', lineHeight: '1.5', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
+                  }}>
+                    {e.detail}
+                  </div>
+                  <div style={{ fontSize: '10px', color: t.muted, marginTop: '3px', textAlign: outbound ? 'right' : 'left' }}>
+                    {new Date(e.at).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
+                    {e.manual && <span style={{ marginLeft: '6px', color: t.orange }}>· manual</span>}
+                  </div>
+                </div>
+              );
+            })
+          )}
+
+          {/* Fallback for a backend that predates `events`. */}
+          {activeTab === 'conversation' && !events && (
             timeline.length === 0 ? (
               <p style={{ color: t.muted, textAlign: 'center', marginTop: '40px' }}>No messages yet.</p>
             ) : timeline.map((msg, i) => (

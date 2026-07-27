@@ -45,10 +45,10 @@ health polling. That is more than most agency dashboards have.
   asserted in `tests/integration/adminOpsCrossTenant.test.js` — including the
   case where `total` degrades into "length of this page", which is the original
   bug seen from the other side.
-- **Phase 2 — action rail and money view done** (27 July 2026). The rail
+- **Phase 2 — action rail, money view and lead timeline done** (27 July 2026). The rail
   carries five signals including the unanswered-customer row, which shipped
   only after outbound recording was made complete enough to support it.
-  Per-lead timeline and stale-state warnings still open.
+  Per-lead timeline done too; stale-state warnings are all that remain.
 - **Phase 3 — not started.**
 
 ---
@@ -113,8 +113,19 @@ The shift: from *"here is everything"* to *"here is what needs you"*.
   is — the moment money that may not exist joins a revenue figure, the figure
   stops being trustworthy. A failed load says so rather than rendering R0,
   which would be indistinguishable from a bad month.
-- **Per-lead timeline.** The conversation, quotes, payments and status changes
-  in one column. This exists in the data already; it has never been rendered.
+- **Per-lead timeline.** ✅ Built — `services/leadTimelineService.js`, returned
+  as `events` on `GET /admin-ops/leads/:id/timeline`, rendered in
+  `LeadDetailModal`. Messages, payments, invoices, takeovers and admin actions
+  merged chronologically; non-message events read as centred markers in the
+  thread.
+
+  Matching notes: payments and takeovers join on a real `leadId`; **invoices
+  have no `leadId`**, so they join on `recipientPhone` + `tenantId`, exact
+  match only — a widened guess would show one customer another's invoice.
+  Every non-message source is best-effort: losing the payment history is bad,
+  losing the whole conversation because one collection errored is worse.
+  `events` was added ALONGSIDE `timeline` rather than replacing it, so a
+  frontend deploy that lands before the backend still renders.
 - **Stale-state warnings.** Takeovers open beyond 24h, agent circuit-breaker
   trips, flows unpublished on a paying tenant. All are knowable now and all
   currently reach you only as WhatsApp alerts, if at all.
