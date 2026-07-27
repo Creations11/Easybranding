@@ -45,10 +45,10 @@ health polling. That is more than most agency dashboards have.
   asserted in `tests/integration/adminOpsCrossTenant.test.js` — including the
   case where `total` degrades into "length of this page", which is the original
   bug seen from the other side.
-- **Phase 2 — action rail, money view and lead timeline done** (27 July 2026). The rail
+- **Phase 2 — done** (27 July 2026). The rail
   carries five signals including the unanswered-customer row, which shipped
   only after outbound recording was made complete enough to support it.
-  Per-lead timeline done too; stale-state warnings are all that remain.
+  Per-lead timeline and stale-state warnings done. Phase 2 complete.
 - **Phase 3 — not started.**
 
 ---
@@ -126,9 +126,21 @@ The shift: from *"here is everything"* to *"here is what needs you"*.
   losing the whole conversation because one collection errored is worse.
   `events` was added ALONGSIDE `timeline` rather than replacing it, so a
   frontend deploy that lands before the backend still renders.
-- **Stale-state warnings.** Takeovers open beyond 24h, agent circuit-breaker
-  trips, flows unpublished on a paying tenant. All are knowable now and all
-  currently reach you only as WhatsApp alerts, if at all.
+- **Stale-state warnings.** ✅ Built — `services/platformHealthService.js`,
+  `GET /admin-ops/health-warnings`, `components/HealthWarnings.jsx`. What
+  unites these is that the system keeps WORKING while it is wrong: the
+  outbound kill switch left on, a paying tenant whose flows are all drafts, a
+  tenant with no WhatsApp number, a sales agent left in shadow after an
+  incident, an outbox that stopped draining. Idle takeovers live on the rail
+  instead, since they are a task rather than a state.
+
+  **"Agent circuit-breaker trips" was dropped: there is no circuit breaker in
+  this codebase.** That plan item described something that does not exist, and
+  a warning that can never fire is worse than an absent one — it reads as a
+  working check.
+
+  A clean result renders as one quiet line, not a card. A panel that takes
+  real estate to say "all good" trains you to stop reading it.
 
 ---
 

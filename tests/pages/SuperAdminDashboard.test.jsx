@@ -23,6 +23,7 @@ const ROUTE_DEFAULTS = {
   '/admin-ops/alerts': { data: { data: { alerts: [] } } },
   '/admin-ops/owed-work': { data: { data: { items: [], total: 0, counts: {} } } },
   '/admin-ops/money': { data: { data: null } },
+  '/admin-ops/health-warnings': { data: { data: { warnings: [], total: 0 } } },
   '/tenants': { data: { data: { tenants: [] } } },
   '/tenants/stats': { data: { data: { stats: null } } },
   '/users': { data: { data: { users: [] } } },
@@ -580,4 +581,64 @@ describe('LeadDetailModal — merged timeline', () => {
 
     await waitFor(() => expect(screen.getByText('Legacy message')).toBeInTheDocument())
   })
+})
+
+// ── Health warnings (Phase 2) ──────────────────────────────────────────
+// These are things that are silently wrong: the system keeps working while
+// it is misconfigured. Nothing errors, so nothing surfaces them but this.
+describe('SuperAdminDashboard — health warnings', () => {
+  const withWarnings = (warnings) =>
+    mockApiGet({
+      '/admin-ops/overview': { data: { data: { overview: {
+        totalLeads: 1, activeConversations: 1, qualifiedLeads: 0,
+        rejectedLeads: 0, todayLeads: 0, qualificationRate: 0,
+      } } } },
+      '/admin-ops/health-warnings': { data: { data: { warnings, total: warnings.length } } },
+    })
+
+  it('names what is misconfigured and why it matters', async () => {
+    withWarnings([
+      { kind: 'outbound_paused', severity: 'high', title: 'Outbound sending is PAUSED',
+        detail: 'Messages are being queued, not sent — nothing is lost.' },
+      { kind: 'agent_not_live', severity: 'medium', title: "Lonar's sales agent is in shadow mode",
+        detail: 'It is enabled but not answering customers.' },
+    ])
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() => expect(screen.getByText('Needs fixing (2)')).toBeInTheDocument())
+    expect(screen.getByText('Outbound sending is PAUSED')).toBeInTheDocument()
+    expect(screen.getByText("Lonar's sales agent is in shadow mode")).toBeInTheDocument()
+  })
+
+  // A health panel that takes real estate to say "all good" trains you to
+  // stop reading it — so a clean result is one quiet line, not a card.
+  it('stays out of the way when the checks pass', async () => {
+    withWarnings([])
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() => expect(screen.getByText('Configuration checks passed')).toBeInTheDocument())
+    expect(screen.queryByText(/Needs fixing/)).not.toBeInTheDocument()
+  })
+
+  it('does not pass a failed check off as a clean bill of health', async () => {
+    const routes = {
+      ...ROUTE_DEFAULTS,
+      '/admin-ops/overview': { data: { data: { overview: {
+        totalLeads: 1, activeConversations: 1, qualifiedLeads: 0,
+        rejectedLeads: 0, todayLeads: 0, qualificationRate: 0,
+      } } } },
+    }
+    api.get.mockImplementation((url) => {
+      const path = url.split('?')[0]
+      if (path === '/admin-ops/health-warnings') return Promise.reject(new Error('boom'))
+      return Promise.resolve(routes[path] ?? { data: { data: {} } })
+    })
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(
+      () => expect(screen.getByText(/Couldn't run the configuration checks/)).toBeInTheDocument(),
+      { timeout: 8000 },
+    )
+    expect(screen.queryByText('Configuration checks passed')).not.toBeInTheDocument()
+  }, 10000)
 })

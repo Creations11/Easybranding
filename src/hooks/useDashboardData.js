@@ -151,6 +151,15 @@ export function useMoneyView(scope = '') {
   );
 }
 
+// Configuration and operational state that is silently wrong.
+export function useHealthWarnings(scope = '') {
+  return useIfNotAgent(
+    ['admin-ops', 'health-warnings', scope],
+    () => api.get(scopedUrl('/admin-ops/health-warnings', scope)).then(r => r.data?.data),
+    { staleTime: 60_000 }
+  );
+}
+
 export function useStages(scope = '') {
   return useIfNotAgent(
     ['admin-ops', 'stages', scope],
