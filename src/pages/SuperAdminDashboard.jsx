@@ -25,6 +25,7 @@ import MoneyPanel from '../components/MoneyPanel';
 import HealthWarnings from '../components/HealthWarnings';
 import TodayVerdict from '../components/TodayVerdict';
 import LeadsBoard from '../components/LeadsBoard';
+import RevenueTrend from '../components/RevenueTrend';
 import { useAuth } from '../context/AuthContext';
 import {
   useOverview, useAllLeads, useActiveLeads, useQualifiedLeads,
@@ -433,6 +434,8 @@ export default function SuperAdminDashboard() {
               <ActionRail query={owedWorkQ} colors={c} onOpenLead={setLeadDetailId} />
 
               <MoneyPanel query={moneyQ} colors={c} />
+
+              <RevenueTrend query={moneyQ} colors={c} />
 
               <HealthWarnings query={healthQ} colors={c} />
 

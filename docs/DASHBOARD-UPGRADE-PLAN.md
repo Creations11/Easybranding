@@ -160,10 +160,25 @@ misleading one is lipstick.
   than any single panel failing because a reassuring summary stops you reading
   the detail. Loading reads "Checking…", any error reads "Can't tell right
   now".
-- **Real charts, few of them.** Leads per day by tenant, conversion by rung of
-  the product ladder, revenue trend. Three good charts beat a wall of tiles.
-- **Keyboard and mobile.** You run this business from a phone — the board
-  should be usable there, not merely responsive.
+- **Real charts, few of them.** ✅ One built — `components/RevenueTrend.jsx`,
+  six months of collected revenue, fed by `trend` on `GET /admin-ops/money`.
+  Hand-drawn markup, no charting library: the dependency would dwarf the
+  component, and every option such a library offers here is one this chart
+  should not have. Zero baseline, linear scale, equal bar widths — the
+  settings that keep a bar chart honest, and they should not be adjustable.
+
+  **The current month is drawn hollow and labelled "so far".** It is
+  incomplete by definition, and a part-month drawn like a full one reads as a
+  collapse — the chart would mislead using entirely accurate data. Empty
+  months are included rather than skipped, otherwise the gap between bars
+  silently changes meaning. "Best month" compares only COMPLETE months.
+
+  Still to come: leads per day by tenant, conversion by rung of the ladder.
+- **Keyboard and mobile.** 🚧 Mobile started — the leads board becomes a
+  single full-width column behind a status picker under 768px
+  (`hooks/useMediaQuery.js`). The multi-column board was a horizontal scroll
+  containing vertically-scrolling columns, so a thumb-drag was ambiguous and
+  most of the board was undiscoverable. Keyboard navigation not started.
 - **Split the file.** SuperAdminDashboard.jsx becomes a route with panel
   components. Do this WITH the redesign, not as a separate refactor nobody
   schedules. 🚧 In progress — `LeadsBoard` extracted (the largest single

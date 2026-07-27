@@ -787,3 +787,71 @@ describe('LeadsBoard — on a phone', () => {
     expect(screen.queryByText('Sipho')).not.toBeInTheDocument()
   })
 })
+
+// ── Revenue trend chart (Phase 3) ──────────────────────────────────────
+describe('SuperAdminDashboard — revenue trend', () => {
+  const withTrend = (trend) =>
+    mockApiGet({
+      '/admin-ops/overview': { data: { data: { overview: {
+        totalLeads: 1, activeConversations: 1, qualifiedLeads: 0,
+        rejectedLeads: 0, todayLeads: 0, qualificationRate: 0,
+      } } } },
+      '/admin-ops/money': { data: { data: {
+        collected: { thisMonth: 700, samePeriodLastMonth: 0, changePct: null, count: 2, platformFees: 0 },
+        unconfirmed: { amount: 0, count: 0 },
+        outstanding: { invoiced: 0, count: 0, overdueAmount: 0, overdueCount: 0 },
+        recurring: { mrr: 0, tenants: 0 },
+        trend,
+      } } },
+    })
+
+  const SIX = [
+    { month: '2026-02', label: 'Feb', collected: 1200, partial: false },
+    { month: '2026-03', label: 'Mar', collected: 0,    partial: false },
+    { month: '2026-04', label: 'Apr', collected: 900,  partial: false },
+    { month: '2026-05', label: 'May', collected: 1500, partial: false },
+    { month: '2026-06', label: 'Jun', collected: 1100, partial: false },
+    { month: '2026-07', label: 'Jul', collected: 700,  partial: true  },
+  ]
+
+  it('draws every month, including ones with no revenue', async () => {
+    withTrend(SIX)
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() => expect(screen.getByText('Collected, 6 months')).toBeInTheDocument())
+    for (const label of ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul']) {
+      expect(screen.getByText(label)).toBeInTheDocument()
+    }
+    // An empty month reads as no revenue, not as missing data.
+    expect(screen.getByText('—')).toBeInTheDocument()
+  })
+
+  // The final bar is the current month, incomplete by definition. Drawn like
+  // a full one it reads as a collapse — the chart would be lying with
+  // entirely accurate data.
+  it('marks the current month as incomplete', async () => {
+    withTrend(SIX)
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() => expect(screen.getByText('so far')).toBeInTheDocument())
+  })
+
+  // "Best month" must not be beaten by a part-month that only looks smaller.
+  it('compares against the best COMPLETE month', async () => {
+    withTrend(SIX)
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() =>
+      expect(screen.getByText((_, el) =>
+        el?.children.length === 0 &&
+        el.textContent.replace(/\u00a0/g, ' ') === 'best full month R1 500')).toBeInTheDocument())
+  })
+
+  it('renders nothing at all when there is no trend to draw', async () => {
+    withTrend([])
+    renderWithProviders(<SuperAdminDashboard />)
+
+    await waitFor(() => expect(screen.getByText('Money')).toBeInTheDocument())
+    expect(screen.queryByText('Collected, 6 months')).not.toBeInTheDocument()
+  })
+})
