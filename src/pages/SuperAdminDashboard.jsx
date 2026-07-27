@@ -19,6 +19,7 @@ import api from '../api';
 import LeadDetailModal from '../components/LeadDetailModal';
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
 import StatCard from '../components/StatCard';
+import DataFreshness from '../components/DataFreshness';
 import { useAuth } from '../context/AuthContext';
 import {
   useOverview, useAllLeads, useActiveLeads, useQualifiedLeads,
@@ -73,7 +74,8 @@ export default function SuperAdminDashboard() {
   const changeScope = (v) => { setStoredScope(v); setOpsScope(v); };
 
   // ── React Query data ──────────────────────────────────────
-  const overview     = useOverview(opsScope).data;
+  const overviewQ    = useOverview(opsScope);
+  const overview     = overviewQ.data;
   const allLeads     = useAllLeads().data || [];
   // Keep the whole query, not just the rows: a column must be able to tell
   // "empty" from "still loading" from "the request failed" — they looked
@@ -376,11 +378,20 @@ export default function SuperAdminDashboard() {
               <div style={{ marginBottom: 28, display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end', justifyContent: 'space-between' }}>
                 <div>
                   <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4 }}>Operations</h1>
-                  <p style={{ color: c.muted, fontSize: 15 }}>
+                  <p style={{ color: c.muted, fontSize: 15, marginBottom: 8 }}>
                     {opsScope
                       ? (tenants.find(t => t._id === opsScope)?.businessName || 'Selected client') + ' — pipeline'
                       : 'All clients — platform-wide pipeline'}
                   </p>
+                  {/* React Query keeps serving the last good response after a
+                      refetch fails, so this screen could sit for hours looking
+                      healthy while every background refresh errored. Say how
+                      old the numbers are, and say when they stopped updating. */}
+                  <DataFreshness
+                    colors={c}
+                    onRefresh={refetch}
+                    queries={[overviewQ, activeQ, qualifiedQ, rejectedQ, closedQ]}
+                  />
                 </div>
                 {/* Super-admin sees every tenant by default, which mixes
                     platform oversight with working our own customers.

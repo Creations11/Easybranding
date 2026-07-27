@@ -197,6 +197,18 @@ describe('SuperAdminDashboard', () => {
       expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
     })
 
+    it('states how old the figures are', async () => {
+      mockApiGet({
+        '/admin-ops/overview': { data: { data: { overview: { totalLeads: 4, activeConversations: 1, qualifiedLeads: 0, rejectedLeads: 0, todayLeads: 0, qualificationRate: 0 } } } },
+      })
+      renderWithProviders(<SuperAdminDashboard />)
+      await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
+
+      // Freshness is on the Operations header, which is the default section.
+      await waitFor(() => expect(screen.getByText(/Updated just now|Refreshing…/)).toBeInTheDocument())
+      expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument()
+    })
+
     it('does not claim a column is empty while it is still loading', async () => {
       const routes = { ...ROUTE_DEFAULTS,
         '/admin-ops/overview': { data: { data: { overview: { totalLeads: 1, activeConversations: 0, qualifiedLeads: 0, rejectedLeads: 0, todayLeads: 0, qualificationRate: 0 } } } },
