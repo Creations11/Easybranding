@@ -220,11 +220,29 @@ misleading one is lipstick.
   most of the board was undiscoverable. Keyboard navigation not started.
 - **Split the file.** SuperAdminDashboard.jsx becomes a route with panel
   components. Do this WITH the redesign, not as a separate refactor nobody
-  schedules. 🚧 In progress — `LeadsBoard` extracted (the largest single
-  block, ~120 lines, clean boundary). The page is 1066 → 967 lines. The
-  Operations section as a whole is the next candidate but is coupled to ~20
-  locals, so it wants doing alongside the layout work rather than as a
-  mechanical move.
+  schedules. ✅ Done — `components/LeadsBoard.jsx` then
+  `sections/OperationsSection.jsx`. The page went 1066 → 648 lines and no
+  longer contains the Operations view at all.
+
+  Operations OWNS what only it uses: its queries, tab state, message filters,
+  lead columns, and the takeover/resume/reopen handlers. The page keeps what
+  several sections share — tenants, tenant stats, the full lead list, and
+  which lead modal is open. Prop names deliberately match the locals they
+  replaced so the 240 lines of JSX moved across unchanged; renaming during a
+  move turns a mechanical change into a reviewable one.
+
+  Two things the move surfaced, both worth knowing:
+  - `alerts` feeds the sidebar badge, so the page still needs it. A dependency
+    array is easy to miss when auditing what a block uses.
+  - The page's loading gate means Operations doesn't mount — so doesn't
+    fetch — until something has arrived. Previously those queries fired
+    regardless. Better behaviour, but it changed one test's premise.
+
+  It was flagged earlier as wanting to happen alongside the layout work rather
+  than as a mechanical move. In the end the layout work came first — pulling
+  LeadsBoard and the panels out is what made the section small enough to move
+  in one piece, which is roughly what "do it with the redesign" was protecting
+  against.
 
 ---
 

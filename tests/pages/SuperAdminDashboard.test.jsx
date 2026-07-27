@@ -169,9 +169,17 @@ describe('SuperAdminDashboard', () => {
   // truncation. Production had 70 closed leads, 20 returned, and 50 showing as
   // uncategorised (2026-07-27).
   it('asks for more than the default 20 on every status column', async () => {
-    mockApiGet()
+    // Needs a LOADED page: Operations owns these queries now
+    // (sections/OperationsSection.jsx), and the page's loading gate means the
+    // section doesn't mount — so doesn't fetch — until something has arrived.
+    mockApiGet({
+      '/admin-ops/overview': { data: { data: { overview: {
+        totalLeads: 1, activeConversations: 1, qualifiedLeads: 0,
+        rejectedLeads: 0, todayLeads: 0, qualificationRate: 0,
+      } } } },
+    })
     renderWithProviders(<SuperAdminDashboard />)
-    await waitFor(() => expect(api.get).toHaveBeenCalled())
+    await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
 
     const urls = api.get.mock.calls.map(c => c[0])
     for (const path of ['/admin-ops/leads/closed', '/admin-ops/leads/qualified', '/admin-ops/leads/rejected', '/admin-ops/conversations/active']) {
