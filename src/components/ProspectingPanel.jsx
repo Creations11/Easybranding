@@ -1,6 +1,7 @@
 // src/components/ProspectingPanel.jsx
 import { useState, useEffect } from 'react';
 import api from '../api';
+import CampaignReport from './CampaignReport';
 
 const c = {
   card: '#121710', lime: '#B8F040', earth: '#C4873A',
@@ -180,8 +181,8 @@ export default function ProspectingPanel({ currentUser }) {
       {msg && <div style={{ background: msg.startsWith('✅') ? c.lime + '18' : c.red + '18', border: '1px solid ' + (msg.startsWith('✅') ? c.lime : c.red) + '33', borderRadius: '10px', padding: '10px 16px', marginBottom: '16px', color: msg.startsWith('✅') ? c.lime : c.red, fontSize: '14px' }}>{msg}</div>}
 
       <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid ' + c.borderDim, marginBottom: '24px' }}>
-        {['contacts', 'add', 'send'].map(t => (
-          <button key={t} onClick={() => setActiveTab(t)} style={{ padding: '10px 16px', background: 'none', border: 'none', borderBottom: activeTab === t ? '2px solid ' + c.lime : '2px solid transparent', color: activeTab === t ? c.lime : c.muted, cursor: 'pointer', fontSize: '13px', fontWeight: activeTab === t ? '600' : '400', marginBottom: '-1px', textTransform: 'capitalize', fontFamily: 'inherit' }}>{t === 'add' ? 'Add Contacts' : t === 'send' ? 'Send Messages' : 'Contact List'}</button>
+        {['contacts', 'add', 'send', 'campaigns'].map(t => (
+          <button key={t} onClick={() => setActiveTab(t)} style={{ padding: '10px 16px', background: 'none', border: 'none', borderBottom: activeTab === t ? '2px solid ' + c.lime : '2px solid transparent', color: activeTab === t ? c.lime : c.muted, cursor: 'pointer', fontSize: '13px', fontWeight: activeTab === t ? '600' : '400', marginBottom: '-1px', textTransform: 'capitalize', fontFamily: 'inherit' }}>{t === 'add' ? 'Add Contacts' : t === 'send' ? 'Send Messages' : t === 'campaigns' ? 'Campaigns' : 'Contact List'}</button>
         ))}
       </div>
 
@@ -320,6 +321,8 @@ export default function ProspectingPanel({ currentUser }) {
           </div>
         </div>
       )}
+
+      {activeTab === 'campaigns' && <CampaignReport />}
     </div>
   );
 }
