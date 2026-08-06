@@ -58,8 +58,17 @@ export default function ActionRail({ query, colors, onOpenLead }) {
   // "Close" was pressed teaches the owner the buttons are unreliable, and
   // then they stop using the rail rather than reporting it.
   const act = async (item, body) => {
+    // NOT disabled while in flight. `disabled={busy === item.id}` was the one
+    // structural difference between these buttons and "Add note", and the
+    // owner reported for two days that Add note worked and the others did
+    // not — the exact symptom of a stuck busy flag. The server action is an
+    // upsert keyed on the item, so a double click is harmless; a button that
+    // can wedge is not.
     setBusy(item.id);
     setFailed(null);
+    // Belt and braces: even if the request never settles, the label stops
+    // saying "Closing…" rather than leaving the row looking broken.
+    const release = setTimeout(() => setBusy(null), 8000);
     try {
       await api.post(`/admin-ops/owed-work/${encodeURIComponent(item.id)}/action`, body);
       setEditing(null);
@@ -75,6 +84,7 @@ export default function ActionRail({ query, colors, onOpenLead }) {
         msg: (err.response?.data?.message || 'That did not go through.') + ' Refresh to see the current state.',
       });
     } finally {
+      clearTimeout(release);
       setBusy(null);
     }
   };
@@ -275,8 +285,7 @@ export default function ActionRail({ query, colors, onOpenLead }) {
                   <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
                     <button
                       onClick={() => act(item, { state: 'note', note: draft.note, label: draft.label })}
-                      disabled={busy === item.id}
-                      style={btn(c.lime)}
+                        style={btn(c.lime)}
                     >
                       {busy === item.id ? 'Saving…' : 'Save'}
                     </button>
@@ -290,15 +299,13 @@ export default function ActionRail({ query, colors, onOpenLead }) {
                 >
                   <button
                     onClick={() => act(item, { state: 'closed' })}
-                    disabled={busy === item.id}
                     title="Dealt with — do not show this again"
                     style={btn(c.sage)}
                   >
-                    ✓ Close
+                    {busy === item.id ? 'Working…' : '✓ Close'}
                   </button>
                   <button
                     onClick={() => act(item, { state: 'snoozed', snoozeHours: 24 })}
-                    disabled={busy === item.id}
                     title="Real, but not today — back tomorrow"
                     style={btn(c.amber)}
                   >
@@ -306,7 +313,6 @@ export default function ActionRail({ query, colors, onOpenLead }) {
                   </button>
                   <button
                     onClick={() => act(item, { state: 'snoozed', snoozeHours: 24 * 7 })}
-                    disabled={busy === item.id}
                     title="Back in a week"
                     style={btn(c.amber)}
                   >
