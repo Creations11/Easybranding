@@ -140,8 +140,55 @@ export default function ActionRail({ query, colors, onOpenLead }) {
     );
   }
 
+  // 66 items, 35 of them R10/R25 invoices left over from development, is not
+  // a per-item job — and closing them one at a time replaces each row with an
+  // identical-looking one, which is how this rail came to look broken.
+  //
+  // Only offered for a kind with several items: a "clear all" next to two
+  // rows is noise, and next to one row it is a trap.
+  const counts = data?.counts || {};
+  const bulkable = Object.entries(counts).filter(([, n]) => n >= 5);
+
+  const bulk = async (kind, state, snoozeHours) => {
+    const label = KIND_LABEL[kind] || kind;
+    if (state === 'closed' && !window.confirm(
+      `Close all ${counts[kind]} ${label.toLowerCase()} items? They will not come back.`
+    )) return;
+    setBusy('bulk:' + kind);
+    setFailed(null);
+    try {
+      await api.post('/admin-ops/owed-work/bulk', { kind, state, snoozeHours });
+      await refetch?.();
+    } catch (err) {
+      setFailed({ id: 'bulk:' + kind, msg: err.response?.data?.message || 'That did not go through. Refresh to see the current state.' });
+    } finally { setBusy(null); }
+  };
+
   return shell(
     <div>
+      {bulkable.length > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+          marginBottom: 10, padding: '9px 12px', background: c.card,
+          border: '1px solid ' + c.borderDim, borderRadius: 10,
+        }}>
+          <span style={{ fontSize: 11, color: c.muted }}>Clear a whole group:</span>
+          {bulkable.map(([kind, n]) => (
+            <button
+              key={kind}
+              onClick={() => bulk(kind, 'closed')}
+              disabled={busy === 'bulk:' + kind}
+              title={`Close all ${n} — they will not come back`}
+              style={btn(c.sage)}
+            >
+              {busy === 'bulk:' + kind ? 'Clearing…' : `✓ ${KIND_LABEL[kind] || kind} (${n})`}
+            </button>
+          ))}
+          {failed?.id?.startsWith('bulk:') && (
+            <span style={{ fontSize: 12, color: c.red }}>{failed.msg}</span>
+          )}
+        </div>
+      )}
       {items.map((item) => {
         const sev = SEVERITY[item.severity] || SEVERITY.low;
         const tone = c[sev.key] || c.muted;
