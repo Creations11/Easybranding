@@ -65,7 +65,15 @@ export default function ActionRail({ query, colors, onOpenLead }) {
       setEditing(null);
       await refetch?.();
     } catch (err) {
-      setFailed({ id: item.id, msg: err.response?.data?.message || 'Could not save that — nothing changed.' });
+      // Deliberately does NOT say "nothing changed". On 2026-08-06 the
+      // server wrote the action and THEN threw on a missing import, so the
+      // owner was told nothing had changed while four items had in fact
+      // been closed and snoozed. A failure message can only honestly report
+      // what it knows: the request failed. Refresh, don't assume.
+      setFailed({
+        id: item.id,
+        msg: (err.response?.data?.message || 'That did not go through.') + ' Refresh to see the current state.',
+      });
     } finally {
       setBusy(null);
     }
