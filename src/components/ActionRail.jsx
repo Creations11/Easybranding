@@ -1,5 +1,12 @@
 // src/components/ActionRail.jsx
 //
+// Items can now be CLOSED, POSTPONED or ANNOTATED. The rail is derived from
+// live data, so before that the only response to an item was to fix the
+// underlying thing or see it again tomorrow — wrong for work handled outside
+// the system (an EFT seen in the bank) and for work that is real but not
+// today. A rail that cannot record "dealt with" or "chase it Monday" becomes
+// a list nobody reads.
+//
 // "What needs you today", at the top of Operations.
 //
 // Phase 2 of the dashboard plan. Every other panel on this screen reports
@@ -10,6 +17,9 @@
 // Ranking, thresholds and wording all come from the server
 // (services/owedWorkService.js) so the same judgement applies wherever this
 // is rendered, and so the rules live next to the data they interrogate.
+
+import { useState } from 'react';
+import api from '../api';
 
 const SEVERITY = {
   high:   { label: 'Now',   key: 'red' },
@@ -33,6 +43,39 @@ export default function ActionRail({ query, colors, onOpenLead }) {
   const { data, isLoading, isError, refetch } = query || {};
   const items = data?.items || [];
   const total = data?.total ?? 0;
+
+  // Which item is open for editing, and what is being typed into it.
+  const [editing, setEditing] = useState(null);
+  const [draft, setDraft] = useState({ note: '', label: '' });
+  const [busy, setBusy] = useState(null);
+  const [failed, setFailed] = useState(null);
+
+  // Close / postpone / annotate. The rail is derived live, so an item can
+  // only be answered by recording what the owner DID about it — see
+  // models/OwedWorkAction.js.
+  //
+  // A failure must be visible. Silently leaving an item on the board after
+  // "Close" was pressed teaches the owner the buttons are unreliable, and
+  // then they stop using the rail rather than reporting it.
+  const act = async (item, body) => {
+    setBusy(item.id);
+    setFailed(null);
+    try {
+      await api.post(`/admin-ops/owed-work/${encodeURIComponent(item.id)}/action`, body);
+      setEditing(null);
+      await refetch?.();
+    } catch (err) {
+      setFailed({ id: item.id, msg: err.response?.data?.message || 'Could not save that — nothing changed.' });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const btn = (tone) => ({
+    padding: '4px 10px', fontSize: 11, fontFamily: 'inherit', cursor: 'pointer',
+    background: tone + '18', color: tone, border: '1px solid ' + tone + '3a',
+    borderRadius: 7, whiteSpace: 'nowrap',
+  });
 
   const shell = (children) => (
     <div style={{ marginBottom: 18 }}>
@@ -126,6 +169,102 @@ export default function ActionRail({ query, colors, onOpenLead }) {
                 <span style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{item.title}</span>
               </div>
               <div style={{ fontSize: 12, color: c.muted, lineHeight: 1.5 }}>{item.detail}</div>
+
+              {/* A note the owner left. Shown on the card because a note
+                  nobody sees is the same as no note. */}
+              {item.note && (
+                <div style={{
+                  marginTop: 8, fontSize: 12, color: c.text, lineHeight: 1.5,
+                  background: c.lime + '10', border: '1px solid ' + c.lime + '2a',
+                  borderRadius: 8, padding: '7px 10px',
+                }}>
+                  📝 {item.note}
+                </div>
+              )}
+
+              {/* Back because it was postponed, not because it is new. */}
+              {item.wasSnoozed && (
+                <div style={{ marginTop: 6, fontSize: 11, color: c.amber }}>
+                  ⏰ You postponed this — it is due again.
+                </div>
+              )}
+
+              {failed?.id === item.id && (
+                <div style={{ marginTop: 8, fontSize: 12, color: c.red }}>{failed.msg}</div>
+              )}
+
+              {editing === item.id ? (
+                <div onClick={(e) => e.stopPropagation()} style={{ marginTop: 10 }}>
+                  <input
+                    autoFocus
+                    value={draft.label}
+                    onChange={(e) => setDraft({ ...draft, label: e.target.value })}
+                    placeholder="Label (optional) — e.g. the customer's name"
+                    style={{
+                      width: '100%', marginBottom: 6, padding: '7px 10px', fontSize: 12,
+                      fontFamily: 'inherit', background: c.bg, color: c.text,
+                      border: '1px solid ' + c.borderDim, borderRadius: 8,
+                    }}
+                  />
+                  <textarea
+                    value={draft.note}
+                    onChange={(e) => setDraft({ ...draft, note: e.target.value })}
+                    placeholder="Note — what is actually happening with this?"
+                    rows={2}
+                    style={{
+                      width: '100%', padding: '7px 10px', fontSize: 12, fontFamily: 'inherit',
+                      background: c.bg, color: c.text, border: '1px solid ' + c.borderDim,
+                      borderRadius: 8, resize: 'vertical',
+                    }}
+                  />
+                  <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                    <button
+                      onClick={() => act(item, { state: 'note', note: draft.note, label: draft.label })}
+                      disabled={busy === item.id}
+                      style={btn(c.lime)}
+                    >
+                      {busy === item.id ? 'Saving…' : 'Save'}
+                    </button>
+                    <button onClick={() => setEditing(null)} style={btn(c.muted)}>Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}
+                >
+                  <button
+                    onClick={() => act(item, { state: 'closed' })}
+                    disabled={busy === item.id}
+                    title="Dealt with — do not show this again"
+                    style={btn(c.sage)}
+                  >
+                    ✓ Close
+                  </button>
+                  <button
+                    onClick={() => act(item, { state: 'snoozed', snoozeHours: 24 })}
+                    disabled={busy === item.id}
+                    title="Real, but not today — back tomorrow"
+                    style={btn(c.amber)}
+                  >
+                    ⏰ Tomorrow
+                  </button>
+                  <button
+                    onClick={() => act(item, { state: 'snoozed', snoozeHours: 24 * 7 })}
+                    disabled={busy === item.id}
+                    title="Back in a week"
+                    style={btn(c.amber)}
+                  >
+                    Next week
+                  </button>
+                  <button
+                    onClick={() => { setEditing(item.id); setDraft({ note: item.note || '', label: item.label || '' }); }}
+                    style={btn(c.lime)}
+                  >
+                    {item.note || item.label ? '✎ Edit note' : '✎ Add note'}
+                  </button>
+                </div>
+              )}
             </div>
             {clickable && (
               <span style={{ fontSize: 11, color: c.lime, whiteSpace: 'nowrap', paddingTop: 2 }}>
