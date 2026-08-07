@@ -52,7 +52,13 @@ describe('AdminDashboard', () => {
     expect(screen.getByText('Loading Admin Operations Center...')).toBeInTheDocument()
   })
 
-  it('shows the top-level error message when any one of the 14 calls rejects', async () => {
+  // One failing call must NOT blank the dashboard. It used to: loadData ran
+  // Promise.all, so a single rejection replaced the whole page with an error —
+  // which is how the deliberate 403 on /tenants/stats took every client's
+  // dashboard down (2026-08-07). The failure still has to be visible (an empty
+  // panel otherwise reads as "no data"), so it surfaces as a banner while the
+  // panels that loaded keep rendering.
+  it('surfaces a failed call as a banner without destroying the page', async () => {
     seedUser({ role: 'admin' })
     mockApiGet({
       '/admin-ops/agents': Promise.reject({ response: { data: { message: 'Agents endpoint down' } } }),
@@ -60,7 +66,37 @@ describe('AdminDashboard', () => {
 
     render(<AdminDashboard />)
 
-    await waitFor(() => expect(screen.getByText('Agents endpoint down')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(/Agents endpoint down/)).toBeInTheDocument())
+    // The dashboard itself still rendered — this is the regression guard.
+    expect(screen.getByRole('button', { name: /^Leads/ })).toBeInTheDocument()
+  })
+
+  it('blanks the page only when EVERY call fails (dead API / expired token)', async () => {
+    seedUser({ role: 'admin' })
+    api.get.mockImplementation(() =>
+      Promise.reject({ response: { data: { message: 'Session expired' } } }))
+
+    render(<AdminDashboard />)
+
+    await waitFor(() => expect(screen.getByText('Session expired')).toBeInTheDocument())
+    expect(screen.queryByRole('button', { name: /^Leads/ })).not.toBeInTheDocument()
+  })
+
+  // A tenant admin must never request platform-wide stats: /tenants/stats is
+  // super_admin-only and its 403 was the original outage.
+  it('does not request /tenants/stats for a plain admin, but does for super_admin', async () => {
+    seedUser({ role: 'admin' })
+    mockApiGet()
+    render(<AdminDashboard />)
+    await waitFor(() => expect(screen.queryByText('Loading Admin Operations Center...')).not.toBeInTheDocument())
+    expect(api.get).not.toHaveBeenCalledWith('/tenants/stats')
+
+    api.get.mockReset()
+    localStorage.clear()
+    seedUser({ role: 'super_admin' })
+    mockApiGet()
+    render(<AdminDashboard />)
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith('/tenants/stats'))
   })
 
   it('renders Overview stats once all 14 calls resolve', async () => {

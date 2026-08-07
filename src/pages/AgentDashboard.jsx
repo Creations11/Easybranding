@@ -4,6 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { colors } from '../utils/theme';
 
+// Module scope, like App.jsx's getUser(): loadData reads the role through
+// this rather than closing over component state, so the mount effect stays
+// dependency-free.
+const getStoredUser = () => {
+  try { return JSON.parse(localStorage.getItem('eb_user') || '{}'); }
+  catch { return {}; }
+};
+
 const STATUS_COLORS = {
   qualified:                 colors.lime,
   not_qualified:             colors.red,
@@ -98,25 +106,38 @@ export default function AgentDashboard() {
   const [actionMsg,    setActionMsg]    = useState('');
   const bottomRef = useRef(null);
   const navigate  = useNavigate();
-  const user      = (() => { try { return JSON.parse(localStorage.getItem('eb_user') || '{}'); } catch { return {}; } })();
+  const user      = getStoredUser();
 
   const loadData = async () => {
-    try {
-      const [ovRes, leadsRes, viewRes, queueRes, alertRes] = await Promise.all([
-        api.get('/agent/overview'),
-        api.get('/agent/leads'),
-        api.get('/agent/viewings'),
-        api.get('/agent/takeover-queue'),
-        api.get('/admin-ops/alerts'),
-      ]);
-      setOverview(ovRes.data.data?.overview);
-      setLeads(leadsRes.data.data?.leads || []);
-      setViewings(viewRes.data.data?.viewings || []);
-      setQueue(queueRes.data.data);
-      setAlerts(alertRes.data.data?.alerts || []);
-    } catch (err) {
-      console.error('Failed to load agent data', err);
-    } finally { setLoading(false); }
+    // /admin-ops/alerts is verifyAdmin-gated and an "agent" is deliberately
+    // not an admin role, so it 403s for the very users this page is for.
+    // Under the old Promise.all that one rejection took the four /agent/*
+    // calls down with it and the catch only console.error'd — an agent saw an
+    // empty dashboard and no reason why (fixed 2026-08-07). Alerts are only
+    // requested by roles that may actually have them, and allSettled keeps one
+    // failing panel from emptying the rest.
+    const canSeeAdminAlerts = ['admin', 'super_admin', 'eb_manager'].includes(getStoredUser().role);
+
+    const results = await Promise.allSettled([
+      api.get('/agent/overview'),
+      api.get('/agent/leads'),
+      api.get('/agent/viewings'),
+      api.get('/agent/takeover-queue'),
+      canSeeAdminAlerts ? api.get('/admin-ops/alerts') : Promise.resolve(null),
+    ]);
+
+    const [ovRes, leadsRes, viewRes, queueRes, alertRes] =
+      results.map(r => (r.status === 'fulfilled' ? r.value : null));
+
+    setOverview(ovRes?.data.data?.overview ?? null);
+    setLeads(leadsRes?.data.data?.leads || []);
+    setViewings(viewRes?.data.data?.viewings || []);
+    setQueue(queueRes?.data.data ?? null);
+    setAlerts(alertRes?.data.data?.alerts || []);
+
+    const failed = results.filter(r => r.status === 'rejected');
+    if (failed.length) console.error('Some agent panels failed to load', failed.map(f => f.reason));
+    setLoading(false);
   };
 
   useEffect(() => { loadData(); }, []);

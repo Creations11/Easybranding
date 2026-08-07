@@ -9,6 +9,14 @@ import AdminClientModal from '../components/AdminClientModal';
 import { colors } from '../utils/theme';
 
 
+// Module scope, like App.jsx's getUser(): loadData reads the role through
+// this rather than closing over component state, so the mount effect stays
+// dependency-free.
+const getStoredUser = () => {
+  try { return JSON.parse(localStorage.getItem('eb_user') || '{}'); }
+  catch { return {}; }
+};
+
 const PLAN_COLORS   = { starter: colors.muted, growth: colors.lime, enterprise: colors.emerald };
 const STATUS_COLORS = { active: colors.lime, trial: colors.amber, suspended: colors.red, cancelled: colors.muted };
 
@@ -37,12 +45,13 @@ export default function AdminDashboard() {
   const [inviteUrl,           setInviteUrl]           = useState('');
   const [loading,             setLoading]             = useState(true);
   const [error,               setError]               = useState('');
+  // Partial failure: some panels are empty because their call failed, not
+  // because the business has no data. Shown as a banner, never as a
+  // page-replacing error — see loadData.
+  const [panelError,          setPanelError]          = useState('');
   const [tab, setTab] = useState('overview');
 
-  const currentUser = (() => {
-    try { return JSON.parse(localStorage.getItem('eb_user') || '{}'); }
-    catch { return {}; }
-  })();
+  const currentUser = getStoredUser();
   const isSuperAdmin = currentUser.role === 'super_admin';
   const isAdmin      = currentUser.role === 'admin';
   const userTenantId = currentUser.tenantId || null;
@@ -51,41 +60,83 @@ export default function AdminDashboard() {
   const [clientFilter,        setClientFilter]        = useState('all');
 
   const loadData = async () => {
-    try {
-      const [ovRes, activeRes, qualRes, rejRes, closedRes, alertRes, agentRes, clientRes, statsRes, pendingRes, usersRes, stagesRes, messagesRes, viewingsRes] = await Promise.all([
-        api.get('/admin-ops/overview'),
-        api.get('/admin-ops/conversations/active'),
-        api.get('/admin-ops/leads/qualified'),
-        api.get('/admin-ops/leads/rejected'),
-        api.get('/admin-ops/leads/closed'),
-        api.get('/admin-ops/alerts'),
-        api.get('/admin-ops/agents'),
-        api.get('/tenants'),
-        api.get('/tenants/stats'),
-        api.get('/users/pending'),
-        api.get('/users'),
-        api.get('/admin-ops/stages'),
-        api.get('/admin-ops/messages/recent'),
-        api.get('/admin-ops/viewings'),
-      ]);
-      setOverview(ovRes.data.data?.overview);
-      setActiveConversations(activeRes.data.data?.leads || []);
-      setQualifiedLeads(qualRes.data.data?.leads || []);
-      setRejectedLeads(rejRes.data.data?.leads || []);
-      setClosedLeads(closedRes.data.data?.leads || []);
-      setAlerts(alertRes.data.data?.alerts || []);
-      setAgents(agentRes.data.data?.agents || []);
-      setClients(clientRes.data.data?.tenants || []);
-      setClientStats(statsRes.data.data?.stats);
-      setPendingUsers(pendingRes.data.data?.users || []);
-      setAllUsers(usersRes.data.data?.users || []);
-      setTenants(clientRes.data.data?.tenants || []);
-      setStages(stagesRes.data.data?.stages || []);
-      setRecentMessages(messagesRes.data.data?.messages || []);
-      setViewingRequests(viewingsRes.data.data?.viewings || []);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load admin data');
-    } finally { setLoading(false); }
+    // ── Why this is allSettled and not Promise.all ────────────────────────
+    //
+    // These panels load in parallel, and with Promise.all a SINGLE rejected
+    // request rejected the whole batch — the catch below then blanked the
+    // entire page with "Failed to load admin data". No partial render, no
+    // clue which call failed.
+    //
+    // That is exactly what happened to every client (2026-08-07):
+    // /tenants/stats is platform-wide (all tenants, MRR) and super_admin-only
+    // by design, so it correctly 403s a tenant admin — and that one deliberate
+    // 403 took down the whole dashboard for every paying client. It is now
+    // only requested by users who can actually see platform data, and any
+    // other failure degrades a single panel instead of the page.
+    const wantsPlatformStats = ['super_admin', 'eb_manager'].includes(getStoredUser().role);
+
+    // Kicked off first so it still runs in parallel, but kept OUT of the
+    // results tally below: a client skips it entirely, and a skipped call must
+    // not count as a success when deciding whether everything failed.
+    const statsPromise = wantsPlatformStats
+      ? api.get('/tenants/stats').catch(() => null)
+      : null;
+
+    const results = await Promise.allSettled([
+      api.get('/admin-ops/overview'),
+      api.get('/admin-ops/conversations/active'),
+      api.get('/admin-ops/leads/qualified'),
+      api.get('/admin-ops/leads/rejected'),
+      api.get('/admin-ops/leads/closed'),
+      api.get('/admin-ops/alerts'),
+      api.get('/admin-ops/agents'),
+      api.get('/tenants'),
+      api.get('/users/pending'),
+      api.get('/users'),
+      api.get('/admin-ops/stages'),
+      api.get('/admin-ops/messages/recent'),
+      api.get('/admin-ops/viewings'),
+    ]);
+
+    const [ovRes, activeRes, qualRes, rejRes, closedRes, alertRes, agentRes,
+           clientRes, pendingRes, usersRes, stagesRes, messagesRes,
+           viewingsRes] = results.map(r => (r.status === 'fulfilled' ? r.value : null));
+    const statsRes = statsPromise ? await statsPromise : null;
+
+    setOverview(ovRes?.data.data?.overview ?? null);
+    setActiveConversations(activeRes?.data.data?.leads || []);
+    setQualifiedLeads(qualRes?.data.data?.leads || []);
+    setRejectedLeads(rejRes?.data.data?.leads || []);
+    setClosedLeads(closedRes?.data.data?.leads || []);
+    setAlerts(alertRes?.data.data?.alerts || []);
+    setAgents(agentRes?.data.data?.agents || []);
+    setClients(clientRes?.data.data?.tenants || []);
+    setClientStats(statsRes?.data.data?.stats ?? null);
+    setPendingUsers(pendingRes?.data.data?.users || []);
+    setAllUsers(usersRes?.data.data?.users || []);
+    setTenants(clientRes?.data.data?.tenants || []);
+    setStages(stagesRes?.data.data?.stages || []);
+    setRecentMessages(messagesRes?.data.data?.messages || []);
+    setViewingRequests(viewingsRes?.data.data?.viewings || []);
+
+    // Only a wholesale failure is worth blanking the page for — a dead API or
+    // an expired token fails every call, and a dashboard of empty panels with
+    // no message would look like "you have no business" rather than "we could
+    // not load it".
+    //
+    // A PARTIAL failure still has to be visible, though: an empty panel is
+    // indistinguishable from a panel with nothing in it, so the user is told
+    // which way it is — just without losing the panels that did load.
+    const rejected = results.filter(r => r.status === 'rejected');
+    const firstMessage = rejected[0]?.reason?.response?.data?.message || 'Failed to load admin data';
+    if (rejected.length && rejected.length === results.length) {
+      setError(firstMessage);
+      setPanelError('');
+    } else {
+      setError('');
+      setPanelError(rejected.length ? firstMessage : '');
+    }
+    setLoading(false);
   };
 
   useEffect(() => { loadData(); }, []);
@@ -147,6 +198,15 @@ export default function AdminDashboard() {
     <div style={{ minHeight: '100vh', background: '#050505', color: colors.text, padding: 'clamp(80px, 10vw, 100px) clamp(16px, 4vw, 40px) 40px' }}>
       <style>{`.leads-board-scroll::-webkit-scrollbar{height:10px}.leads-board-scroll::-webkit-scrollbar-track{background:${colors.borderDim};border-radius:999px}.leads-board-scroll::-webkit-scrollbar-thumb{background:${colors.lime};border-radius:999px}`}</style>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+
+        {panelError && (
+          <div style={{
+            marginBottom: '24px', padding: '12px 16px', borderRadius: '8px',
+            border: `1px solid ${colors.amber}`, color: colors.amber, fontSize: '14px',
+          }}>
+            ⚠️ Some panels could not load: {panelError}
+          </div>
+        )}
 
         <div style={{ marginBottom: '40px' }}>
           <h1 style={{ fontSize: 'clamp(24px, 5vw, 48px)', fontWeight: '900', marginBottom: '8px' }}>
