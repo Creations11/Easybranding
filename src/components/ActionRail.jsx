@@ -20,6 +20,7 @@
 
 import { useState } from 'react';
 import api from '../api';
+import { scopedUrl } from '../hooks/useDashboardData';
 
 const SEVERITY = {
   high:   { label: 'Now',   key: 'red' },
@@ -38,7 +39,7 @@ const KIND_LABEL = {
   awaiting_reply:   'Unanswered',
 };
 
-export default function ActionRail({ query, colors, onOpenLead }) {
+export default function ActionRail({ query, colors, onOpenLead, scope = '' }) {
   const c = colors;
   const { data, isLoading, isError, refetch } = query || {};
   const items = data?.items || [];
@@ -70,7 +71,16 @@ export default function ActionRail({ query, colors, onOpenLead }) {
     // saying "Closing…" rather than leaving the row looking broken.
     const release = setTimeout(() => setBusy(null), 8000);
     try {
-      await api.post(`/admin-ops/owed-work/${encodeURIComponent(item.id)}/action`, body);
+      // SCOPED, exactly like the GET that produced this item. Without the
+      // scope the server files the action under the platform bucket while the
+      // scoped read looks for it under the tenant — so "Close" returned 200,
+      // wrote a row, and the item never went away. 76 actions accumulated
+      // that way before anyone could prove the button worked at all
+      // (2026-08-08).
+      await api.post(
+        scopedUrl(`/admin-ops/owed-work/${encodeURIComponent(item.id)}/action`, scope),
+        body
+      );
       setEditing(null);
       await refetch?.();
     } catch (err) {
@@ -167,7 +177,8 @@ export default function ActionRail({ query, colors, onOpenLead }) {
     setBusy('bulk:' + kind);
     setFailed(null);
     try {
-      await api.post('/admin-ops/owed-work/bulk', { kind, state, snoozeHours });
+      // Scoped for the same reason as the per-item action above.
+      await api.post(scopedUrl('/admin-ops/owed-work/bulk', scope), { kind, state, snoozeHours });
       await refetch?.();
     } catch (err) {
       setFailed({ id: 'bulk:' + kind, msg: err.response?.data?.message || 'That did not go through. Refresh to see the current state.' });

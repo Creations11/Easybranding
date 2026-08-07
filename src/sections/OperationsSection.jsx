@@ -229,7 +229,9 @@ export default function OperationsSection({
       {/* Above the tabs on purpose: owed work is not one view among
           several, it is the answer to "is today fine?" — so it must
           not be something you have to navigate to in order to see. */}
-      <ActionRail query={owedWorkQ} colors={c} onOpenLead={setLeadDetailId} />
+      {/* scope: the rail's actions must be filed under the SAME tenant the
+          items were read under, or they are recorded and never applied. */}
+      <ActionRail query={owedWorkQ} colors={c} onOpenLead={setLeadDetailId} scope={opsScope} />
 
       <MoneyPanel query={moneyQ} colors={c} />
 

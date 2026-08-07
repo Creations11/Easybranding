@@ -28,7 +28,11 @@ export const getStoredScope = () => {
 export const setStoredScope = (v) => {
   try { v ? localStorage.setItem(SCOPE_KEY, v) : localStorage.removeItem(SCOPE_KEY); } catch { /* ignore */ }
 };
-const scopedUrl = (path, scope) => {
+// Exported because WRITES have to carry the same scope as the read that
+// produced the thing being written about. The owed-work rail learned this the
+// hard way: it read scoped and POSTed unscoped, so every "Close" was filed
+// under the platform bucket and no scoped read ever saw it again.
+export const scopedUrl = (path, scope) => {
   if (!scope) return path;
   return path + (path.includes('?') ? '&' : '?') + 'tenantId=' + scope;
 };
