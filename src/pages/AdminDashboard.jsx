@@ -1,6 +1,7 @@
 // src/pages/AdminDashboard.jsx
 import { useState, useEffect } from 'react';
 import api from '../api';
+import { useAuth } from '../context/AuthContext';
 import SuperAdminPanel from '../components/SuperAdminPanel';
 import LeadDetailModal from '../components/LeadDetailModal';
 import AssignModal from '../components/AssignModal';
@@ -16,6 +17,110 @@ const getStoredUser = () => {
   try { return JSON.parse(localStorage.getItem('eb_user') || '{}'); }
   catch { return {}; }
 };
+
+// ── Account controls ──────────────────────────────────────────────────
+//
+// Added 2026-08-08. This page had NO sign-out and no way to change a password:
+// ConditionalNav only renders <Nav/> on public routes, SuperAdminDashboard
+// carries its own Sign Out button, and this page — the one every CLIENT lands
+// on — had neither. The first client onboarded reported it as "it's just
+// stuck", which is exactly what it was: signed in, no way out, no way to
+// replace the temporary password he'd been sent over WhatsApp.
+function ChangePasswordModal({ onClose }) {
+  const [current, setCurrent] = useState('');
+  const [next, setNext]       = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [busy, setBusy]       = useState(false);
+  const [error, setError]     = useState('');
+  const [done, setDone]       = useState(false);
+
+  const submit = async () => {
+    setError('');
+    if (next !== confirm) return setError("The new passwords don't match.");
+    if (next.length < 6) return setError('New password must be at least 6 characters.');
+    setBusy(true);
+    try {
+      // Trimmed: these are typed on a phone and pasted out of WhatsApp, where a
+      // trailing space is invisible and would otherwise read as a wrong password.
+      await api.post('/auth/change-password', {
+        currentPassword: current.trim(),
+        newPassword: next.trim(),
+      });
+      setDone(true);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not change the password.');
+    } finally { setBusy(false); }
+  };
+
+  const field = {
+    width: '100%', padding: '12px', borderRadius: '10px', background: '#1C1C19',
+    border: '1px solid ' + colors.borderDim, color: colors.text, fontSize: '14px',
+    marginBottom: '12px', outline: 'none', fontFamily: 'inherit',
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: colors.card, border: '1px solid ' + colors.borderDim,
+          borderRadius: '14px', padding: '22px', width: '100%', maxWidth: '380px',
+        }}
+      >
+        <h3 style={{ color: colors.lime, marginBottom: '14px', fontSize: '17px' }}>Change password</h3>
+
+        {done ? (
+          <>
+            <p style={{ color: colors.text, fontSize: '14px', marginBottom: '18px' }}>
+              ✅ Password updated. Use the new one next time you sign in.
+            </p>
+            <button onClick={onClose} style={{
+              width: '100%', padding: '11px', background: colors.lime, color: '#050505',
+              border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}>Done</button>
+          </>
+        ) : (
+          <>
+            {/* autoCapitalize/autoCorrect off: a mobile keyboard "helpfully"
+                capitalising the first character is a wrong password. */}
+            <input type="password" value={current} onChange={(e) => setCurrent(e.target.value)}
+              placeholder="Current password" style={field} autoComplete="current-password"
+              autoCapitalize="none" autoCorrect="off" spellCheck={false} />
+            <input type="password" value={next} onChange={(e) => setNext(e.target.value)}
+              placeholder="New password (6+ characters)" style={field} autoComplete="new-password"
+              autoCapitalize="none" autoCorrect="off" spellCheck={false} />
+            <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)}
+              placeholder="Repeat new password" style={field} autoComplete="new-password"
+              autoCapitalize="none" autoCorrect="off" spellCheck={false} />
+
+            {error && <p style={{ color: colors.red, fontSize: '13px', marginBottom: '12px' }}>{error}</p>}
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={submit} disabled={busy} style={{
+                flex: 1, padding: '11px', background: colors.lime, color: '#050505',
+                border: 'none', borderRadius: '10px', fontWeight: 700,
+                cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.7 : 1,
+                fontFamily: 'inherit',
+              }}>{busy ? 'Saving…' : 'Change password'}</button>
+              <button onClick={onClose} style={{
+                padding: '11px 18px', background: 'rgba(255,255,255,0.05)',
+                border: '1px solid ' + colors.borderDim, color: colors.muted,
+                borderRadius: '10px', cursor: 'pointer', fontFamily: 'inherit',
+              }}>Cancel</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const PLAN_COLORS   = { starter: colors.muted, growth: colors.lime, enterprise: colors.emerald };
 const STATUS_COLORS = { active: colors.lime, trial: colors.amber, suspended: colors.red, cancelled: colors.muted };
@@ -49,8 +154,10 @@ export default function AdminDashboard() {
   // because the business has no data. Shown as a banner, never as a
   // page-replacing error — see loadData.
   const [panelError,          setPanelError]          = useState('');
+  const [showPasswordModal,   setShowPasswordModal]   = useState(false);
   const [tab, setTab] = useState('overview');
 
+  const { signOut } = useAuth();
   const currentUser = getStoredUser();
   const isSuperAdmin = currentUser.role === 'super_admin';
   const isAdmin      = currentUser.role === 'admin';
@@ -208,14 +315,53 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        <div style={{ marginBottom: '40px' }}>
-          <h1 style={{ fontSize: 'clamp(24px, 5vw, 48px)', fontWeight: '900', marginBottom: '8px' }}>
-            {isSuperAdmin ? 'Admin Control Center' : 'Operations Dashboard'}
-          </h1>
-          <p style={{ color: colors.muted, fontSize: '20px' }}>
-            {isSuperAdmin ? 'Real-time Platform Operations & Oversight' : 'Your agency\'s live WhatsApp pipeline'}
-          </p>
+        {/* Title and account controls share a row and wrap on a phone, so the
+            way OUT is visible on the first screen instead of below the fold.
+            There is no nav bar on this route (ConditionalNav renders <Nav/> on
+            public routes only), so these buttons are the only ones. */}
+        <div style={{
+          marginBottom: '40px', display: 'flex', flexWrap: 'wrap', gap: '16px',
+          alignItems: 'flex-start', justifyContent: 'space-between',
+        }}>
+          <div style={{ minWidth: 0 }}>
+            <h1 style={{ fontSize: 'clamp(24px, 5vw, 48px)', fontWeight: '900', marginBottom: '8px' }}>
+              {isSuperAdmin ? 'Admin Control Center' : 'Operations Dashboard'}
+            </h1>
+            <p style={{ color: colors.muted, fontSize: 'clamp(14px, 2.5vw, 20px)' }}>
+              {isSuperAdmin ? 'Real-time Platform Operations & Oversight' : 'Your agency\'s live WhatsApp pipeline'}
+            </p>
+            {currentUser.email && (
+              <p style={{ color: colors.muted, fontSize: '13px', marginTop: '6px' }}>
+                Signed in as {currentUser.email}
+              </p>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setShowPasswordModal(true)}
+              style={{
+                padding: '10px 16px', background: 'rgba(255,255,255,0.05)',
+                border: '1px solid ' + colors.borderDim, color: colors.text,
+                borderRadius: '10px', cursor: 'pointer', fontSize: '14px', fontFamily: 'inherit',
+              }}
+            >
+              🔑 Change password
+            </button>
+            <button
+              onClick={signOut}
+              style={{
+                padding: '10px 16px', background: 'rgba(255,255,255,0.05)',
+                border: '1px solid ' + colors.borderDim, color: colors.muted,
+                borderRadius: '10px', cursor: 'pointer', fontSize: '14px', fontFamily: 'inherit',
+              }}
+            >
+              Sign out
+            </button>
+          </div>
         </div>
+
+        {showPasswordModal && <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />}
 
         {/* Stats */}
         {overview && (

@@ -26,7 +26,14 @@ export default function Login() {
     e.preventDefault();
     setLoading(true); setError('');
     try {
-      const res = await api.post('/auth/login', { email, password });
+      // Trimmed. These credentials are typed on phones and pasted out of
+      // WhatsApp, where a trailing space is invisible — untrimmed it reaches
+      // the server as a different string and comes back "Invalid email or
+      // password", which reads as a wrong password rather than a stray space.
+      const res = await api.post('/auth/login', {
+        email: email.trim(),
+        password: password.trim(),
+      });
       const { user } = res.data.data;
 
       // Token is now in httpOnly cookie — browser handles it automatically
@@ -110,15 +117,20 @@ export default function Login() {
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* autoCapitalize/autoCorrect off: a phone keyboard capitalising the
+              first letter, or "correcting" an address, is a failed login the
+              user cannot see. */}
           <input
             type="email" value={email} onChange={e => setEmail(e.target.value)}
             placeholder="Email address" required style={inputStyle}
+            autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false}
             onFocus={e => e.target.style.borderColor = 'rgba(184,240,64,0.4)'}
             onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
           />
           <input
             type="password" value={password} onChange={e => setPassword(e.target.value)}
             placeholder="Password" required style={inputStyle}
+            autoComplete="current-password" autoCapitalize="none" autoCorrect="off" spellCheck={false}
             onFocus={e => e.target.style.borderColor = 'rgba(184,240,64,0.4)'}
             onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
           />
