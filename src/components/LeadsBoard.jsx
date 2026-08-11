@@ -14,6 +14,16 @@
 import { useState } from 'react';
 import useMediaQuery, { MOBILE_QUERY } from '../hooks/useMediaQuery';
 
+// "18m" / "4h" / "3d". A list of 200 leads is a queue, and how long someone
+// has been in it is the whole triage decision — a name and a phone number
+// cannot tell you who to open next.
+function since(minutes) {
+  if (minutes === null || minutes === undefined) return null;
+  if (minutes < 60) return `${Math.max(minutes, 0)}m`;
+  if (minutes < 1440) return `${Math.floor(minutes / 60)}h`;
+  return `${Math.floor(minutes / 1440)}d`;
+}
+
 export default function LeadsBoard({
   columns,
   allLeadsCount,
@@ -42,7 +52,11 @@ export default function LeadsBoard({
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700 }}>Leads <span style={{ color: c.muted, fontWeight: 400, fontSize: 14 }}>({allLeadsCount} total in system)</span></h2>
+        {/* "total in system" was counting the fetched page, not the system —
+            it read "50 total" beside a column saying "200 of 278". Each
+            column already reports its own true total, so this states what it
+            actually is. */}
+        <h2 style={{ fontSize: 20, fontWeight: 700 }}>Leads <span style={{ color: c.muted, fontWeight: 400, fontSize: 14 }}>({allLeadsCount} loaded)</span></h2>
         <select
           value={tenantFilter}
           onChange={e => onTenantFilterChange(e.target.value)}
@@ -150,13 +164,46 @@ export default function LeadsBoard({
                 <p style={{ color: c.muted, fontSize: 13, padding: '20px 0', textAlign: 'center' }}>None</p>
               ) : col.items.map(lead => {
                 const business = tenantNameById[lead.tenantId];
+                // Only the active column is a working queue; a closed lead has
+                // nobody waiting on it, so the stripe would be noise there.
+                const waiting = col.key === 'active' && lead.awaitingReply;
+                const ago = since(lead.minutesSinceLastMessage);
+                const last = lead.lastMessage;
                 return (
-                  <div key={lead._id} onClick={() => onOpenLead(lead._id)} className="card-hover" style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 12, padding: '12px 14px', marginBottom: 8, cursor: 'pointer' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
+                  <div key={lead._id} onClick={() => onOpenLead(lead._id)} className="card-hover"
+                    style={{
+                      background: c.card,
+                      border: '1px solid ' + c.borderDim,
+                      // A single-sided accent and a rounded corner fight each
+                      // other, so the stripe squares the card off.
+                      borderLeft: waiting ? '3px solid ' + c.amber : '1px solid ' + c.borderDim,
+                      borderRadius: waiting ? '0 12px 12px 0' : 12,
+                      padding: '12px 14px', marginBottom: 8, cursor: 'pointer',
+                    }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 2, alignItems: 'baseline' }}>
                       <strong style={{ fontSize: 13 }}>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
+                      {ago && (
+                        <span style={{ fontSize: 11, color: waiting ? c.amber : c.muted, whiteSpace: 'nowrap', flexShrink: 0 }}>{ago}</span>
+                      )}
                     </div>
                     {business && <p style={{ color: c.cyan, fontSize: 11, marginBottom: 3 }}>{business}</p>}
-                    <p style={{ color: c.muted, fontSize: 12, marginBottom: 6 }}>{lead.phone}</p>
+
+                    {/* The status line replaces the phone number, which nobody
+                        dials off a screen. What the lead is and how far in
+                        they are is what decides whether to open them. */}
+                    <p style={{ color: c.muted, fontSize: 11, marginBottom: 6 }}>
+                      {(lead.workflowStatus || 'new').replace(/_/g, ' ')}
+                      {lead.messageCount ? ` · ${lead.messageCount} msg${lead.messageCount === 1 ? '' : 's'}` : ''}
+                    </p>
+
+                    {/* One line of what was actually said. "Does that mean he
+                        will pay additional charges" and "Hello! Can I get more
+                        info" are the same card without it. */}
+                    {last?.body && (
+                      <p style={{ color: waiting ? c.text : c.muted, fontSize: 12, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {last.direction === 'inbound' ? '📱 ' : '🤖 '}{last.body}
+                      </p>
+                    )}
 
                     {col.key === 'active' && (
                       <>
