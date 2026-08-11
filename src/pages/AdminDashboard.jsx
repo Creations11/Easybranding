@@ -223,7 +223,13 @@ export default function AdminDashboard() {
     setAllUsers(usersRes?.data.data?.users || []);
     setTenants(clientRes?.data.data?.tenants || []);
     setStages(stagesRes?.data.data?.stages || []);
-    setRecentMessages(messagesRes?.data.data?.messages || []);
+    // Grouped by sender. Falls back to the flat array so the tab still
+    // renders against an older API that has not deployed `conversations` yet.
+    setRecentMessages(
+      messagesRes?.data.data?.conversations
+      || messagesRes?.data.data?.messages
+      || []
+    );
     setViewingRequests(viewingsRes?.data.data?.viewings || []);
 
     // Only a wholesale failure is worth blanking the page for — a dead API or
@@ -558,26 +564,46 @@ export default function AdminDashboard() {
         {/* ── Recent Messages ────────────────────────────────── */}
         {tab === 'messages' && (
           <div>
-            <h2 style={{ marginBottom: '20px', fontSize: '20px' }}>Recent Messages ({recentMessages.length})</h2>
+            {/* One card per sender, their recent messages inside it, ordered
+                by who spoke last. The flat version gave every message its own
+                card, so one person sending six things in a row filled the
+                screen and quieter people dropped off the bottom. */}
+            <h2 style={{ marginBottom: '20px', fontSize: '20px' }}>Recent Messages ({recentMessages.length} {recentMessages.length === 1 ? 'conversation' : 'conversations'})</h2>
             {recentMessages.length === 0 ? (
               <p style={{ color: colors.muted, textAlign: 'center', padding: '60px 0' }}>No messages yet.</p>
-            ) : recentMessages.map((msg, i) => (
-              <div key={i} onClick={() => setLeadDetailId(msg.leadId)} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '12px', padding: '14px 18px', marginBottom: '8px', cursor: 'pointer', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: msg.direction === 'inbound' ? 'rgba(34,211,238,0.15)' : colors.lime + '26', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>
-                  {msg.direction === 'inbound' ? '📱' : '🤖'}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <strong style={{ fontSize: '13px' }}>{msg.name !== 'Unknown' ? msg.name : msg.phone}</strong>
-                    <span style={{ fontSize: '11px', color: colors.muted }}>{new Date(msg.timestamp).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}</span>
+            ) : recentMessages.map((convo) => {
+              const thread = convo.messages || [];
+              const latest = thread[thread.length - 1];
+              const hidden = (convo.totalMessages || thread.length) - thread.length;
+              return (
+                <div key={convo.leadId} onClick={() => setLeadDetailId(convo.leadId)}
+                  style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '12px', padding: '14px 18px', marginBottom: '10px', cursor: 'pointer' }}>
+
+                  {/* The sender, once */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: thread.length ? '10px' : 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                      <strong style={{ fontSize: '14px' }}>{convo.name && convo.name !== 'Unknown' ? convo.name : convo.phone}</strong>
+                      {convo.takenOver && <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '999px', background: `${colors.amber}22`, color: colors.amber, flexShrink: 0 }}>taken over</span>}
+                      <span style={{ fontSize: '11px', color: colors.muted, flexShrink: 0 }}>{convo.totalMessages || thread.length} msgs</span>
+                    </div>
+                    <span style={{ fontSize: '11px', color: colors.muted, flexShrink: 0 }}>
+                      {latest ? new Date(latest.timestamp).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }) : ''}
+                    </span>
                   </div>
-                  <p style={{ color: colors.muted, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.body}</p>
+
+                  {/* …then the messages, oldest first so it reads like a chat */}
+                  {hidden > 0 && (
+                    <p style={{ fontSize: '11px', color: colors.muted, marginBottom: '6px' }}>+{hidden} earlier — open to read the rest</p>
+                  )}
+                  {thread.map((msg, j) => (
+                    <div key={j} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', padding: '3px 0' }}>
+                      <span style={{ fontSize: '12px', flexShrink: 0, opacity: 0.8 }}>{msg.direction === 'inbound' ? '📱' : '🤖'}</span>
+                      <p style={{ color: msg.direction === 'inbound' ? colors.text : colors.muted, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>{msg.body}</p>
+                    </div>
+                  ))}
                 </div>
-                <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '999px', background: msg.direction === 'inbound' ? colors.cyan + '15' : colors.lime + '15', color: msg.direction === 'inbound' ? colors.cyan : colors.lime, flexShrink: 0 }}>
-                  {msg.direction}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
