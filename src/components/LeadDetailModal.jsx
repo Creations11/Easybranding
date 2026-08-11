@@ -106,6 +106,10 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
   // `timeline` when the API hasn't got `events` (older deploy).
   const [events,        setEvents]        = useState(null);
   const [takeoverHistory, setTakeoverHistory] = useState([]);
+  // Spam takes the lead out of every live view, so it asks once first. A
+  // stray click on a dashboard is far easier than mistyping "SPAM 3" on a
+  // phone, and this is cheaper than a modal.
+  const [spamConfirm, setSpamConfirm] = useState(false);
   const [message,       setMessage]       = useState('');
   const [activeTab,     setActiveTab]     = useState('conversation');
   const [showViewing,   setShowViewing]   = useState(false);
@@ -176,6 +180,23 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
       setTimeout(() => setActionMsg(''), 3000);
     } catch (err) {
       setActionMsg(`❌ ${err.response?.data?.message || 'Action failed'}`);
+    } finally { setActionLoading(''); }
+  };
+
+  // Clearing a spam mark is a DELETE on the same path, which doAction (POST
+  // only) cannot express — so it gets its own small handler rather than a
+  // method argument threaded through every other action.
+  const clearSpam = async () => {
+    setActionLoading('unspam'); setActionMsg('');
+    try {
+      const { data } = await api.delete(`/admin-ops/leads/${leadId}/spam`);
+      setActionMsg(`✅ Spam mark removed — back in as "${data?.data?.restoredTo || 'active'}"`);
+      setSpamConfirm(false);
+      await load();
+      if (onUpdate) onUpdate();
+      setTimeout(() => setActionMsg(''), 3000);
+    } catch (err) {
+      setActionMsg(`❌ ${err.response?.data?.message || 'Could not clear the spam mark'}`);
     } finally { setActionLoading(''); }
   };
 
@@ -271,6 +292,30 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
               style={{ padding: '8px 16px', background: `${t.red}18`, color: t.red, border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', opacity: actionLoading === 'close' ? 0.6 : 1 }}>
               {actionLoading === 'close' ? 'Closing...' : '✕ Close Lead'}
             </button>
+
+            {/* Spam. Marking removes the lead from leads, conversations, the
+                counts and the "Needs you" rail — the conversation is kept,
+                just hidden — so it asks once, then offers the undo. */}
+            {lead?.spamMarkedAt ? (
+              <button onClick={clearSpam} disabled={actionLoading === 'unspam'}
+                title={lead.spamReason ? `Marked as spam: ${lead.spamReason}` : 'Marked as spam'}
+                style={{ padding: '8px 16px', background: `${t.orange}18`, color: t.orange, border: `1px solid ${t.orange}33`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', opacity: actionLoading === 'unspam' ? 0.6 : 1 }}>
+                {actionLoading === 'unspam' ? 'Restoring...' : '↩ Not spam'}
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  if (!spamConfirm) { setSpamConfirm(true); return; }
+                  setSpamConfirm(false);
+                  doAction('spam', { reason: 'Marked from dashboard' }, 'Marked as spam — removed from live work');
+                }}
+                onBlur={() => setSpamConfirm(false)}
+                disabled={actionLoading === 'spam'}
+                title="Removes this lead from your leads, conversations and the Needs-you rail. The conversation is kept."
+                style={{ padding: '8px 16px', background: `${t.red}18`, color: t.red, border: `1px solid ${spamConfirm ? t.red : 'transparent'}`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: spamConfirm ? '700' : '400', opacity: actionLoading === 'spam' ? 0.6 : 1 }}>
+                {actionLoading === 'spam' ? 'Marking...' : spamConfirm ? 'Confirm — mark as spam?' : '🚫 Mark as Spam'}
+              </button>
+            )}
             {actionMsg && <span style={{ fontSize: '12px', color: actionMsg.startsWith('✅') ? t.lime : t.red, marginLeft: '4px' }}>{actionMsg}</span>}
           </div>
         )}
