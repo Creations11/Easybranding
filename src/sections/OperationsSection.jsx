@@ -125,6 +125,37 @@ export default function OperationsSection({
     });
   }, [messages, msgSearch, msgDateFrom, msgDateTo, tenantNameById]);
 
+  // Group the FILTERED list by sender, so search and the date range keep
+  // working exactly as they did and only the display changes.
+  //
+  // filteredMessages is newest-first, and a Map keeps insertion order — so
+  // the first time a sender appears is their most recent message, and the
+  // groups come out ordered by who spoke last with no second sort. That is
+  // the "name moves up the ladder when they reply" behaviour.
+  const messageThreads = useMemo(() => {
+    const byLead = new Map();
+    for (const msg of filteredMessages) {
+      const key = String(msg.leadId ?? `${msg.phone}`);
+      if (!byLead.has(key)) {
+        byLead.set(key, {
+          key,
+          leadId: msg.leadId,
+          name: msg.name,
+          phone: msg.phone,
+          tenantId: msg.tenantId,
+          businessName: msg.businessName,
+          latestAt: msg.timestamp,
+          messages: [],
+        });
+      }
+      byLead.get(key).messages.push(msg);
+    }
+    // Within a thread, flip to oldest-first so it reads down the card like a
+    // conversation, while the cards themselves stay newest-first.
+    for (const thread of byLead.values()) thread.messages.reverse();
+    return [...byLead.values()];
+  }, [filteredMessages]);
+
   // The four status endpoints are the board's columns, but they don't
   // necessarily cover every lead. Anything in allLeads not present in one of
   // them gets its own "Other" column instead of silently disappearing.
@@ -358,7 +389,7 @@ export default function OperationsSection({
       {opsTab === 'messages' && (
         <SectionErrorBoundary name="Messages" onRetry={refetch}>
           <div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>Recent Messages ({filteredMessages.length}{filteredMessages.length !== messages.length ? ` of ${messages.length}` : ''})</h2>
+            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>Recent Messages ({messageThreads.length} {messageThreads.length === 1 ? 'sender' : 'senders'} · {filteredMessages.length}{filteredMessages.length !== messages.length ? ` of ${messages.length}` : ''} messages)</h2>
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
               <input
@@ -387,19 +418,33 @@ export default function OperationsSection({
 
             {filteredMessages.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '60px 0', color: c.muted }}><p style={{ fontSize: 40, marginBottom: 16 }}>💬</p><p>No messages match these filters.</p></div>
-            ) : filteredMessages.map((msg, i) => {
-              const business = msg.businessName || tenantNameById[msg.tenantId];
+            ) : messageThreads.map((thread) => {
+              const business = thread.businessName || tenantNameById[thread.tenantId];
+              const latest = thread.messages[thread.messages.length - 1];
               return (
-                <div key={i} onClick={() => setLeadDetailId(msg.leadId)} className="card-hover" style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 12, padding: '12px 16px', marginBottom: 8, cursor: 'pointer', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: msg.direction === 'inbound' ? c.cyan + '22' : c.lime + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{msg.direction === 'inbound' ? '📱' : '🤖'}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2, gap: 8 }}>
-                      <strong style={{ fontSize: 13 }}>{msg.name !== 'Unknown' ? msg.name : msg.phone}</strong>
-                      <span style={{ fontSize: 11, color: c.muted, whiteSpace: 'nowrap' }}>{new Date(msg.timestamp).toLocaleDateString('en-ZA')} · {new Date(msg.timestamp).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}</span>
+                <div key={thread.key} onClick={() => setLeadDetailId(thread.leadId)} className="card-hover" style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 12, padding: '12px 16px', marginBottom: 8, cursor: 'pointer' }}>
+
+                  {/* The sender, once */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, gap: 8, alignItems: 'baseline' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <strong style={{ fontSize: 13 }}>{thread.name && thread.name !== 'Unknown' ? thread.name : thread.phone}</strong>
+                      {thread.messages.length > 1 && (
+                        <span style={{ fontSize: 11, color: c.muted, marginLeft: 8 }}>{thread.messages.length} messages</span>
+                      )}
+                      {business && <p style={{ color: c.cyan, fontSize: 11, marginTop: 2 }}>{business}</p>}
                     </div>
-                    {business && <p style={{ color: c.cyan, fontSize: 11, marginBottom: 3 }}>{business}</p>}
-                    <p style={{ color: c.muted, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.body}</p>
+                    <span style={{ fontSize: 11, color: c.muted, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      {new Date(latest.timestamp).toLocaleDateString('en-ZA')} · {new Date(latest.timestamp).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
+
+                  {/* …then their messages, oldest first */}
+                  {thread.messages.map((msg, j) => (
+                    <div key={j} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '2px 0' }}>
+                      <span style={{ fontSize: 12, flexShrink: 0, opacity: 0.85 }}>{msg.direction === 'inbound' ? '📱' : '🤖'}</span>
+                      <p style={{ color: msg.direction === 'inbound' ? c.text : c.muted, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>{msg.body}</p>
+                    </div>
+                  ))}
                 </div>
               );
             })}
