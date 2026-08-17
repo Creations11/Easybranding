@@ -7,6 +7,7 @@ import LeadDetailModal from '../components/LeadDetailModal';
 import AssignModal from '../components/AssignModal';
 import AdminApproveModal from '../components/AdminApproveModal';
 import AdminClientModal from '../components/AdminClientModal';
+import useMediaQuery, { MOBILE_QUERY } from '../hooks/useMediaQuery';
 import { colors } from '../utils/theme';
 
 
@@ -156,6 +157,9 @@ export default function AdminDashboard() {
   const [panelError,          setPanelError]          = useState('');
   const [showPasswordModal,   setShowPasswordModal]   = useState(false);
   const [tab, setTab] = useState('overview');
+  const isMobile = useMediaQuery(MOBILE_QUERY);
+  // Which lead column is showing on a phone — the board is one-at-a-time there.
+  const [mobileCol, setMobileCol] = useState('active');
 
   const { signOut } = useAuth();
   const currentUser = getStoredUser();
@@ -310,7 +314,7 @@ export default function AdminDashboard() {
   return (
     <div style={{ minHeight: '100vh', background: '#050505', color: colors.text, padding: 'clamp(80px, 10vw, 100px) clamp(16px, 4vw, 40px) 40px' }}>
       <style>{`.leads-board-scroll::-webkit-scrollbar{height:10px}.leads-board-scroll::-webkit-scrollbar-track{background:${colors.borderDim};border-radius:999px}.leads-board-scroll::-webkit-scrollbar-thumb{background:${colors.lime};border-radius:999px}`}</style>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: isMobile ? '0 12px' : undefined }}>
 
         {panelError && (
           <div style={{
@@ -429,10 +433,37 @@ export default function AdminDashboard() {
             from here. */}
         {tab === 'leads' && (
           <div>
-            <h2 style={{ marginBottom: '20px', fontSize: '20px' }}>Leads</h2>
-            <p style={{ color: colors.muted, fontSize: '12px', marginBottom: '12px' }}>
-              Scroll sideways (mouse wheel, trackpad, or drag the scrollbar below) to see Qualified, Rejected, and Closed →
-            </p>
+            <h2 style={{ marginBottom: isMobile ? '12px' : '20px', fontSize: '20px' }}>Leads</h2>
+
+            {/* On a phone this board is the screen standing between the owner
+                and a customer conversation, and it was four 300px columns in a
+                horizontal scroller — roughly three screens wide on a 390px
+                device. The hint below it said "mouse wheel, trackpad, or drag
+                the scrollbar", none of which exist on a phone.
+
+                Same resolution LeadsBoard already uses: one column at a time,
+                picked by a chip. */}
+            {isMobile ? (
+              <div style={{ display: 'flex', gap: 6, marginBottom: 14, overflowX: 'auto', paddingBottom: 4 }}>
+                {leadColumns.map(col => (
+                  <button key={col.key} onClick={() => setMobileCol(col.key)}
+                    style={{
+                      flexShrink: 0, minHeight: 40, padding: '0 14px', borderRadius: 999,
+                      border: `1px solid ${mobileCol === col.key ? colors.lime : colors.borderDim}`,
+                      background: mobileCol === col.key ? `${colors.lime}22` : 'transparent',
+                      color: mobileCol === col.key ? colors.lime : colors.muted,
+                      fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                      fontFamily: 'inherit',
+                    }}>
+                    {col.icon} {col.label} ({col.items.length})
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: colors.muted, fontSize: '12px', marginBottom: '12px' }}>
+                Scroll sideways (mouse wheel, trackpad, or drag the scrollbar below) to see Qualified, Rejected, and Closed →
+              </p>
+            )}
             {/* onWheel: a horizontal-scroll-only row is easy to miss without
                 a trackpad — converts normal vertical scroll into horizontal
                 movement while hovering the board, but ONLY when there's no
@@ -453,15 +484,15 @@ export default function AdminDashboard() {
                 e.currentTarget.scrollLeft += e.deltaY;
                 e.preventDefault();
               }}
-              style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }}
+              style={{ display: 'flex', gap: '16px', overflowX: isMobile ? 'visible' : 'auto', paddingBottom: '8px' }}
             >
-              {leadColumns.map(col => (
-                <div key={col.key} style={{ flex: '0 0 300px', width: '300px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              {(isMobile ? leadColumns.filter(c => c.key === mobileCol) : leadColumns).map(col => (
+                <div key={col.key} style={isMobile ? { flex: 1, minWidth: 0 } : { flex: '0 0 300px', width: '300px' }}>
+                  <div style={{ display: isMobile ? 'none' : 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                     <span style={{ fontSize: '15px', fontWeight: '700' }}>{col.icon} {col.label}</span>
                     <span style={{ fontSize: '11px', padding: '2px 9px', borderRadius: '999px', background: colors.borderDim, color: colors.muted, fontWeight: '700' }}>{col.items.length}</span>
                   </div>
-                  <div className="lead-column-scroll" style={{ maxHeight: '620px', overflowY: 'auto', paddingRight: '4px' }}>
+                  <div className="lead-column-scroll" style={isMobile ? { paddingRight: 4 } : { maxHeight: '620px', overflowY: 'auto', paddingRight: '4px' }}>
                     {col.items.length === 0 ? (
                       <p style={{ color: colors.muted, fontSize: '13px', padding: '20px 0', textAlign: 'center' }}>None</p>
                     ) : col.items.map(lead => (

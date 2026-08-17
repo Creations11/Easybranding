@@ -5,6 +5,10 @@
 // ─────────────────────────────────────────────────────────────
 import { useState, useEffect, useRef } from 'react';
 import api from '../api';
+// Styling here is inline (1,678 style props across src against 75
+// classNames), and inline styles cannot carry a media query — so the
+// responsive switch has to be a JS one. Same hook LeadsBoard already uses.
+import useMediaQuery, { MOBILE_QUERY } from '../hooks/useMediaQuery';
 
 const t = {
   lime:      '#B8F040',
@@ -214,6 +218,7 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
     } finally { setActionLoading(''); }
   };
 
+  const isMobile = useMediaQuery(MOBILE_QUERY);
   const isTakenOver = lead?.workflowStatus === 'taken_over';
   const isQualified = lead?.workflowStatus === 'qualified';
   const isClosed    = lead?.workflowStatus === 'closed';
@@ -225,11 +230,31 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
   );
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-      <div style={{ width: '100%', maxWidth: '780px', maxHeight: '92vh', background: t.card, borderRadius: '24px', border: `1px solid ${t.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    // On a phone this is the whole screen, not a card floating in a dark
+    // overlay: a 20px inset plus a 24px radius on a 390px device wastes most
+    // of the width, and the conversation is the only thing the owner came
+    // for. Uses 100dvh rather than 100vh — on mobile Safari 100vh is the
+    // UNCOLLAPSED viewport, so the composer at the bottom sits under the
+    // browser chrome and cannot be tapped, which is the classic way a mobile
+    // chat ships broken.
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', display: 'flex',
+      alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'center',
+      zIndex: 1000, padding: isMobile ? 0 : '20px',
+    }}>
+      <div style={{
+        width: '100%',
+        maxWidth: isMobile ? '100%' : '780px',
+        height: isMobile ? '100dvh' : undefined,
+        maxHeight: isMobile ? '100dvh' : '92vh',
+        background: t.card,
+        borderRadius: isMobile ? 0 : '24px',
+        border: isMobile ? 'none' : `1px solid ${t.border}`,
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      }}>
 
         {/* Header */}
-        <div style={{ padding: '20px 24px', borderBottom: `1px solid ${t.borderDim}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ padding: isMobile ? '14px 14px' : '20px 24px', borderBottom: `1px solid ${t.borderDim}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '700' }}>{lead?.name !== 'Unknown' ? lead?.name : lead?.phone}</h3>
@@ -247,12 +272,14 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
               {lead?.monthlyIncome ? ` · R${lead.monthlyIncome} income` : ''}
             </p>
           </div>
-          <button onClick={onClose} style={{ fontSize: '24px', background: 'none', border: 'none', color: t.muted, cursor: 'pointer', padding: '4px' }}>×</button>
+          <button onClick={onClose} aria-label="Close"
+            style={{ fontSize: '24px', background: 'none', border: 'none', color: t.muted, cursor: 'pointer',
+                     padding: isMobile ? '0 8px' : '4px', minWidth: isMobile ? 44 : undefined, minHeight: isMobile ? 44 : undefined, flexShrink: 0 }}>×</button>
         </div>
 
         {/* Operator controls */}
         {!isClosed && (
-          <div style={{ padding: '12px 24px', borderBottom: `1px solid ${t.borderDim}`, display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ padding: isMobile ? '10px 14px' : '12px 24px', borderBottom: `1px solid ${t.borderDim}`, display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
             {!isTakenOver ? (
               <button onClick={() => doAction('takeover', { reason: 'Admin intervention' }, 'Conversation taken over')} disabled={actionLoading === 'takeover'}
                 style={{ padding: '8px 16px', background: `${t.orange}18`, color: t.orange, border: `1px solid ${t.orange}33`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', opacity: actionLoading === 'takeover' ? 0.6 : 1 }}>
@@ -487,15 +514,46 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
 
         {/* Message input — only when taken over */}
         {isTakenOver && !isClosed && (
-          <div style={{ padding: '14px 24px', borderTop: `1px solid ${t.borderDim}`, display: 'flex', gap: '10px' }}>
+          <div style={{
+            padding: isMobile ? '10px 12px' : '14px 24px',
+            borderTop: `1px solid ${t.borderDim}`, display: 'flex', gap: '10px',
+            // Keeps the composer clear of the iPhone home indicator.
+            paddingBottom: isMobile ? 'calc(10px + env(safe-area-inset-bottom))' : '14px',
+          }}>
             <input
               value={message} onChange={e => setMessage(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
-              placeholder="Type a message to send via WhatsApp..."
-              style={{ flex: 1, padding: '12px 16px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${t.borderDim}`, borderRadius: '999px', color: t.text, fontSize: '14px', outline: 'none', fontFamily: 'inherit' }}
+              placeholder={isMobile ? 'Message…' : 'Type a message to send via WhatsApp...'}
+              // Chat composer, so: no autocapitalise fighting the sender, no
+              // autocorrect mangling names, and enterKeyHint puts "send" on
+              // the on-screen keyboard instead of a newline arrow.
+              enterKeyHint="send"
+              autoCapitalize="sentences"
+              autoCorrect="off"
+              style={{
+                flex: 1, minWidth: 0,
+                padding: isMobile ? '11px 14px' : '12px 16px',
+                background: 'rgba(255,255,255,0.04)', border: `1px solid ${t.borderDim}`,
+                borderRadius: '999px', color: t.text,
+                // 16px on mobile is not a style choice: iOS Safari zooms the
+                // whole page in when a focused input is under 16px, and the
+                // user is then stranded zoomed-in with no way back.
+                fontSize: isMobile ? '16px' : '14px',
+                outline: 'none', fontFamily: 'inherit',
+              }}
             />
             <button onClick={handleSend} disabled={actionLoading === 'message' || !message.trim()}
-              style={{ padding: '12px 24px', background: !message.trim() || actionLoading === 'message' ? `${t.lime}44` : t.lime, color: '#080A06', border: 'none', borderRadius: '999px', fontWeight: '700', cursor: !message.trim() || actionLoading === 'message' ? 'not-allowed' : 'pointer', fontSize: '14px', fontFamily: 'inherit' }}>
+              style={{
+                // 44px minimum touch target — below that it is a coin flip
+                // whether a thumb hits it.
+                padding: isMobile ? '0 18px' : '12px 24px',
+                minWidth: isMobile ? '64px' : undefined,
+                minHeight: isMobile ? '44px' : undefined,
+                background: !message.trim() || actionLoading === 'message' ? `${t.lime}44` : t.lime,
+                color: '#080A06', border: 'none', borderRadius: '999px', fontWeight: '700',
+                cursor: !message.trim() || actionLoading === 'message' ? 'not-allowed' : 'pointer',
+                fontSize: isMobile ? '15px' : '14px', fontFamily: 'inherit', flexShrink: 0,
+              }}>
               {actionLoading === 'message' ? '...' : 'Send'}
             </button>
           </div>
