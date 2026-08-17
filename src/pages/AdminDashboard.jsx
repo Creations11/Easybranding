@@ -8,6 +8,7 @@ import AssignModal from '../components/AssignModal';
 import AdminApproveModal from '../components/AdminApproveModal';
 import AdminClientModal from '../components/AdminClientModal';
 import useMediaQuery, { MOBILE_QUERY } from '../hooks/useMediaQuery';
+import ChatTab from '../components/ChatTab';
 import { colors } from '../utils/theme';
 
 
@@ -298,7 +299,7 @@ export default function AdminDashboard() {
   if (error)   return <div style={{ padding: '140px', color: colors.red }}>{error}</div>;
 
   const tabs = [
-    'overview', 'leads',
+    'chat', 'overview', 'leads',
     'funnel', 'viewings', 'messages', 'alerts',
     ...(isSuperAdmin ? ['clients', 'users', 'platform'] : []),
     ...(isAdmin ? ['users'] : []),
@@ -431,6 +432,10 @@ export default function AdminDashboard() {
             that didn't exist anywhere in this dashboard before —
             closed leads were previously unreachable and unreopenable
             from here. */}
+        {tab === 'chat' && (
+          <ChatTab conversations={activeConversations} onRefresh={loadData} onExit={() => setTab('overview')} />
+        )}
+
         {tab === 'leads' && (
           <div>
             <h2 style={{ marginBottom: isMobile ? '12px' : '20px', fontSize: '20px' }}>Leads</h2>
