@@ -18,6 +18,7 @@ import { useState, useMemo } from 'react';
 import api from '../api';
 import LeadDetailModal from '../components/LeadDetailModal';
 import OperationsSection from '../sections/OperationsSection';
+import ChatTab from '../components/ChatTab';
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
 import StatCard from '../components/StatCard';
 import { useAuth } from '../context/AuthContext';
@@ -174,6 +175,10 @@ export default function SuperAdminDashboard() {
   // ── Navigation ─────────────────────────────────────────────
   const navSections = useMemo(() => {
     const s = [];
+    // Chat first. Added 2026-08-17 after the owner could not find it: the tab
+    // was only on AdminDashboard, which is where role=admin tenants land —
+    // super_admin routes to THIS page and never saw it.
+    s.push({ id: 'chat', icon: '💬', label: 'Chat', badge: 0 });
     if (!isEBAgent) { s.push({ id: 'operations', icon: '🏠', label: 'Operations', badge: alerts.length }); }
     if (!isEBAgent) { s.push({ id: 'clients',    icon: '👥', label: 'Clients',    badge: 0 }); }
     // FIX: PACMembersPanel had no nav entry anywhere — added here,
@@ -272,6 +277,17 @@ export default function SuperAdminDashboard() {
 
       {/* Main content */}
       <div className="main-content" style={{ marginLeft: sidebarOpen ? 220 : 64, flex: 1, minWidth: 0, padding: '32px', paddingTop: 96, transition: 'margin-left 0.2s ease', minHeight: '100vh' }}>
+
+        {/* ════════ CHAT ════════ */}
+        {section === 'chat' && (
+          <SectionErrorBoundary name="Chat" onRetry={refetch}>
+            <ChatTab
+              conversations={activeLeads}
+              onRefresh={refetch}
+              onExit={() => setSection('operations')}
+            />
+          </SectionErrorBoundary>
+        )}
 
         {/* ════════ OPERATIONS ════════ */}
         {section === 'operations' && (
