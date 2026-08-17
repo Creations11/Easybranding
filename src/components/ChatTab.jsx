@@ -60,8 +60,89 @@ const timeOf = (ts) => {
 const preview = (m) => {
   if (!m) return 'No messages yet';
   const body = String(m.body || '').replace(/\s+/g, ' ').trim();
-  return (m.direction === 'outbound' ? '✓ ' : '') + (body.slice(0, 42) || '📎 Attachment');
+  const tick = m.direction === 'outbound' ? '✓ ' : '';
+  if (!body && m.mediaContentType) return tick + kindOf(m.mediaContentType).label;
+  return tick + (body.slice(0, 42) || '📎 Attachment');
 };
+
+// What a customer actually sends: a photo of the part they need, a voice note
+// explaining the job, a proof of payment. Each wants a different control —
+// an <img> for a photo, a player for audio, a link for anything else.
+const kindOf = (contentType = '') => {
+  const t = String(contentType);
+  if (/image/i.test(t)) return { kind: 'image', label: '📷 Photo' };
+  if (/audio|voice|ogg|mpeg|mp3|amr|opus/i.test(t)) return { kind: 'audio', label: '🎤 Voice note' };
+  if (/pdf/i.test(t)) return { kind: 'file', label: '📄 Document' };
+  if (/video/i.test(t)) return { kind: 'video', label: '🎬 Video' };
+  return { kind: 'file', label: '📎 Attachment' };
+};
+
+// Lead.messages.body is `required` on the API side, so a caption-less photo is
+// stored with a stand-in body — "📷 Photo", "🎤 Voice note" — put there purely
+// so the write does not fail validation (leadMessageLog.describeMedia).
+// Showing that word under the photo it describes is the one thing WhatsApp
+// never does, so drop it once the real attachment is on screen.
+const PLACEHOLDER = /^(📷 Photo|🎤 Voice note|🎥 Video|👤 Contact card|📎 (Document|Attachment))( \(\+\d+ more\))?$/;
+
+const caption = (m) => {
+  const body = String(m.body || '').trim();
+  if (m.mediaPath && PLACEHOLDER.test(body)) return '';
+  // No media to show and no words either — say so rather than render nothing.
+  if (!body && !m.mediaPath) return '📎 Attachment';
+  return body;
+};
+
+/**
+ * Renders one attachment.
+ *
+ * `src` goes through the API rather than at Twilio directly: inbound media
+ * URLs are credential-protected and 401 in a browser, so the bytes are
+ * proxied under the session the dashboard already has. api.defaults.baseURL
+ * is reused so this follows whatever environment the rest of the app targets.
+ */
+function Media({ msg }) {
+  // Optional-chained: api.defaults is always present under axios, but a
+  // thrown TypeError here would take the whole thread down over an
+  // attachment, which is the wrong trade for a preview.
+  const src = `${api.defaults?.baseURL || ''}${msg.mediaPath}`;
+  const { kind, label } = kindOf(msg.mediaContentType);
+  const [failed, setFailed] = useState(false);
+
+  // A broken image icon inside a chat bubble reads as a bug in the product.
+  // A labelled link reads as a file the browser could not preview, which is
+  // what actually happened.
+  if (failed || kind === 'file') {
+    return (
+      <a href={src} target="_blank" rel="noopener noreferrer"
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 10px',
+                 background: 'rgba(255,255,255,0.06)', borderRadius: 6, color: '#E9EDEF',
+                 fontSize: 13.5, textDecoration: 'none', minHeight: 40 }}>
+        {label} <span style={{ opacity: 0.6, fontSize: 12 }}>open</span>
+      </a>
+    );
+  }
+
+  if (kind === 'image') {
+    return (
+      <a href={src} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
+        <img src={src} alt={label} onError={() => setFailed(true)}
+          style={{ maxWidth: '100%', maxHeight: 260, borderRadius: 6, display: 'block' }} />
+      </a>
+    );
+  }
+
+  if (kind === 'video') {
+    return <video src={src} controls onError={() => setFailed(true)}
+      style={{ maxWidth: '100%', maxHeight: 260, borderRadius: 6, display: 'block' }} />;
+  }
+
+  // Voice notes are the case this whole path exists for — a customer's
+  // explanation that nobody on the platform could hear.
+  return (
+    <audio src={src} controls onError={() => setFailed(true)}
+      style={{ width: '100%', minWidth: 210, height: 38 }} />
+  );
+}
 
 export default function ChatTab({ conversations = [], onRefresh, onExit }) {
   const isMobile = useMediaQuery(MOBILE_QUERY);
@@ -252,9 +333,13 @@ export default function ChatTab({ conversations = [], onRefresh, onExit }) {
                 borderTopLeftRadius: out ? 8 : 2,
                 opacity: m.pending ? 0.6 : 1,
               }}>
-                <p style={{ color: '#E9EDEF', fontSize: 14.5, lineHeight: 1.4, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                  {m.body || '📎 Attachment'}
-                </p>
+                {m.mediaPath && <Media msg={m} />}
+                {caption(m) && (
+                  <p style={{ color: '#E9EDEF', fontSize: 14.5, lineHeight: 1.4, whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word', marginTop: m.mediaPath ? 5 : 0 }}>
+                    {caption(m)}
+                  </p>
+                )}
                 <p style={{ color: 'rgba(233,237,239,0.5)', fontSize: 11, textAlign: 'right', marginTop: 2 }}>
                   {timeOf(m.timestamp)}{out && (m.pending ? ' ○' : ' ✓')}
                 </p>

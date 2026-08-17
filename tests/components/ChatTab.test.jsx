@@ -11,8 +11,11 @@ import { seedUser } from '../test-utils'
 import api from '../../src/api'
 import ChatTab from '../../src/components/ChatTab'
 
+// `defaults` included because the real axios instance has it and Media reads
+// baseURL off it — a mock missing it renders nothing and the failure looks
+// like a broken component rather than a broken fixture.
 vi.mock('../../src/api', () => ({
-  default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
+  default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn(), defaults: { baseURL: '' } },
 }))
 
 // useMediaQuery reads matchMedia, which jsdom does not implement.
@@ -189,5 +192,91 @@ describe('on a phone', () => {
 
     const box = await screen.findByPlaceholderText('Type a message')
     expect(box).toHaveStyle({ fontSize: '16px' })
+  })
+})
+
+describe('media in the thread', () => {
+  // A customer sent three photos of his proof of payment and the owner saw
+  // three blank bubbles: the timeline dropped mediaUrl entirely.
+  // Real shape: caption-less media is stored with a stand-in body, because
+  // Lead.messages.body is required and an empty string loses the whole write.
+  const placeholderFor = (t) =>
+    /image/.test(t) ? '📷 Photo'
+    : /audio/.test(t) ? '🎤 Voice note'
+    : /video/.test(t) ? '🎥 Video'
+    : '📎 Document'
+
+  const withMedia = (contentType, body = null) => ({
+    data: { data: {
+      lead: { _id: 'l1', name: 'Prisca Ndlovu', phone: '+27618076325', workflowStatus: 'taken_over' },
+      timeline: [{
+        direction: 'inbound', body: body ?? placeholderFor(contentType), timestamp: new Date().toISOString(),
+        mediaContentType: contentType, mediaPath: '/admin-ops/leads/l1/media/1',
+      }],
+    } },
+  })
+
+  const open = async () => {
+    render(<ChatTab conversations={CONVOS} />)
+    fireEvent.click(screen.getByText('Prisca Ndlovu'))
+  }
+
+  it('renders a photo as an image, not an empty bubble', async () => {
+    api.get.mockResolvedValue(withMedia('image/jpeg'))
+    await open()
+    const img = await screen.findByRole('img', { name: /photo/i })
+    expect(img.getAttribute('src')).toContain('/admin-ops/leads/l1/media/1')
+  })
+
+  it('gives a voice note a player', async () => {
+    api.get.mockResolvedValue(withMedia('audio/ogg'))
+    await open()
+    await waitFor(() => {
+      const audio = document.querySelector('audio')
+      expect(audio).toBeTruthy()
+      expect(audio.getAttribute('src')).toContain('/media/1')
+    })
+  })
+
+  it('offers a document as a link rather than trying to preview it', async () => {
+    api.get.mockResolvedValue(withMedia('application/pdf'))
+    await open()
+    expect(await screen.findByText(/document/i)).toBeInTheDocument()
+  })
+
+  // Never the protected Twilio URL — it 401s in a browser, and shipping it
+  // would mean shipping the credentials that open it.
+  it('never points at Twilio directly', async () => {
+    api.get.mockResolvedValue(withMedia('image/jpeg'))
+    await open()
+    const img = await screen.findByRole('img', { name: /photo/i })
+    expect(img.getAttribute('src')).not.toMatch(/api\.twilio\.com/)
+  })
+
+  it('keeps the caption alongside the photo when there is one', async () => {
+    api.get.mockResolvedValue(withMedia('image/jpeg', 'here is the proof'))
+    await open()
+    expect(await screen.findByText('here is the proof')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /photo/i })).toBeInTheDocument()
+  })
+
+  // WhatsApp does not print the word "Photo" under a photo.
+  it('does not repeat the stand-in body under the attachment', async () => {
+    api.get.mockResolvedValue(withMedia('image/jpeg'))
+    await open()
+    await screen.findByRole('img', { name: /photo/i })
+    expect(screen.queryByText('📷 Photo')).not.toBeInTheDocument()
+  })
+
+  it('still shows a body that only looks like a caption', async () => {
+    api.get.mockResolvedValue(withMedia('image/jpeg', 'Photo of the invoice'))
+    await open()
+    expect(await screen.findByText('Photo of the invoice')).toBeInTheDocument()
+  })
+
+  it('labels an attachment in the conversation list preview', () => {
+    const convos = [{ ...CONVOS[0], lastMessage: { direction: 'inbound', body: '🎤 Voice note', mediaContentType: 'audio/ogg' } }]
+    render(<ChatTab conversations={convos} />)
+    expect(screen.getByText(/voice note/i)).toBeInTheDocument()
   })
 })
