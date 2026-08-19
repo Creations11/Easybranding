@@ -144,6 +144,137 @@ function Media({ msg }) {
   );
 }
 
+/**
+ * Message everyone.
+ *
+ * Two steps on purpose. WhatsApp discards a freeform message to anyone who
+ * has not written in the last 24 hours — and reports it as sent — so a
+ * one-click broadcast tells an owner it reached everybody when it may have
+ * reached nobody. When this was built every one of SendUs's six customers
+ * was out of window.
+ *
+ * So the first click asks the server who this actually reaches, and shows
+ * the answer before there is anything to confirm. The send button does not
+ * exist until that number does.
+ */
+function BroadcastPanel({ state, setState, onSent }) {
+  const { text, preview, result, busy } = state;
+
+  const check = async () => {
+    if (!text.trim()) return;
+    setState(s => ({ ...s, busy: true, result: null }));
+    try {
+      const r = await api.post('/admin-ops/broadcast', { message: text.trim(), dryRun: true });
+      setState(s => ({ ...s, preview: r.data, busy: false }));
+    } catch (e) {
+      setState(s => ({ ...s, busy: false, result: { error: e.response?.data?.message || 'Could not check the audience.' } }));
+    }
+  };
+
+  const send = async () => {
+    setState(s => ({ ...s, busy: true }));
+    try {
+      const r = await api.post('/admin-ops/broadcast', { message: text.trim() });
+      setState(s => ({ ...s, busy: false, result: r.data }));
+      onSent?.();
+    } catch (e) {
+      setState(s => ({ ...s, busy: false, result: { error: e.response?.data?.message || 'Send failed.' } }));
+    }
+  };
+
+  const close = () => setState({ open: false, text: '', preview: null, result: null, busy: false });
+
+  return (
+    <div
+      role="dialog" aria-label="Message everyone"
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+      }}
+      onClick={e => { if (e.target === e.currentTarget) close(); }}
+    >
+      <div style={{
+        background: PANEL_BG, borderRadius: 12, width: '100%', maxWidth: 460,
+        padding: 20, maxHeight: '90vh', overflowY: 'auto',
+      }}>
+        <h3 style={{ color: colors.text, fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Message everyone</h3>
+        <p style={{ color: colors.muted, fontSize: 13, marginBottom: 14 }}>
+          One message to your customers. You'll see who it reaches before it sends.
+        </p>
+
+        <textarea
+          value={text}
+          onChange={e => setState(s => ({ ...s, text: e.target.value, preview: null }))}
+          placeholder="What do you want to tell them?"
+          rows={4}
+          style={{
+            width: '100%', padding: '11px 13px', background: 'rgba(255,255,255,0.06)',
+            border: 'none', borderRadius: 8, color: colors.text, fontSize: 16,
+            outline: 'none', fontFamily: 'inherit', resize: 'vertical',
+          }}
+        />
+
+        {preview && (
+          <div style={{ marginTop: 14, padding: 13, background: 'rgba(255,255,255,0.04)', borderRadius: 8 }}>
+            <p style={{ color: colors.text, fontSize: 15, fontWeight: 700 }}>
+              Reaches {preview.willReach} of {preview.audience.total}
+            </p>
+            <p style={{ color: colors.muted, fontSize: 12.5, marginTop: 5 }}>
+              {preview.audience.inWindow} messaged you recently · {preview.audience.outOfWindow} did not
+            </p>
+            {preview.warning && (
+              <p style={{ color: '#F0B429', fontSize: 12.5, marginTop: 9, lineHeight: 1.5 }}>
+                {preview.warning}
+              </p>
+            )}
+          </div>
+        )}
+
+        {result && (
+          <p style={{
+            marginTop: 13, fontSize: 13.5,
+            color: result.error ? colors.red : colors.lime,
+          }}>
+            {result.error || result.message}
+          </p>
+        )}
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+          <button onClick={close} style={{
+            flex: 1, padding: '11px', background: 'transparent', border: `1px solid ${colors.borderDim}`,
+            borderRadius: 8, color: colors.muted, fontSize: 14, cursor: 'pointer',
+            fontFamily: 'inherit', minHeight: 44,
+          }}>
+            {result && !result.error ? 'Done' : 'Cancel'}
+          </button>
+
+          {/* The send button only appears once the reach is known and is not
+              zero — there is nothing to confirm before that. */}
+          {!preview ? (
+            <button onClick={check} disabled={!text.trim() || busy} style={{
+              flex: 1, padding: '11px', background: colors.lime, border: 'none', borderRadius: 8,
+              color: '#050505', fontSize: 14, fontWeight: 700,
+              cursor: text.trim() && !busy ? 'pointer' : 'not-allowed',
+              opacity: text.trim() && !busy ? 1 : 0.5, fontFamily: 'inherit', minHeight: 44,
+            }}>
+              {busy ? 'Checking…' : 'Who gets this?'}
+            </button>
+          ) : preview.willReach > 0 && !result ? (
+            <button onClick={send} disabled={busy} style={{
+              flex: 1, padding: '11px', background: colors.lime, border: 'none', borderRadius: 8,
+              color: '#050505', fontSize: 14, fontWeight: 700,
+              cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.5 : 1,
+              fontFamily: 'inherit', minHeight: 44,
+            }}>
+              {busy ? 'Sending…' : `Send to ${preview.willReach}`}
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ChatTab({ conversations = [], onRefresh, onExit }) {
   const isMobile = useMediaQuery(MOBILE_QUERY);
   const [selectedId, setSelectedId] = useState(null);
@@ -154,6 +285,9 @@ export default function ChatTab({ conversations = [], onRefresh, onExit }) {
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState('');
   const [query, setQuery] = useState('');
+  const [broadcast, setBroadcast] = useState({ open: false, text: '', preview: null, result: null, busy: false });
+  const [reengaging, setReengaging] = useState(false);
+  const [reengageMsg, setReengageMsg] = useState(null);
   const endRef = useRef(null);
 
   const openThread = useCallback(async (id) => {
@@ -179,6 +313,23 @@ export default function ChatTab({ conversations = [], onRefresh, onExit }) {
 
   const isTakenOver = lead?.workflowStatus === 'taken_over';
   const isClosed    = lead?.workflowStatus === 'closed';
+
+  // An approved template is the ONLY thing that reaches someone outside the
+  // 24-hour window. On success the thread reloads so the recorded note shows
+  // — the owner should be able to see that they acted.
+  const reengage = async () => {
+    setReengaging(true);
+    setReengageMsg(null);
+    try {
+      const r = await api.post(`/admin-ops/leads/${selectedId}/reengage`);
+      setReengageMsg({ ok: !!r.data?.success, text: r.data?.message || 'Sent.' });
+      if (r.data?.success) await openThread(selectedId);
+    } catch (e) {
+      setReengageMsg({ ok: false, text: e.response?.data?.message || 'Could not reopen the chat.' });
+    } finally {
+      setReengaging(false);
+    }
+  };
 
   const send = async () => {
     const body = message.trim();
@@ -238,6 +389,17 @@ export default function ChatTab({ conversations = [], onRefresh, onExit }) {
             fontSize: isMobile ? 16 : 14, outline: 'none', fontFamily: 'inherit',
           }}
         />
+        <button
+          onClick={() => setBroadcast({ open: true, text: '', preview: null, result: null, busy: false })}
+          style={{
+            width: '100%', marginTop: 8, padding: '9px 14px', background: 'transparent',
+            border: `1px solid ${colors.borderDim}`, borderRadius: 999, color: colors.text,
+            fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+            minHeight: 40,
+          }}
+        >
+          📣 Message everyone
+        </button>
       </div>
       <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
         {list.length === 0 && (
@@ -377,6 +539,35 @@ export default function ChatTab({ conversations = [], onRefresh, onExit }) {
         <div style={{ padding: '14px', background: PANEL_BG, borderTop: `1px solid ${colors.borderDim}` }}>
           <p style={{ color: colors.muted, fontSize: 12, textAlign: 'center' }}>This conversation is closed.</p>
         </div>
+      ) : lead && lead.inWindow === false ? (
+        /* Outside the 24-hour window. A composer here would take the owner's
+           message, show it in the thread, and let WhatsApp throw it away —
+           reported as delivered. So the composer is replaced by the one thing
+           that can actually arrive: an approved template. */
+        <div style={{ padding: '12px 14px', background: PANEL_BG, borderTop: `1px solid ${colors.borderDim}`,
+                      paddingBottom: isMobile ? 'calc(12px + env(safe-area-inset-bottom))' : 12 }}>
+          <p style={{ color: colors.muted, fontSize: 12.5, textAlign: 'center', marginBottom: 9, lineHeight: 1.5 }}>
+            They haven't messaged in over 24 hours, so WhatsApp won't deliver a normal reply.
+          </p>
+          <button
+            onClick={reengage} disabled={reengaging}
+            style={{
+              width: '100%', padding: '12px', borderRadius: 999, border: 'none',
+              background: reengaging ? 'rgba(255,255,255,0.08)' : colors.lime,
+              color: reengaging ? colors.muted : '#050505',
+              fontSize: 14, fontWeight: 700, cursor: reengaging ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit', minHeight: 46,
+            }}
+          >
+            {reengaging ? 'Sending…' : '🔓 Reopen this chat'}
+          </button>
+          {reengageMsg && (
+            <p style={{ color: reengageMsg.ok ? colors.lime : colors.red, fontSize: 12.5,
+                        textAlign: 'center', marginTop: 9, lineHeight: 1.5 }}>
+              {reengageMsg.text}
+            </p>
+          )}
+        </div>
       ) : isTakenOver ? (
         <div style={{
           display: 'flex', gap: 8, padding: 10, background: PANEL_BG,
@@ -462,6 +653,7 @@ export default function ChatTab({ conversations = [], onRefresh, onExit }) {
         <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
           {selectedId ? ThreadPane : ListPane}
         </div>
+        {broadcast.open && <BroadcastPanel state={broadcast} setState={setBroadcast} onSent={onRefresh} />}
       </div>
     );
   }
@@ -475,6 +667,7 @@ export default function ChatTab({ conversations = [], onRefresh, onExit }) {
     }}>
       {ListPane}
       {selectedId ? ThreadPane : EmptyPane}
+      {broadcast.open && <BroadcastPanel state={broadcast} setState={setBroadcast} onSent={onRefresh} />}
     </div>
   );
 }

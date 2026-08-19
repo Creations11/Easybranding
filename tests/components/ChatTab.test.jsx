@@ -318,3 +318,148 @@ describe('name and number together', () => {
     expect(link.closest('p')).toHaveTextContent(/assistant is answering/i)
   })
 })
+
+// Baltmore asked for a broadcast button. The reason it is two steps and not
+// one: WhatsApp discards a freeform message to anyone who hasn't written in
+// 24 hours AND reports it as sent. Every one of his six customers was out of
+// window when this was built, so a one-click version would have told him it
+// reached everybody having reached nobody.
+describe('message everyone', () => {
+  const openPanel = () => {
+    render(<ChatTab conversations={CONVOS} />)
+    fireEvent.click(screen.getByText(/message everyone/i))
+  }
+
+  it('asks who gets it before offering to send', async () => {
+    openPanel()
+    fireEvent.change(screen.getByPlaceholderText(/what do you want to tell them/i), {
+      target: { value: 'New stock arrived' },
+    })
+    // No send button yet — the reach is unknown.
+    expect(screen.queryByText(/^Send to/)).not.toBeInTheDocument()
+    expect(screen.getByText(/who gets this/i)).toBeInTheDocument()
+  })
+
+  it('runs a dry run first and never sends on the first click', async () => {
+    api.post.mockResolvedValue({ data: { audience: { total: 6, inWindow: 1, outOfWindow: 5, excluded: {} }, willReach: 1 } })
+    openPanel()
+    fireEvent.change(screen.getByPlaceholderText(/what do you want to tell them/i), { target: { value: 'Hello' } })
+    fireEvent.click(screen.getByText(/who gets this/i))
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith(
+      '/admin-ops/broadcast', { message: 'Hello', dryRun: true },
+    ))
+  })
+
+  it('shows the real reach, not the audience size', async () => {
+    api.post.mockResolvedValue({ data: { audience: { total: 6, inWindow: 1, outOfWindow: 5, excluded: {} }, willReach: 1 } })
+    openPanel()
+    fireEvent.change(screen.getByPlaceholderText(/what do you want to tell them/i), { target: { value: 'Hello' } })
+    fireEvent.click(screen.getByText(/who gets this/i))
+
+    expect(await screen.findByText(/reaches 1 of 6/i)).toBeInTheDocument()
+    expect(await screen.findByText(/^Send to 1$/)).toBeInTheDocument()
+  })
+
+  // The exact SendUs case: nobody is contactable, so there is nothing to confirm.
+  it('offers no send button when it would reach nobody', async () => {
+    api.post.mockResolvedValue({ data: {
+      audience: { total: 6, inWindow: 0, outOfWindow: 6, excluded: {} },
+      willReach: 0, warning: '6 people are outside the 24-hour window.',
+    } })
+    openPanel()
+    fireEvent.change(screen.getByPlaceholderText(/what do you want to tell them/i), { target: { value: 'Hello' } })
+    fireEvent.click(screen.getByText(/who gets this/i))
+
+    expect(await screen.findByText(/outside the 24-hour window/i)).toBeInTheDocument()
+    expect(screen.queryByText(/^Send to/)).not.toBeInTheDocument()
+  })
+
+  it('sends for real only on the second click', async () => {
+    api.post
+      .mockResolvedValueOnce({ data: { audience: { total: 2, inWindow: 2, outOfWindow: 0, excluded: {} }, willReach: 2 } })
+      .mockResolvedValueOnce({ data: { sent: 2, message: 'Sent to 2 people.' } })
+    openPanel()
+    fireEvent.change(screen.getByPlaceholderText(/what do you want to tell them/i), { target: { value: 'Hello' } })
+    fireEvent.click(screen.getByText(/who gets this/i))
+    fireEvent.click(await screen.findByText(/^Send to 2$/))
+
+    await waitFor(() => expect(api.post).toHaveBeenLastCalledWith(
+      '/admin-ops/broadcast', { message: 'Hello' },
+    ))
+    expect(await screen.findByText(/sent to 2 people/i)).toBeInTheDocument()
+  })
+})
+
+// Outside the 24-hour window WhatsApp discards a normal reply and reports it
+// delivered. Showing a composer there takes the owner's message, puts it in
+// the thread, and throws it away. Every one of SendUs's six customers was in
+// that state, so this is the common case, not the edge one.
+describe('reopening a chat that fell outside the window', () => {
+  const closedWindow = (extra = {}) => ({
+    data: { data: {
+      lead: { _id: 'l1', name: 'Sponki', phone: '+27618076325', workflowStatus: 'taken_over', inWindow: false, ...extra },
+      timeline: [{ direction: 'inbound', body: 'Im selling clothing', timestamp: new Date().toISOString() }],
+    } },
+  })
+
+  const open = async () => {
+    render(<ChatTab conversations={CONVOS} />)
+    fireEvent.click(screen.getByText('Prisca Ndlovu'))
+  }
+
+  it('hides the composer and explains why', async () => {
+    api.get.mockResolvedValue(closedWindow())
+    await open()
+
+    expect(await screen.findByText(/won't deliver a normal reply/i)).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('Type a message')).not.toBeInTheDocument()
+  })
+
+  it('offers the reopen button', async () => {
+    api.get.mockResolvedValue(closedWindow())
+    await open()
+    expect(await screen.findByText(/reopen this chat/i)).toBeInTheDocument()
+  })
+
+  it('sends the approved template to that lead', async () => {
+    api.get.mockResolvedValue(closedWindow())
+    api.post.mockResolvedValue({ data: { success: true, message: 'Sent.' } })
+    await open()
+    fireEvent.click(await screen.findByText(/reopen this chat/i))
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/admin-ops/leads/l1/reengage'))
+  })
+
+  it('reports a refusal instead of claiming it worked', async () => {
+    api.get.mockResolvedValue(closedWindow())
+    api.post.mockResolvedValue({ data: { success: false, message: 'Sponki is marked do-not-disturb.' } })
+    await open()
+    fireEvent.click(await screen.findByText(/reopen this chat/i))
+
+    expect(await screen.findByText(/do-not-disturb/i)).toBeInTheDocument()
+  })
+
+  // The composer must come back when the window is open — this must not
+  // become a permanent replacement.
+  it('shows the composer normally when the window is open', async () => {
+    api.get.mockResolvedValue({
+      data: { data: {
+        lead: { _id: 'l1', name: 'Sponki', phone: '+27618076325', workflowStatus: 'taken_over', inWindow: true },
+        timeline: [],
+      } },
+    })
+    await open()
+
+    expect(await screen.findByPlaceholderText('Type a message')).toBeInTheDocument()
+    expect(screen.queryByText(/reopen this chat/i)).not.toBeInTheDocument()
+  })
+
+  // Older responses have no inWindow field at all. Hiding the composer on a
+  // missing value would break every thread on a stale deploy.
+  it('does not hide the composer when the API says nothing about the window', async () => {
+    api.get.mockResolvedValue(timeline('taken_over'))
+    await open()
+    expect(await screen.findByPlaceholderText('Type a message')).toBeInTheDocument()
+  })
+})
