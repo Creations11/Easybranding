@@ -408,34 +408,60 @@ describe('reopening a chat that fell outside the window', () => {
     fireEvent.click(screen.getByText('Prisca Ndlovu'))
   }
 
-  it('hides the composer and explains why', async () => {
+  // The composer STAYS. Typing out of window still works — the server sends
+  // a re-engagement template and holds the message until they reply, because
+  // a template does not reopen the window, only their answer does.
+  it('keeps the composer and explains what will happen', async () => {
     api.get.mockResolvedValue(closedWindow())
     await open()
 
-    expect(await screen.findByText(/won't deliver a normal reply/i)).toBeInTheDocument()
-    expect(screen.queryByPlaceholderText('Type a message')).not.toBeInTheDocument()
+    expect(await screen.findByText(/goes the moment they reply/i)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Type a message')).toBeInTheDocument()
   })
 
-  it('offers the reopen button', async () => {
+  // Sends through the SAME endpoint as an in-window reply. The owner should
+  // not have to know which side of the window a customer is on — the server
+  // decides whether to send now or nudge and hold.
+  it('sends through the normal message endpoint anyway', async () => {
     api.get.mockResolvedValue(closedWindow())
+    api.post.mockResolvedValue({ data: { data: { held: true }, message: 'Held.' } })
     await open()
-    expect(await screen.findByText(/reopen this chat/i)).toBeInTheDocument()
+
+    const box = await screen.findByPlaceholderText('Type a message')
+    fireEvent.change(box, { target: { value: 'Your quote is ready' } })
+    fireEvent.keyDown(box, { key: 'Enter' })
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith(
+      '/admin-ops/leads/l1/message', { message: 'Your quote is ready' },
+    ))
   })
 
-  it('sends the approved template to that lead', async () => {
+  // "Sent" would be a lie — it is waiting. The owner needs to know that, or
+  // they wonder why nobody answered something that never arrived.
+  it('says the message is waiting rather than sent', async () => {
     api.get.mockResolvedValue(closedWindow())
-    api.post.mockResolvedValue({ data: { success: true, message: 'Sent.' } })
+    api.post.mockResolvedValue({
+      data: { data: { held: true, openerSent: true }, message: "yours goes the moment they answer" },
+    })
     await open()
-    fireEvent.click(await screen.findByText(/reopen this chat/i))
 
-    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/admin-ops/leads/l1/reengage'))
+    const box = await screen.findByPlaceholderText('Type a message')
+    fireEvent.change(box, { target: { value: 'Your quote is ready' } })
+    fireEvent.keyDown(box, { key: 'Enter' })
+
+    expect(await screen.findByText(/goes the moment they answer/i)).toBeInTheDocument()
   })
 
   it('reports a refusal instead of claiming it worked', async () => {
     api.get.mockResolvedValue(closedWindow())
-    api.post.mockResolvedValue({ data: { success: false, message: 'Sponki is marked do-not-disturb.' } })
+    api.post.mockResolvedValue({
+      data: { data: { held: false, reason: 'resting' }, message: 'Sponki is marked do-not-disturb — nothing was sent.' },
+    })
     await open()
-    fireEvent.click(await screen.findByText(/reopen this chat/i))
+
+    const box = await screen.findByPlaceholderText('Type a message')
+    fireEvent.change(box, { target: { value: 'hello' } })
+    fireEvent.keyDown(box, { key: 'Enter' })
 
     expect(await screen.findByText(/do-not-disturb/i)).toBeInTheDocument()
   })

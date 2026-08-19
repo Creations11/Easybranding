@@ -342,9 +342,19 @@ export default function ChatTab({ conversations = [], onRefresh, onExit }) {
     setMessages(prev => [...prev, optimistic]);
     setMessage('');
     try {
-      await api.post(`/admin-ops/leads/${selectedId}/message`, { message: body });
+      const r = await api.post(`/admin-ops/leads/${selectedId}/message`, { message: body });
+      // Out of window the server either HOLDS this (and nudges them) or
+      // refuses outright. Either way "sent" would be a lie, so say what
+      // actually happened — otherwise the owner waits for a reply to
+      // something that never arrived.
+      const d = r?.data?.data || {};
+      const notice = typeof d.held === 'boolean' ? (r.data.message || '') : '';
+
       await openThread(selectedId);
       onRefresh?.();
+      // AFTER the reload, deliberately: openThread clears err on entry, so
+      // setting this first would wipe it a line later.
+      if (notice) setErr(notice);
     } catch (e) {
       setErr(e.response?.data?.message || 'Message did not send.');
       // Put it back in the box rather than losing what they typed.
@@ -539,34 +549,38 @@ export default function ChatTab({ conversations = [], onRefresh, onExit }) {
         <div style={{ padding: '14px', background: PANEL_BG, borderTop: `1px solid ${colors.borderDim}` }}>
           <p style={{ color: colors.muted, fontSize: 12, textAlign: 'center' }}>This conversation is closed.</p>
         </div>
-      ) : lead && lead.inWindow === false ? (
-        /* Outside the 24-hour window. A composer here would take the owner's
-           message, show it in the thread, and let WhatsApp throw it away —
-           reported as delivered. So the composer is replaced by the one thing
-           that can actually arrive: an approved template. */
-        <div style={{ padding: '12px 14px', background: PANEL_BG, borderTop: `1px solid ${colors.borderDim}`,
-                      paddingBottom: isMobile ? 'calc(12px + env(safe-area-inset-bottom))' : 12 }}>
-          <p style={{ color: colors.muted, fontSize: 12.5, textAlign: 'center', marginBottom: 9, lineHeight: 1.5 }}>
-            They haven't messaged in over 24 hours, so WhatsApp won't deliver a normal reply.
+      ) : lead && lead.inWindow === false && isTakenOver ? (
+        /* Outside the 24-hour window — but the composer stays.
+           Typing here still works: the server sends a re-engagement template
+           now and HOLDS this message until they reply, because a template
+           does not reopen the window, only their answer does. The owner
+           writes once and does not have to remember any of that. */
+        <div style={{ background: PANEL_BG, borderTop: `1px solid ${colors.borderDim}`, flexShrink: 0 }}>
+          <p style={{ color: colors.muted, fontSize: 12, textAlign: 'center', padding: '9px 14px 0', lineHeight: 1.5 }}>
+            They haven't written in 24 hours. Send anyway — we'll nudge them and your message goes the moment they reply.
           </p>
-          <button
-            onClick={reengage} disabled={reengaging}
-            style={{
-              width: '100%', padding: '12px', borderRadius: 999, border: 'none',
-              background: reengaging ? 'rgba(255,255,255,0.08)' : colors.lime,
-              color: reengaging ? colors.muted : '#050505',
-              fontSize: 14, fontWeight: 700, cursor: reengaging ? 'not-allowed' : 'pointer',
-              fontFamily: 'inherit', minHeight: 46,
-            }}
-          >
-            {reengaging ? 'Sending…' : '🔓 Reopen this chat'}
-          </button>
-          {reengageMsg && (
-            <p style={{ color: reengageMsg.ok ? colors.lime : colors.red, fontSize: 12.5,
-                        textAlign: 'center', marginTop: 9, lineHeight: 1.5 }}>
-              {reengageMsg.text}
-            </p>
-          )}
+          <div style={{ display: 'flex', gap: 8, padding: 10,
+                        paddingBottom: isMobile ? 'calc(10px + env(safe-area-inset-bottom))' : 10 }}>
+            <input
+              value={message} onChange={e => setMessage(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
+              placeholder="Type a message"
+              enterKeyHint="send" autoCorrect="off"
+              style={{
+                flex: 1, minWidth: 0, padding: '11px 16px', background: BUBBLE_IN,
+                border: 'none', borderRadius: 999, color: '#E9EDEF',
+                fontSize: isMobile ? 16 : 14, outline: 'none', fontFamily: 'inherit',
+              }}
+            />
+            <button onClick={send} disabled={sending || !message.trim()} aria-label="Send"
+              style={{
+                width: 46, height: 46, borderRadius: '50%', flexShrink: 0, border: 'none',
+                background: message.trim() ? colors.lime : 'rgba(255,255,255,0.08)',
+                color: message.trim() ? '#050505' : colors.muted,
+                fontSize: 19, cursor: message.trim() ? 'pointer' : 'not-allowed',
+              }}
+            >➤</button>
+          </div>
         </div>
       ) : isTakenOver ? (
         <div style={{
