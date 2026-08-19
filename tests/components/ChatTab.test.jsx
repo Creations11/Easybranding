@@ -280,3 +280,41 @@ describe('media in the thread', () => {
     expect(screen.getByText(/voice note/i)).toBeInTheDocument()
   })
 })
+
+// Baltmore: "why doesn't the chat show the name and the number, we have both."
+// A WhatsApp profile name is whatever the customer typed into their own
+// phone, so two "Thabo"s are indistinguishable — and the number is what he
+// actually calls back on.
+describe('name and number together', () => {
+  it('shows both in the conversation list', () => {
+    render(<ChatTab conversations={CONVOS} />)
+    expect(screen.getByText('Prisca Ndlovu')).toBeInTheDocument()
+    expect(screen.getByText('+27618076325')).toBeInTheDocument()
+  })
+
+  // The fallback row already IS the number. Printing it twice reads as a bug.
+  it('does not repeat the number when it is standing in for the name', () => {
+    render(<ChatTab conversations={CONVOS} />)
+    expect(screen.getAllByText('+27737299929')).toHaveLength(1)
+  })
+
+  it('shows the number in the thread header, ready to dial', async () => {
+    api.get.mockResolvedValue(timeline('taken_over'))
+    render(<ChatTab conversations={CONVOS} />)
+    fireEvent.click(screen.getByText('Prisca Ndlovu'))
+
+    const link = await screen.findByRole('link', { name: '+27618076325' })
+    expect(link).toHaveAttribute('href', 'tel:+27618076325')
+  })
+
+  // Scoped to the header: "Assistant is answering" also appears where the
+  // composer would be, and an unscoped match finds both.
+  it('still says who is answering, alongside the number', async () => {
+    api.get.mockResolvedValue(timeline('qualified'))
+    render(<ChatTab conversations={CONVOS} />)
+    fireEvent.click(screen.getByText('Prisca Ndlovu'))
+
+    const link = await screen.findByRole('link', { name: '+27618076325' })
+    expect(link.closest('p')).toHaveTextContent(/assistant is answering/i)
+  })
+})

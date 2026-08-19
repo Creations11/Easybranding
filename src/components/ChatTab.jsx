@@ -267,6 +267,16 @@ export default function ChatTab({ conversations = [], onRefresh, onExit }) {
                 </span>
                 <span style={{ color: colors.muted, fontSize: 11, flexShrink: 0 }}>{timeOf(c.lastMessageAt)}</span>
               </div>
+              {/* The number, always — not only when the name is missing.
+                  Baltmore asked for this: a WhatsApp profile name is whatever
+                  the customer typed into their own phone, so two "Thabo"s are
+                  indistinguishable, and the number is what he calls back on.
+                  Shown only when it adds something the line above doesn't. */}
+              {c.name && c.name !== 'Unknown' && c.phone && (
+                <div style={{ color: colors.muted, fontSize: 11.5, marginTop: 1, fontVariantNumeric: 'tabular-nums' }}>
+                  {c.phone}
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 2 }}>
                 <span style={{ color: colors.muted, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {preview(c.lastMessage)}
@@ -309,7 +319,17 @@ export default function ChatTab({ conversations = [], onRefresh, onExit }) {
           <p style={{ color: colors.text, fontSize: 15, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {lead?.name && lead.name !== 'Unknown' ? lead.name : lead?.phone}
           </p>
-          <p style={{ color: colors.muted, fontSize: 12 }}>
+          {/* Number alongside the status, and tappable — on a phone the whole
+              point of having it here is being able to ring them. */}
+          <p style={{ color: colors.muted, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {lead?.phone && lead?.name && lead.name !== 'Unknown' && (
+              <>
+                <a href={`tel:${lead.phone}`} style={{ color: colors.muted, textDecoration: 'none', fontVariantNumeric: 'tabular-nums' }}>
+                  {lead.phone}
+                </a>
+                <span style={{ opacity: 0.5 }}> · </span>
+              </>
+            )}
             {isClosed ? 'Closed' : isTakenOver ? 'You are replying' : 'Assistant is answering'}
           </p>
         </div>
