@@ -18,7 +18,8 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import ConnectWhatsApp from '../components/ConnectWhatsApp';
-import { loadProducts, tenantFieldsFor } from '../config/plans';
+import { loadProducts, loadIndustries, tenantFieldsFor } from '../config/plans';
+import { useAuth } from '../context/AuthContext';
 
 const c = {
   bg: '#06080A', surface: '#0D110C', card: '#121710',
@@ -50,6 +51,21 @@ export default function Onboarding() {
   useEffect(() => {
     loadProducts().then(setProducts).catch(() => setPriceError('Could not load pricing. Please reload.'));
   }, []);
+
+  // The industry bots, also served rather than copied. Same reasoning: a
+  // templateId this list gets wrong is a bot that never answers.
+  const [industries, setIndustries] = useState([]);
+  useEffect(() => {
+    loadIndustries().then(setIndustries).catch(() => setPriceError('Could not load the bot list. Please reload.'));
+  }, []);
+
+  // A platform operator (super_admin / eb_manager) onboarding a client is a
+  // DIFFERENT job from a business owner signing themselves up, and the
+  // difference matters at the last step: /onboarding/choose acts on
+  // req.user.tenantId, so an operator calling it would price and publish onto
+  // their OWN tenant rather than the client's.
+  const { user, isSuperAdmin, isEBManager } = useAuth();
+  const isOperator = isSuperAdmin || isEBManager || user?.role === 'eb_agent';
   const [form, setForm] = useState({
     businessName: '',
     brandName: '',
@@ -60,6 +76,11 @@ export default function Onboarding() {
     workflowType: 'full',
     ownerPhone: '',
     product: '',
+    // Which industry flow template gets published when payment clears. NOT
+    // the same field as `industry` above: that one is Tenant.industry, a
+    // reporting label with its own enum. This is a flowTemplates id, and the
+    // go-live reconciler publishes exactly this template or nothing at all.
+    templateId: '',
   });
 
   const steps = [
@@ -114,6 +135,21 @@ export default function Onboarding() {
           { value: 'full', label: 'Full — 6 questions including income' },
           { value: 'basic', label: 'Basic — 4 questions, no income check' },
         ], required: true },
+      ],
+    },
+    {
+      // The bot that actually gets published when payment clears. Without
+      // this the reconciler has nothing to publish and reports "no template
+      // chosen at signup" — a paying customer with a working number and a
+      // bot that never answers.
+      title: 'Choose Your Bot',
+      icon: '🤖',
+      description: 'Which one matches your business? We will set it up for you.',
+      fields: [
+        { name: 'templateId', label: 'Your industry', type: 'select', options: industries.map((t) => ({
+          value: t.id,
+          label: t.label,
+        })), required: true },
       ],
     },
     {
@@ -189,6 +225,11 @@ export default function Onboarding() {
         plan: chosen.plan,
         monthlyFee: chosen.monthlyFee,
         workflowType: form.workflowType || 'full',
+        // Carried onto the tenant so the go-live reconciler knows what to
+        // publish when payment clears. Set on BOTH paths — an operator
+        // onboarding a client by hand needs it just as much, or that client
+        // pays and nothing happens.
+        onboarding: { productKey: form.product, templateId: form.templateId },
       };
       // A client who connected their own number already HAS a tenant: the
       // Embedded Signup endpoint creates one the moment Meta confirms the
@@ -201,7 +242,42 @@ export default function Onboarding() {
       } else {
         await api.post('/tenants', payload);
       }
-      // After successful creation, redirect to dashboard
+
+      // ── An operator stops here ──────────────────────────────────────
+      //
+      // /onboarding/choose acts on req.user.tenantId. An operator calling it
+      // would price and publish onto their OWN tenant instead of the client
+      // they just created, so they finish the way they always have and take
+      // payment however they arranged it.
+      if (isOperator) {
+        navigate('/admin');
+        return;
+      }
+
+      // ── An owner goes to checkout ───────────────────────────────────
+      //
+      // This is the step that used to be me. Choosing records the product
+      // against their tenant and mints a Paystack link; paying fires the
+      // webhook, which publishes their flow and provisions their WABA
+      // without anyone at EasyBranding doing anything.
+      const res = await api.post('/onboarding/choose', {
+        productKey: form.product,
+        templateId: form.templateId,
+      });
+      const paymentUrl = (res.data?.data || res.data)?.paymentUrl;
+
+      if (paymentUrl) {
+        window.location.href = paymentUrl;
+        return;
+      }
+
+      // Saved, but Paystack could not be reached. Say so rather than
+      // dropping them on a dashboard that will not explain why nothing
+      // happened — their choice is safe and payment can be retried.
+      alert(
+        'Your details are saved, but we could not open the payment page just now. ' +
+        'Open your dashboard and click Pay to try again.'
+      );
       navigate('/admin');
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to create tenant');
@@ -437,6 +513,22 @@ export default function Onboarding() {
                     }}>
                       <span style={{ color: c.muted }}>Plan:</span>
                       <span style={{ color: c.lime, fontWeight: '700' }}>{display}</span>
+                    </div>
+                  );
+                }
+                // Same reason as the plan row above: "salon" is an internal
+                // template id, not something a customer agreed to. Show the
+                // label they actually picked.
+                if (key === 'templateId') {
+                  const t = industries.find((x) => x.id === value);
+                  if (!t) return null;
+                  return (
+                    <div key={key} style={{
+                      display: 'flex', justifyContent: 'space-between', padding: '6px 0',
+                      borderBottom: `1px solid ${c.borderDim}`, fontSize: '13px',
+                    }}>
+                      <span style={{ color: c.muted }}>Your bot:</span>
+                      <span style={{ color: c.lime, fontWeight: '700' }}>{t.label}</span>
                     </div>
                   );
                 }

@@ -52,6 +52,26 @@ export async function loadProducts() {
   return cache;
 }
 
+let industryCache = null;
+
+/**
+ * The industry bots a customer can choose, e.g. { id: 'salon', label: 'Hair
+ * & Beauty' }. Served rather than copied, for the same reason as the prices:
+ * a second hardcoded list here drifts the moment a template is renamed, and
+ * a templateId the API does not recognise means the go-live reconciler
+ * publishes nothing and the customer's bot silently never answers.
+ */
+export async function loadIndustries() {
+  if (industryCache) return industryCache;
+  const res = await api.get('/products/industries');
+  const industries = (res.data?.data || res.data)?.industries;
+  if (!Array.isArray(industries) || !industries.length) {
+    throw new Error('Industry list unavailable');
+  }
+  industryCache = industries;
+  return industryCache;
+}
+
 /** For a <select>: "Appointment Booker — R199/mo". */
 export const productOptions = (products) =>
   (products || []).map((p) => ({
