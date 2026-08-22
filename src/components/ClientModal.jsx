@@ -10,6 +10,7 @@
 // customWorkflow.questions (already in the backend's allowed-fields
 // whitelist from an earlier fix, so this persists correctly).
 import { useState } from 'react';
+import { planOptions, startingPrice } from '../config/plans';
 import api from '../api';
 import QuestionEditor from './QuestionEditor';
 
@@ -90,7 +91,9 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
     plan:           tenant?.plan           || 'starter',
     status:         tenant?.status         || 'trial',
     workflowType:   tenant?.workflowType   || 'basic',
-    monthlyFee:     tenant?.monthlyFee     || 950,
+    // startingPrice('starter'), not a literal — this said 950 while signup
+    // charged 999, so creating a client here undercut the advertised price.
+    monthlyFee:     tenant?.monthlyFee     || startingPrice('starter'),
     aiEnabled:      tenant?.aiEnabled      ?? true,
     industry:       tenant?.industry       || 'rental_agency',
     ownerPhone:     tenant?.ownerPhone     || '',
@@ -403,14 +406,28 @@ Send the proof of payment here and we'll get you going. 👍`}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div>
             <label style={labelStyle}>Plan</label>
+            {/*
+              Names and prices come from src/config/plans.js, the same table
+              Onboarding sells from. This dropdown used to carry its own
+              copy — "Starter R950" where signup said "Professional R999" —
+              so opening a client here silently repriced them by R49 and
+              renamed their plan.
+
+              Changing the plan only ever sets a STARTING price. monthlyFee
+              stays editable below because what a client pays is negotiated,
+              not implied by the key: NovaCare is on growth at R599.
+            */}
             <select value={form.plan} onChange={e => {
-              set('plan', e.target.value);
-              set('monthlyFee', e.target.value === 'r99' ? 99 : e.target.value === 'starter' ? 950 : e.target.value === 'growth' ? 2450 : 0);
+              const plan = e.target.value;
+              set('plan', plan);
+              const start = startingPrice(plan);
+              // Enterprise has no price. Leave whatever was agreed rather
+              // than writing 0, which reads as "free" in every report.
+              if (start !== null) set('monthlyFee', start);
             }} style={{ ...iStyle, marginBottom: 0 }}>
-              <option value="r99">R99 — R99/mo (lead-gen)</option>
-              <option value="starter">Starter — R950/mo</option>
-              <option value="growth">Growth — R2,450/mo</option>
-              <option value="enterprise">Enterprise — Custom</option>
+              {planOptions().map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
             </select>
           </div>
           <div>

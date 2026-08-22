@@ -18,6 +18,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import ConnectWhatsApp from '../components/ConnectWhatsApp';
+import { PLANS } from '../config/plans';
 
 const c = {
   bg: '#06080A', surface: '#0D110C', card: '#121710',
@@ -27,15 +28,13 @@ const c = {
   border: 'rgba(184,240,64,0.12)', borderDim: 'rgba(255,255,255,0.06)',
 };
 
-// FIX: single source of truth for plan -> public name -> price,
-// matching the live homepage pricing exactly (Professional R999,
-// Business R2,499, Enterprise Custom). Update this object, and both
-// the onboarding form AND the database write stay in sync.
-const PLANS = {
-  starter:    { label: 'Professional', price: 999,  description: '1 WhatsApp number, up to 5 agents' },
-  growth:     { label: 'Business',     price: 2499, description: '2 WhatsApp numbers, unlimited agents' },
-  enterprise: { label: 'Enterprise',   price: null, description: 'Custom — contact us for pricing' },
-};
+// PLANS now lives in src/config/plans.js — imported above.
+//
+// It was declared here AND in ClientModal.jsx, with different names and
+// different prices for the same key ("Professional R999" vs "Starter
+// R950"). The header comment above records that drift being fixed in June;
+// it was fixed in this file only, which is how the second copy survived.
+// One table, both screens.
 
 export default function Onboarding() {
   const navigate = useNavigate();
