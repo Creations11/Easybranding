@@ -1,77 +1,69 @@
 // src/config/plans.js
 //
-// The ONE place a plan's public name and price are written down.
+// The price list, FETCHED from the API rather than declared here.
 //
-// ── Why this file exists ────────────────────────────────────────────────
+// ── Why this file no longer holds prices ────────────────────────────────
 //
-// The same plan key meant different things depending on which screen you
-// were on. On 2026-08-22 there were four answers to "what does `starter`
-// cost":
+// It used to. So did ClientModal.jsx, and planLimits.js and paymentService.js
+// in the API — five copies in two repositories, all disagreeing:
 //
-//   Onboarding.jsx       "Professional"  R999    (matches the homepage)
-//   ClientModal.jsx      "Starter"       R950    (stale)
-//   API planLimits.js    —               R950    (vestigial, see below)
-//   What tenants pay     —               R950, R150, …
+//   Onboarding.jsx        "Professional"  R999
+//   ClientModal.jsx       "Starter"       R950
+//   API planLimits.js     —               R950
+//   API paymentService.js —               R950 fallback
+//   What tenants pay      —               R99–R250
 //
-// So a client was quoted R999 during signup and silently became R950 the
-// first time an admin opened them in the client modal. Onboarding.jsx's own
-// header records this drift being "fixed" in June — it was fixed in one
-// file, which created the second divergence rather than closing it.
+// A client was quoted R999 at signup and silently repriced to R950 the first
+// time an admin opened them. Two of the copies lived in a different repo
+// from the other three, which is why they drifted for months unnoticed.
 //
-// The prices here match the live homepage, because that is the number a
-// customer has actually been shown and agreed to. If the homepage changes,
-// change it here and both screens follow.
+// Consolidating them into one file per repo would have left two, and two
+// copies drift exactly as five did. So the API serves the list and this
+// fetches it. There is no local table to go stale.
 //
-// ── plan is NOT price ───────────────────────────────────────────────────
+// ── product is not plan ─────────────────────────────────────────────────
 //
-// Worth stating plainly, because the dropdowns imply otherwise: the plan
-// key drives FEATURE LIMITS on the API (maxAgents, maxNumbers in
-// planLimits.js). What a tenant actually pays is `monthlyFee`, negotiated
-// per client and written on the tenant.
+// `plan` (starter / growth / …) grants FEATURE LIMITS — agents, numbers,
+// entitlements. A product is what somebody buys: it sets `monthlyFee`, the
+// amount they are charged, and names the plan whose limits it needs.
 //
-// Those genuinely diverge in production and that is not a bug — NovaCare is
-// on `growth` at R599, vmpublishers on `starter` at R150. The price below is
-// the STARTING price the plan is sold at; monthlyFee is what was agreed.
-// Any report that infers revenue from `plan` will be wrong.
-//
-// The `price` field on the API's planLimits.js is vestigial — nothing reads
-// it for billing. Do not "sync" the two; they answer different questions.
+// They genuinely differ in production — NovaCare is on `growth` at R150 —
+// and conflating them is what produced the five copies.
+import api from '../api';
 
-export const PLANS = {
-  r99: {
-    label: 'R99 Lead Capture',
-    price: 99,
-    description: '1 WhatsApp number, 1 agent — lead capture only',
-  },
-  starter: {
-    label: 'Professional',
-    price: 999,
-    description: '1 WhatsApp number, up to 5 agents',
-  },
-  growth: {
-    label: 'Business',
-    price: 2499,
-    description: '2 WhatsApp numbers, unlimited agents',
-  },
-  enterprise: {
-    label: 'Enterprise',
-    price: null, // custom — quoted per client, never written as 0
-    description: 'Custom — contact us for pricing',
-  },
-};
-
-/** Dropdown options, in ladder order, cheapest first. */
-export const planOptions = () =>
-  Object.entries(PLANS).map(([value, p]) => ({
-    value,
-    label: p.price ? `${p.label} — R${p.price.toLocaleString('en-ZA')}/mo` : `${p.label} — ${p.description}`,
-  }));
+let cache = null;
 
 /**
- * The starting price for a plan, or null for Enterprise.
+ * The products, cheapest first.
  *
- * Null rather than 0 on purpose: 0 is a real fee meaning "free", and
- * writing it for a custom-quote client would make them look like a
- * non-paying tenant in every revenue report.
+ * Throws rather than returning a default. Every fallback price in this
+ * system has been wrong at least once — Tenant.monthlyFee defaults to 950,
+ * and paymentService fell back to 950 — so a checkout that cannot reach the
+ * price list must say so, not guess and charge somebody R950.
  */
-export const startingPrice = (plan) => PLANS[plan]?.price ?? null;
+export async function loadProducts() {
+  if (cache) return cache;
+  const res = await api.get('/products');
+  const products = (res.data?.data || res.data)?.products;
+  if (!Array.isArray(products) || !products.length) {
+    throw new Error('Price list unavailable');
+  }
+  cache = products;
+  return cache;
+}
+
+/** For a <select>: "Appointment Booker — R199/mo". */
+export const productOptions = (products) =>
+  (products || []).map((p) => ({
+    value: p.key,
+    label: `${p.label} — R${p.price}/mo`,
+    price: p.price,
+    plan: p.plan,
+  }));
+
+/** What a checkout writes onto the tenant when a product is chosen. */
+export const tenantFieldsFor = (products, key) => {
+  const p = (products || []).find((x) => x.key === key);
+  if (!p) return null;
+  return { plan: p.plan, monthlyFee: p.price };
+};

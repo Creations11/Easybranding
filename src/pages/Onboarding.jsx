@@ -14,11 +14,11 @@
 //    was being saved while the customer-facing pricing page never
 //    used that word at all. Mapped plan values to the real public
 //    tier names and prices so the two can't drift apart again.
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import ConnectWhatsApp from '../components/ConnectWhatsApp';
-import { PLANS } from '../config/plans';
+import { loadProducts, tenantFieldsFor } from '../config/plans';
 
 const c = {
   bg: '#06080A', surface: '#0D110C', card: '#121710',
@@ -40,6 +40,16 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  // The price list comes from the API. There is deliberately no local copy
+  // and no fallback: every hardcoded price in this system has been wrong at
+  // least once, and a checkout that guesses charges somebody the wrong
+  // amount. If this cannot load, the plan step says so.
+  const [products, setProducts] = useState([]);
+  const [priceError, setPriceError] = useState(null);
+  useEffect(() => {
+    loadProducts().then(setProducts).catch(() => setPriceError('Could not load pricing. Please reload.'));
+  }, []);
   const [form, setForm] = useState({
     businessName: '',
     brandName: '',
@@ -49,7 +59,7 @@ export default function Onboarding() {
     whatsappNumber: '',
     workflowType: 'full',
     ownerPhone: '',
-    plan: 'starter',
+    product: '',
   });
 
   const steps = [
@@ -114,9 +124,9 @@ export default function Onboarding() {
       icon: '💳',
       description: 'Pick the plan that fits your business.',
       fields: [
-        { name: 'plan', label: 'Plan', type: 'select', options: Object.entries(PLANS).map(([value, p]) => ({
-          value,
-          label: p.price ? `${p.label} — R${p.price}/month` : `${p.label} — ${p.description}`,
+        { name: 'product', label: 'Plan', type: 'select', options: products.map((p) => ({
+          value: p.key,
+          label: `${p.label} — R${p.price}/month`,
         })), required: true },
       ],
     },
@@ -164,17 +174,20 @@ export default function Onboarding() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const selectedPlan = PLANS[form.plan] || PLANS.starter;
+      // plan AND monthlyFee both come from the chosen product, which came
+      // from the API. Never from a table in this file — that is how a
+      // customer was quoted R999 at signup and charged R950 afterwards.
+      const chosen = tenantFieldsFor(products, form.product);
+      if (!chosen) {
+        alert('Please choose a plan.');
+        setLoading(false);
+        return;
+      }
       const payload = {
         ...form,
         status: 'trial',
-        plan: form.plan,
-        // FIX: monthlyFee now comes from the same PLANS table shown
-        // to the customer during selection — never silently hardcoded.
-        // Enterprise has no fixed price (null), so it's omitted and
-        // handled as a custom-quote case rather than written as 0
-        // or a guessed number.
-        monthlyFee: selectedPlan.price,
+        plan: chosen.plan,
+        monthlyFee: chosen.monthlyFee,
         workflowType: form.workflowType || 'full',
       };
       // A client who connected their own number already HAS a tenant: the
@@ -413,9 +426,10 @@ export default function Onboarding() {
                 // FIX: show the real plan label + price in the review
                 // step, not the raw internal value ("starter"), so
                 // the customer sees exactly what they're agreeing to.
-                if (key === 'plan') {
-                  const p = PLANS[value] || PLANS.starter;
-                  const display = p.price ? `${p.label} — R${p.price}/month` : `${p.label} — Custom pricing`;
+                if (key === 'product') {
+                  const p = products.find((x) => x.key === value);
+                  if (!p) return null;
+                  const display = `${p.label} — R${p.price}/month`;
                   return (
                     <div key={key} style={{
                       display: 'flex', justifyContent: 'space-between', padding: '6px 0',

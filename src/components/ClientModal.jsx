@@ -10,7 +10,8 @@
 // customWorkflow.questions (already in the backend's allowed-fields
 // whitelist from an earlier fix, so this persists correctly).
 import { useState } from 'react';
-import { planOptions, startingPrice } from '../config/plans';
+import { useEffect } from 'react';
+import { loadProducts } from '../config/plans';
 import api from '../api';
 import QuestionEditor from './QuestionEditor';
 
@@ -91,9 +92,11 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
     plan:           tenant?.plan           || 'starter',
     status:         tenant?.status         || 'trial',
     workflowType:   tenant?.workflowType   || 'basic',
-    // startingPrice('starter'), not a literal — this said 950 while signup
-    // charged 999, so creating a client here undercut the advertised price.
-    monthlyFee:     tenant?.monthlyFee     || startingPrice('starter'),
+    // No default price. Every hardcoded one in this system has been wrong at
+    // least once — this said 950 while signup charged 999 — and an unset fee
+    // is honest where a guessed one silently bills somebody. Choosing a
+    // product below sets it.
+    monthlyFee:     tenant?.monthlyFee     ?? '',
     aiEnabled:      tenant?.aiEnabled      ?? true,
     industry:       tenant?.industry       || 'rental_agency',
     ownerPhone:     tenant?.ownerPhone     || '',
@@ -132,6 +135,8 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
   });
   // NEW: custom questions, separate from `form` since this is a
   // nested array (customWorkflow.questions), not a flat field.
+  const [products, setProducts] = useState([]);
+  useEffect(() => { loadProducts().then(setProducts).catch(() => {}); }, []);
   const [questions, setQuestions] = useState(tenant?.customWorkflow?.questions || []);
   // Bot Messages — tenantWorkflowService.js's getMessage() reads
   // tenant.customMessages.{welcome,qualified,rejected}, but no UI ever
@@ -417,16 +422,32 @@ Send the proof of payment here and we'll get you going. 👍`}
               stays editable below because what a client pays is negotiated,
               not implied by the key: NovaCare is on growth at R599.
             */}
-            <select value={form.plan} onChange={e => {
-              const plan = e.target.value;
-              set('plan', plan);
-              const start = startingPrice(plan);
-              // Enterprise has no price. Leave whatever was agreed rather
-              // than writing 0, which reads as "free" in every report.
-              if (start !== null) set('monthlyFee', start);
-            }} style={{ ...iStyle, marginBottom: 0 }}>
-              {planOptions().map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
+            {/*
+              Products come from the API, not a table in this file. Choosing
+              one sets BOTH the plan (feature limits) and monthlyFee (what
+              they are charged) — the two are different things and were
+              conflated across five copies until 2026-08-22.
+
+              monthlyFee stays editable below: a product sets the standard
+              price, and what a client actually pays is negotiated. NovaCare
+              is on `growth` at R150.
+            */}
+            <select
+              value={form.product || ''}
+              onChange={e => {
+                const chosen = products.find(p => p.key === e.target.value);
+                if (!chosen) return;
+                set('product', chosen.key);
+                set('plan', chosen.plan);
+                set('monthlyFee', chosen.price);
+              }}
+              style={{ ...iStyle, marginBottom: 0 }}
+            >
+              <option value="">
+                {products.length ? `Current: ${form.plan} · R${form.monthlyFee}` : 'Loading prices…'}
+              </option>
+              {products.map(p => (
+                <option key={p.key} value={p.key}>{p.label} — R{p.price}/mo</option>
               ))}
             </select>
           </div>
