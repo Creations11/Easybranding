@@ -17,6 +17,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
+import ConnectWhatsApp from '../components/ConnectWhatsApp';
 
 const c = {
   bg: '#06080A', surface: '#0D110C', card: '#121710',
@@ -81,8 +82,19 @@ export default function Onboarding() {
         { name: 'contactEmail', label: 'Your Email', placeholder: 'admin@abcrentals.co.za', type: 'email', required: true },
         { name: 'contactPhone', label: 'Your Phone Number', placeholder: '+27821234567', required: true },
         { name: 'ownerPhone', label: 'Owner WhatsApp (for commands)', placeholder: '+27821234567', required: true },
-        { name: 'whatsappNumber', label: 'Business WhatsApp Number', placeholder: 'whatsapp:+27821234567', required: true },
       ],
+    },
+    {
+      // ADR-008 Phase 6. The business number used to be a text box the owner
+      // typed "whatsapp:+27821234567" into — which is how a tenant ends up
+      // live on a number with a typo in it. Now it is a choice between two
+      // genuinely different products, and one of them verifies the number
+      // with Meta rather than trusting what was typed.
+      title: 'Your WhatsApp Number',
+      icon: '💬',
+      description: 'Two ways to do this. Most businesses want the first.',
+      fields: [],
+      custom: 'whatsapp',
     },
     {
       title: 'Workflow Configuration',
@@ -121,6 +133,19 @@ export default function Onboarding() {
 
   const handleNext = () => {
     const currentStep = steps[step];
+
+    // The number step has no `fields`, so the loop below cannot guard it.
+    // Without this a tenant can be created with no WhatsApp number at all —
+    // it would look successful and never receive a message.
+    if (currentStep.custom === 'whatsapp' && !form.whatsappNumber) {
+      alert(
+        form.numberMode === 'own'
+          ? 'Please finish connecting your number with Meta, or switch to a managed number.'
+          : 'Please enter the WhatsApp number we should set up for you.'
+      );
+      return;
+    }
+
     const requiredFields = currentStep.fields.filter(f => f.required);
     for (const field of requiredFields) {
       if (!form[field.name]?.trim()) {
@@ -232,6 +257,77 @@ export default function Onboarding() {
 
         {/* Fields */}
         <div style={{ marginBottom: '32px' }}>
+          {currentStep.custom === 'whatsapp' && (
+            <div>
+              {[
+                {
+                  key: 'managed',
+                  title: 'Give me a number',
+                  blurb: 'We provide a WhatsApp number on our account. Live today — no paperwork, no card, nothing to verify. Your customers see "' + (form.brandName || form.businessName || 'Your Business') + ' by EasyBranding".',
+                },
+                {
+                  key: 'own',
+                  title: 'Connect my own number',
+                  blurb: 'Your number, your own business name, and you can keep using the WhatsApp Business app on it. Meta verifies your business itself, which usually takes a few days.',
+                },
+              ].map(opt => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => set('numberMode', opt.key)}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left', marginBottom: '12px',
+                    padding: '14px 16px', borderRadius: '12px', cursor: 'pointer',
+                    background: form.numberMode === opt.key ? 'rgba(184,240,64,0.08)' : c.card,
+                    border: `1px solid ${form.numberMode === opt.key ? c.lime : c.borderDim}`,
+                    color: c.text,
+                  }}
+                >
+                  <div style={{ fontWeight: 700, marginBottom: '4px' }}>{opt.title}</div>
+                  <div style={{ color: c.muted, fontSize: '13px', lineHeight: 1.5 }}>{opt.blurb}</div>
+                </button>
+              ))}
+
+              {form.numberMode === 'own' && (
+                <div style={{ marginTop: '16px' }}>
+                  <ConnectWhatsApp
+                    businessName={form.businessName}
+                    contactEmail={form.contactEmail}
+                    colors={c}
+                    onConnected={(d) => {
+                      // Meta's verified number, not a typed one.
+                      set('whatsappNumber', d.whatsappNumber);
+                      set('phoneNumberId', d.phoneNumberId);
+                      set('wabaId', d.wabaId);
+                      set('provider', 'cloud');
+                    }}
+                  />
+                </div>
+              )}
+
+              {form.numberMode === 'managed' && (
+                <div style={{ marginTop: '16px' }}>
+                  <label style={{ color: c.muted, fontSize: '13px', marginBottom: '6px', display: 'block' }}>
+                    Business WhatsApp Number <span style={{ color: c.lime }}>*</span>
+                  </label>
+                  <input
+                    value={form.whatsappNumber || ''}
+                    onChange={e => set('whatsappNumber', e.target.value)}
+                    placeholder="whatsapp:+27821234567"
+                    style={{
+                      width: '100%', padding: '12px 14px', borderRadius: '10px',
+                      background: c.card, border: `1px solid ${c.borderDim}`,
+                      color: c.text, fontSize: '15px',
+                    }}
+                  />
+                  <div style={{ color: c.muted, fontSize: '12px', marginTop: '6px' }}>
+                    Leave this to us if you don't have one yet — we'll allocate one and confirm it.
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {currentStep.fields.map(field => (
             <div key={field.name} style={{ marginBottom: '16px' }}>
               <label style={{
