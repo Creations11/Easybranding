@@ -178,7 +178,17 @@ export default function Onboarding() {
         monthlyFee: selectedPlan.price,
         workflowType: form.workflowType || 'full',
       };
-      await api.post('/tenants', payload);
+      // A client who connected their own number already HAS a tenant: the
+      // Embedded Signup endpoint creates one the moment Meta confirms the
+      // number, because it must work for the standalone /signup/connect
+      // page too. POSTing here as well would create a SECOND tenant on the
+      // same WhatsApp number — two rows, one number, and getTenantByNumber
+      // returning whichever it finds first.
+      if (form.tenantId) {
+        await api.put(`/tenants/${form.tenantId}`, payload);
+      } else {
+        await api.post('/tenants', payload);
+      }
       // After successful creation, redirect to dashboard
       navigate('/admin');
     } catch (err) {
@@ -300,6 +310,12 @@ export default function Onboarding() {
                       set('phoneNumberId', d.phoneNumberId);
                       set('wabaId', d.wabaId);
                       set('provider', 'cloud');
+                      // The signup endpoint ALREADY created the tenant — it
+                      // has to, because the standalone /signup/connect page
+                      // has no form behind it. Remembering the id is what
+                      // stops handleSubmit creating a second one for the
+                      // same number.
+                      set('tenantId', d.tenantId);
                     }}
                   />
                 </div>
