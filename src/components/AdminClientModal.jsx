@@ -35,7 +35,11 @@ export default function AdminClientModal({ client, onClose, onSave }) {
     whatsappNumber:  client?.whatsappNumber  || '',
     workflowType:    client?.workflowType    || 'full',
     plan:            client?.plan            || 'starter',
-    monthlyFee:      client?.monthlyFee      || 950,
+    // No `|| 950`. An unpriced client opened in this modal and saved would
+    // be written to R950 — nearly 10x what Venbus pays — without anyone
+    // typing a number. Empty means "not priced yet", which is the truth, and
+    // the API refuses to invoice it rather than guessing.
+    monthlyFee:      client?.monthlyFee      ?? '',
     status:          client?.status          || 'trial',
     notes:           client?.notes           || '',
     incomeMultiplier: client?.qualificationRules?.incomeMultiplier ?? 3,
@@ -188,10 +192,14 @@ export default function AdminClientModal({ client, onClose, onSave }) {
             <div>
               <p style={{ color: colors.muted, fontSize: '12px', marginBottom: '6px' }}>Plan</p>
               <select value={form.plan} onChange={e => set('plan', e.target.value)} style={iStyle}>
-                <option value="r99">R99 - R99/mo (lead-gen)</option>
-                <option value="starter">Starter - R950/mo</option>
-                <option value="growth">Growth - R2,450/mo</option>
-                <option value="enterprise">Enterprise - Custom</option>
+                {/* Plan is a FEATURE-LIMIT tier, not a price. Naming prices
+                    here made it look like one and they were wrong anyway —
+                    R950 and R2,450 are figures no tenant has ever paid. The
+                    amount charged is monthlyFee, the field directly below. */}
+                <option value="r99">R99 — entry</option>
+                <option value="starter">Starter</option>
+                <option value="growth">Growth</option>
+                <option value="enterprise">Enterprise</option>
               </select>
               <input value={form.monthlyFee} onChange={e => set('monthlyFee', e.target.value)} type="number" placeholder="Monthly Fee (R)" style={iStyle} />
               <p style={{ color: colors.muted, fontSize: '12px', marginBottom: '6px' }}>Status</p>

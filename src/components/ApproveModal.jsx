@@ -35,9 +35,9 @@ export default function ApproveModal({ user, tenants, onClose, onApproved }) {
             <p style={{ color: c.muted, fontSize: '11px', textTransform: 'uppercase', marginBottom: '2px' }}>Requested plan</p>
             <p style={{ color: c.lime, fontWeight: '700', textTransform: 'capitalize' }}>{user.requestedPlan}</p>
           </div>
-          <p style={{ color: c.lime, fontWeight: '700' }}>
-            {user.requestedPlan === 'starter' ? 'R950/mo' : user.requestedPlan === 'growth' ? 'R2,450/mo' : 'Custom'}
-          </p>
+          {/* Price removed — see AdminApproveModal.jsx. R950 / R2,450 are
+              figures no tenant has ever paid, and requestedPlan now carries a
+              product key, so this rendered "Custom" for every real request. */}
         </div>
       )}
       {error && <p style={{ color: c.red, fontSize: '14px', marginBottom: '12px' }}>{error}</p>}

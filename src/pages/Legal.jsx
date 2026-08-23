@@ -158,13 +158,17 @@ These terms constitute a binding legal agreement between you ("Client" or "User"
 • Ensuring your team members comply with these terms
 
 We reserve the right to suspend or terminate accounts that provide false information or violate these terms.`}/>
-      <Section title="4. Subscription Plans and Billing" body={`The Platform is offered on a monthly subscription basis:
+      {/* The prices were written into this document as "Starter R950 /
+          Growth R2,450". Neither is a price we sell — R950 is nearly 10x
+          what our entry customers pay — so our published terms stated a
+          figure no customer has ever been charged.
 
-• Starter: R950/month
-• Growth: R2,450/month
-• Enterprise: Custom pricing
+          Naming prices in a legal document guarantees this recurs: the terms
+          are the copy nobody remembers to update. It now points at the
+          published price list, which is served from one place. */}
+      <Section title="4. Subscription Plans and Billing" body={`The Platform is offered on a monthly subscription basis. Current plans and prices are published at easybranding.co.za and are shown to you before you pay; the price you agree to at signup is the price you are charged.
 
-All plans include a 30-day free trial. After the trial, your selected plan will be billed monthly via Paystack. We reserve the right to change pricing with 30 days written notice.`}/>
+Your selected plan is billed monthly via Paystack. We reserve the right to change pricing with 30 days written notice, and a change never applies to a billing period you have already paid for.`}/>
       <Section title="5. Refund and Cancellation" body={`You may cancel your subscription at any time by providing 30 days written notice to ayanda@easybranding.co.za. No refunds are issued for partial months already paid. Full details are in our Refund Policy.`}/>
       <Section title="6. WhatsApp and Third-Party Services" body={`The Platform integrates with WhatsApp Business API (via Twilio), subject to Meta's terms of service. You agree to only message customers who have opted in to receive communications and to comply with WhatsApp's messaging policies. We are not liable for disruptions caused by WhatsApp, Twilio, Paystack, or other third-party services.`}/>
       <Section title="7. Data and Privacy" body={`We comply with the Protection of Personal Information Act (POPIA). Your customer data is stored securely, never sold or shared with third parties, and is isolated per client. Full details are in our Privacy Policy.`}/>
@@ -250,11 +254,9 @@ export function RefundPolicy() {
 • No charge during the trial period
 • Cancel at any time during the trial with no obligation
 • First payment processed on day 31 if you choose to continue`}/>
-      <Section title="2. Subscription Billing" body={`After the free trial, subscriptions are billed monthly in advance:
-
-• Starter: R950/month
-• Growth: R2,450/month
-• Enterprise: Custom pricing agreed in writing
+      {/* Prices removed here for the same reason as the Terms — see the
+          comment on section 4 there. */}
+      <Section title="2. Subscription Billing" body={`Subscriptions are billed monthly in advance at the plan price shown to you at signup and published at easybranding.co.za.
 
 Payments are processed via Paystack. You will receive an invoice by email after each payment.`}/>
       <Section title="3. Cancellation Policy" body={`You may cancel at any time by sending a written request to ayanda@easybranding.co.za with your business name and registered email address.

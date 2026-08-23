@@ -49,9 +49,12 @@ export default function AdminApproveModal({ user, tenants, onClose, onApproved }
               <p style={{ color: colors.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>Requested plan</p>
               <p style={{ color: PLAN_COLORS[user.requestedPlan] || colors.lime, fontWeight: '700', fontSize: '15px', textTransform: 'capitalize' }}>{user.requestedPlan}</p>
             </div>
-            <p style={{ color: PLAN_COLORS[user.requestedPlan] || colors.lime, fontSize: '14px', fontWeight: '600' }}>
-              {user.requestedPlan === 'starter' ? 'R950/mo' : user.requestedPlan === 'growth' ? 'R2,450/mo' : 'Custom'}
-            </p>
+            {/* The price used to be printed here as R950 / R2,450. Both are
+                figures no tenant has ever paid, and since signup links carry
+                a PRODUCT key ("ai_receptionist") rather than "starter", this
+                showed "Custom" for every real request anyway. A wrong price
+                in front of the person approving is worse than none — the
+                amount charged is monthlyFee on the client record. */}
           </div>
         )}
 
