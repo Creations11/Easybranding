@@ -56,7 +56,20 @@ export default function ConnectWhatsApp({ businessName, contactEmail, onConnecte
     api.get('/embedded-signup/config')
       .then((r) => {
         const data = r.data?.data || r.data;
-        if (cancelled || !data?.appId) return;
+        if (cancelled) return;
+
+        // Say WHY rather than returning silently. This used to `return` on a
+        // missing appId, which left the button reading "Loading…" forever —
+        // indistinguishable from a slow network, and the exact state a
+        // customer would sit in if the server were not configured. The server
+        // now sends `ready` plus a `reason`; show it.
+        if (!data?.appId || !data?.configId || data.ready === false) {
+          setError(
+            data?.reason ||
+            'WhatsApp sign-up is not configured on this server yet. Nothing you did is wrong — we are on it.'
+          );
+          return;
+        }
         setCfg(data);
 
         if (loaded.current) return;
