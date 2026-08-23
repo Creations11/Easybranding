@@ -66,6 +66,33 @@ export default function Onboarding() {
   // their OWN tenant rather than the client's.
   const { user, isSuperAdmin, isEBManager } = useAuth();
   const isOperator = isSuperAdmin || isEBManager || user?.role === 'eb_agent';
+
+  // A self-served owner ALREADY has a tenant — registering created it. Seed
+  // its id so the last step PUTs to that tenant instead of POSTing a new one.
+  //
+  // Without this the wizard creates a SECOND tenant for the same business:
+  // form.tenantId was only ever set by the Embedded Signup callback, so
+  // anyone taking the managed-number route fell through to POST /tenants.
+  // Two rows for one business, and getTenantByNumber returning whichever it
+  // finds first — the same double-creation bug Embedded Signup already had.
+  //
+  // Prefills the details they typed at registration too, so the wizard reads
+  // as a continuation rather than asking the same questions again.
+  useEffect(() => {
+    if (isOperator || !user?.tenantId) return;
+    setForm((prev) => ({ ...prev, tenantId: prev.tenantId || user.tenantId }));
+    api.get('/onboarding/status')
+      .then((r) => {
+        const b = (r.data?.data || r.data)?.business;
+        if (!b) return;
+        setForm((prev) => ({
+          ...prev,
+          businessName: prev.businessName || b.name || '',
+          contactEmail: prev.contactEmail || user.email || '',
+        }));
+      })
+      .catch(() => {}); // prefill is a convenience; they can type it themselves
+  }, [isOperator, user?.tenantId, user?.email]);
   const [form, setForm] = useState({
     businessName: '',
     brandName: '',
@@ -81,6 +108,11 @@ export default function Onboarding() {
     // reporting label with its own enum. This is a flowTemplates id, and the
     // go-live reconciler publishes exactly this template or nothing at all.
     templateId: '',
+    // Set from the logged-in owner's own tenant (see the effect below) or by
+    // the Embedded Signup callback. Its presence is what makes the final step
+    // PUT rather than POST — i.e. update the business they already have
+    // instead of creating a duplicate.
+    tenantId: '',
   });
 
   const steps = [
@@ -499,6 +531,8 @@ export default function Onboarding() {
               marginTop: '8px',
             }}>
               {Object.entries(form).map(([key, value]) => {
+                // Internal plumbing, not something a customer reviews.
+                if (key === 'tenantId') return null;
                 // FIX: show the real plan label + price in the review
                 // step, not the raw internal value ("starter"), so
                 // the customer sees exactly what they're agreeing to.

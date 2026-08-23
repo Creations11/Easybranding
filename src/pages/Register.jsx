@@ -1,7 +1,24 @@
 // src/pages/Register.jsx
+//
+// ── Why this used to dead-end ───────────────────────────────────────────
+//
+// Registering ALWAYS showed "pending approval — an admin reviews your
+// account", regardless of what the server said. The API stopped working that
+// way on 2026-08-22: a business signing itself up now gets a tenant, the
+// admin role, and a session cookie, and the response says `pending: false`.
+//
+// This screen ignored that field, so every self-served signup landed on a
+// screen telling them to wait for a human who was never coming — and because
+// the wizard is the ONLY place Embedded Signup lives, nobody ever reached it.
+// The whole automatic go-live chain sat behind a screen nobody could pass.
+//
+// The pending screen is still correct for INVITED users joining an existing
+// tenant: that approval gate exists to stop a stranger reaching another
+// business's data, and it still does.
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../api';
+import { loadProducts } from '../config/plans';
 
 const t = {
   bg: '#080A06', card: '#0E110B', lime: '#B8F040',
@@ -14,13 +31,17 @@ export default function Register() {
   const inviteToken     = searchParams.get('invite');
   const selectedPlan    = searchParams.get('plan') || null;
 
-  const PLAN_LABELS = {
-    starter:    { label: 'Starter', price: 'R950/mo',   color: '#7A9E6E' },
-    growth:     { label: 'Growth',  price: 'R2,450/mo', color: '#B8F040' },
-    enterprise: { label: 'Enterprise', price: 'Custom', color: '#C4873A' },
-  };
+  // The plan badge, from the API. This was a hardcoded table saying
+  // "Starter R950 / Growth R2,450" — the SIXTH copy of the prices in this
+  // system, and one of the wrongest: R950 is nearly 10x what Venbus pays and
+  // R2,450 is a figure no tenant has ever been charged. Somebody arriving
+  // from a pricing link was greeted with a price we do not sell.
+  const [products, setProducts] = useState([]);
+  useEffect(() => { loadProducts().then(setProducts).catch(() => {}); }, []);
+  const planBadge = products.find((p) => p.key === selectedPlan) || null;
 
   const [fullName,     setFullName]     = useState('');
+  const [businessName, setBusinessName] = useState('');
   const [email,        setEmail]        = useState('');
   const [phone,        setPhone]        = useState('');
   const [password,     setPassword]     = useState('');
@@ -56,10 +77,32 @@ export default function Register() {
     try {
       const res = await api.post('/auth/register', {
         fullName, email, phone, password,
+        // Omitted entirely for invites — sending one alongside an invite
+        // token would be ambiguous about which tenant they are joining.
+        businessName: inviteToken ? undefined : businessName,
         inviteToken: inviteToken || undefined,
         plan: selectedPlan || undefined,
       });
-      setTenantName(res.data.data?.tenantName || tenantName);
+      const data = res.data.data || res.data;
+      setTenantName(data?.tenantName || tenantName);
+
+      // A self-served business is already signed in — the server set the
+      // session cookie and returned pending: false. Send them straight into
+      // the wizard, which is where Embedded Signup and checkout live.
+      //
+      // Making somebody log in again immediately after registering is the
+      // step a self-service funnel loses people at, and showing them a
+      // "pending approval" screen loses all of them.
+      if (data?.pending === false) {
+        // Token is in an httpOnly cookie; only the user object is stored —
+        // the same arrangement Login.jsx uses.
+        localStorage.setItem('eb_user', JSON.stringify(data.user));
+        window.location.href = '/onboarding';
+        return;
+      }
+
+      // Invited users still wait for approval. That gate protects an
+      // EXISTING tenant's data and is not what this change removes.
       setPending(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
@@ -170,8 +213,12 @@ export default function Register() {
 
           {!inviteToken && (
             <div style={{ background: 'rgba(184,240,64,0.05)', border: `1px solid ${t.border}`, borderRadius: '14px', padding: '20px', marginTop: '20px' }}>
-              <p style={{ color: t.muted, fontSize: '13px', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '600' }}>How approval works</p>
-              {['Submit your details', 'Admin reviews your account', 'Get access within 24 hours'].map((step, i) => (
+              {/* Was "How approval works — admin reviews your account, get
+                  access within 24 hours". Nothing about that is true any
+                  more, and promising a 24-hour wait to somebody who is
+                  actually about to go live in minutes is the wrong story. */}
+              <p style={{ color: t.muted, fontSize: '13px', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '600' }}>What happens next</p>
+              {['Create your account', 'Connect your WhatsApp number', 'Choose your bot and go live'].map((step, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: i < 2 ? '10px' : 0 }}>
                   <div style={{ width: '22px', height: '22px', background: t.lime, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: t.bg, fontWeight: '800', flexShrink: 0 }}>{i + 1}</div>
                   <span style={{ color: t.muted, fontSize: '14px' }}>{step}</span>
@@ -190,20 +237,25 @@ export default function Register() {
         </Link>
 
         <h1 style={{ fontSize: '26px', fontWeight: '800', marginBottom: '6px', letterSpacing: '-0.01em' }}>
-          {inviteToken && tenantName ? `Join ${tenantName}` : 'Request access'}
+          {inviteToken && tenantName ? `Join ${tenantName}` : 'Create your account'}
         </h1>
         <p style={{ color: t.muted, fontSize: '14px', marginBottom: selectedPlan ? '16px' : '28px' }}>
-          {inviteToken && inviteValid ? `You've been invited to ${tenantName}` : 'Create your account — approval required'}
+          {/* "Request access — approval required" was true until 2026-08-22
+              and is now only true for invited users. A business signing
+              itself up goes straight through. */}
+          {inviteToken && inviteValid
+            ? `You've been invited to ${tenantName}`
+            : "Set up your WhatsApp assistant — you'll be connecting your number next"}
         </p>
 
-        {/* Plan badge */}
-        {selectedPlan && PLAN_LABELS[selectedPlan] && (
-          <div style={{ background: `${PLAN_LABELS[selectedPlan].color}12`, border: `1px solid ${PLAN_LABELS[selectedPlan].color}33`, borderRadius: '10px', padding: '10px 14px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {/* Plan badge — label and price from the API, never from this file */}
+        {planBadge && (
+          <div style={{ background: `${t.lime}12`, border: `1px solid ${t.lime}33`, borderRadius: '10px', padding: '10px 14px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <p style={{ color: t.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>Selected plan</p>
-              <p style={{ color: PLAN_LABELS[selectedPlan].color, fontWeight: '700', fontSize: '15px' }}>{PLAN_LABELS[selectedPlan].label}</p>
+              <p style={{ color: t.lime, fontWeight: '700', fontSize: '15px' }}>{planBadge.label}</p>
             </div>
-            <p style={{ color: PLAN_LABELS[selectedPlan].color, fontWeight: '700', fontSize: '16px' }}>{PLAN_LABELS[selectedPlan].price}</p>
+            <p style={{ color: t.lime, fontWeight: '700', fontSize: '16px' }}>R{planBadge.price}/mo</p>
           </div>
         )}
 
@@ -226,6 +278,20 @@ export default function Register() {
             <input type="text"     value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Full name"     required style={inputStyle}
               onFocus={e => e.target.style.borderColor = 'rgba(184,240,64,0.4)'}
               onBlur={e  => e.target.style.borderColor = 'rgba(255,255,255,0.08)'} />
+            {/* Business name is what makes this a SELF-SERVICE signup. The
+                API branches on it: with a name it creates the tenant, signs
+                them in and returns pending:false; without one it falls
+                through to the invited-user path and returns "pending
+                approval". This field did not exist, so every website signup
+                took the pending branch and waited for a human who was never
+                coming — and the wizard, which is the only place Embedded
+                Signup lives, was unreachable. Not shown for invites: those
+                join a tenant that already has a name. */}
+            {!inviteToken && (
+              <input type="text" value={businessName} onChange={e => setBusinessName(e.target.value)} placeholder="Business name" required style={inputStyle}
+                onFocus={e => e.target.style.borderColor = 'rgba(184,240,64,0.4)'}
+                onBlur={e  => e.target.style.borderColor = 'rgba(255,255,255,0.08)'} />
+            )}
             <input type="email"    value={email}    onChange={e => setEmail(e.target.value)}    placeholder="Email address" required style={inputStyle}
               onFocus={e => e.target.style.borderColor = 'rgba(184,240,64,0.4)'}
               onBlur={e  => e.target.style.borderColor = 'rgba(255,255,255,0.08)'} />
