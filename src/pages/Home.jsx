@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { loadProducts } from '../config/plans';
 
 const t = {
   void:      '#14231C',
@@ -180,6 +181,27 @@ function FAQ() {
 
 // ── Home page ───────────────────────────────────────────────
 export default function Home() {
+  // ── The price customers are quoted, from the one place it lives ────────
+  //
+  // This section said a flat "R999/month". That is the TOP of the ladder —
+  // the AI Sales Assistant — while the entry product is R99, and the
+  // Facebook ad that brings most of our inbound sells that R99 product by
+  // name. So a lead clicked an R99 ad, arrived here, and was told R999.
+  //
+  // Fetched rather than retyped: a hardcoded number here is how it came to
+  // disagree with the ad in the first place. Falls back to the existing copy
+  // if the list cannot load — a price page that renders "From R/month" is
+  // worse than one showing the old figure.
+  const [fromPrice, setFromPrice] = useState(null);
+  useEffect(() => {
+    loadProducts()
+      .then((ps) => {
+        const min = Math.min(...ps.map((p) => p.price).filter((n) => Number.isFinite(n)));
+        if (Number.isFinite(min)) setFromPrice(min);
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <div style={{
       fontFamily: "'Archivo', sans-serif",
@@ -687,7 +709,7 @@ export default function Home() {
       <section className="section" style={{ background: t.boneDim, textAlign: 'center' }}>
         <div className="wrap-narrow">
           <p className="pricing-line">
-            R999/month.<br />
+            {fromPrice ? `From R${fromPrice}/month.` : 'R999/month.'}<br />
             Less than one missed job.<br />
             Less than one late-night admin session.<br />
             Less than the cost of wondering.
