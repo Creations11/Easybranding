@@ -16,6 +16,7 @@ import AgentDashboard     from './pages/AgentDashboard';
 import PendingApproval    from './pages/PendingApproval';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import Onboarding         from './pages/Onboarding';
+import Continue           from './pages/Continue';
 import Documentation      from './pages/Documentation';
 import Help               from './pages/Help';
 
@@ -139,6 +140,11 @@ export default function App() {
                   <Onboarding />
                 </ProtectedRoute>
               } />
+
+              {/* Deliberately PUBLIC and not wrapped in PublicRoute: the one-time
+                  token is the credential, and a logged-in operator sending
+                  themselves a test link must not be bounced to a dashboard. */}
+              <Route path="/continue" element={<Continue />} />
 
               {/* ── Fallback ──────────────────────────────────────── */}
               <Route path="*" element={<Navigate to="/" replace />} />
