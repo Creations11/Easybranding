@@ -40,7 +40,36 @@ export default function Continue() {
   const [connected, setConnected] = useState(null);
 
   useEffect(() => {
+    // ── No token + a session = a refresh, so let them carry on ─────────
+    //
+    // The token is consumed the moment this page loads, which is right: a
+    // link that survives failure survives forwarding. But it meant a FAILED
+    // attempt burned the link — NovaCare hit Meta's "JSSDK Option is Not
+    // Toggled" error, and retrying after the fix would have needed a whole
+    // new link minted by hand.
+    //
+    // Redemption already signed them in, so a session with no token in the
+    // URL is somebody coming back: refresh, back button, or returning after
+    // a config fix. Let them straight through.
+    //
+    // ORDER MATTERS, and getting it backwards is dangerous. A token in the
+    // URL ALWAYS wins over an existing session, because the token names who
+    // the page is for and the session only says who this browser is. An
+    // operator logged in as super_admin opening a client's link would
+    // otherwise connect the client's number to the OPERATOR's tenant — the
+    // same owner-versus-operator confusion the onboarding wizard guards
+    // against at its final step.
     if (!token) {
+      const existing = localStorage.getItem('eb_user');
+      if (existing) {
+        try {
+          setUser(JSON.parse(existing));
+          setState('ready');
+          return;
+        } catch {
+          localStorage.removeItem('eb_user'); // corrupt — fall through
+        }
+      }
       setState('failed');
       setError('That link is missing its code. Ask us to send a fresh one.');
       return;
