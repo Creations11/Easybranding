@@ -43,6 +43,7 @@ import exportCSV from '../utils/exportCSV';
 // FIX: PACMembersPanel existed but was never imported.
 import PACMembersPanel from '../components/PACMembersPanel';
 import AutomationPanel from '../components/AutomationPanel';
+import BillingPanel from '../components/BillingPanel';
 
 // ── Design tokens ─────────────────────────────────────────────
 const c = {
@@ -191,9 +192,12 @@ export default function SuperAdminDashboard() {
     if (!isEBAgent) { s.push({ id: 'ebteam',     icon: '👔', label: 'EB Team',   badge: 0 }); }
     if (!isEBAgent) { s.push({ id: 'users',      icon: '👤', label: 'Users',     badge: pendingUsers.length }); }
     if (isSuperAdmin) { s.push({ id: 'automation', icon: '🤖', label: 'Automation', badge: 0 }); }
+    // Billing the platform's clients. The API allows super_admin and
+    // eb_manager (a client's own `admin` is refused), so the tab matches.
+    if (isSuperAdmin || user?.role === 'eb_manager') { s.push({ id: 'billing', icon: '🧾', label: 'Billing', badge: 0 }); }
     if (isSuperAdmin) { s.push({ id: 'platform', icon: '⚙️', label: 'Platform', badge: 0 }); }
     return s;
-  }, [isEBAgent, isSuperAdmin, alerts.length, pendingUsers.length]);
+  }, [isEBAgent, isSuperAdmin, user?.role, alerts.length, pendingUsers.length]);
 
 
   // ── Loading ────────────────────────────────────────────────
@@ -440,6 +444,13 @@ export default function SuperAdminDashboard() {
                 </>
               )}
             </div>
+          </SectionErrorBoundary>
+        )}
+
+        {/* ════════ BILLING ════════ */}
+        {section === 'billing' && (isSuperAdmin || user?.role === 'eb_manager') && (
+          <SectionErrorBoundary name="Billing" onRetry={refetch}>
+            <BillingPanel />
           </SectionErrorBoundary>
         )}
 
