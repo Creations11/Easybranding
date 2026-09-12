@@ -44,6 +44,7 @@ import exportCSV from '../utils/exportCSV';
 import PACMembersPanel from '../components/PACMembersPanel';
 import AutomationPanel from '../components/AutomationPanel';
 import BillingPanel from '../components/BillingPanel';
+import SystemHealthPanel from '../components/SystemHealthPanel';
 
 // ── Design tokens ─────────────────────────────────────────────
 const c = {
@@ -195,6 +196,7 @@ export default function SuperAdminDashboard() {
     // Billing the platform's clients. The API allows super_admin and
     // eb_manager (a client's own `admin` is refused), so the tab matches.
     if (isSuperAdmin || user?.role === 'eb_manager') { s.push({ id: 'billing', icon: '🧾', label: 'Billing', badge: 0 }); }
+    if (isSuperAdmin || user?.role === 'eb_manager') { s.push({ id: 'health', icon: '🩺', label: 'Health', badge: 0 }); }
     if (isSuperAdmin) { s.push({ id: 'platform', icon: '⚙️', label: 'Platform', badge: 0 }); }
     return s;
   }, [isEBAgent, isSuperAdmin, user?.role, alerts.length, pendingUsers.length]);
@@ -444,6 +446,13 @@ export default function SuperAdminDashboard() {
                 </>
               )}
             </div>
+          </SectionErrorBoundary>
+        )}
+
+        {/* ════════ SYSTEM HEALTH ════════ */}
+        {section === 'health' && (isSuperAdmin || user?.role === 'eb_manager') && (
+          <SectionErrorBoundary name="System health" onRetry={refetch}>
+            <SystemHealthPanel />
           </SectionErrorBoundary>
         )}
 
