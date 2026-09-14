@@ -28,14 +28,14 @@ export default function QuickPaymentPanel() {
     }
     setLoading(true);
     try {
-      const tenantsRes = await api.get('/tenants').catch(() => ({ data: { data: { tenants: [] } } }));
-      const firstTenant = tenantsRes.data.data?.tenants?.[0];
-
+      // No tenantId: a quick payment from this panel is EasyBranding's own, and
+      // the API books it to the platform tenant. This used to send the first
+      // tenant in the list — whichever client sorted first, with that client's
+      // Paystack subaccount (security scan, 2026-09-14).
       const res = await api.post('/payments/quick', {
         amount: Number(amount),
         note,
         sendToPhone: phone,
-        tenantId: firstTenant?._id || null,
       });
       setResult(res.data.data);
     } catch (err) {
