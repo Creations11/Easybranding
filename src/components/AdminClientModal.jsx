@@ -96,12 +96,14 @@ export default function AdminClientModal({ client, onClose, onSave }) {
       const payload = {
         businessName: form.businessName, brandName: form.brandName || form.businessName,
         contactEmail: form.contactEmail, contactPhone: form.contactPhone,
-        industry: form.industry, whatsappNumber: form.whatsappNumber || null,
+        industry: form.industry,
         workflowType: form.workflowType,
-        plan: form.plan, monthlyFee: Number(form.monthlyFee), status: form.status, notes: form.notes,
+        notes: form.notes,
         qualificationRules: { incomeMultiplier: Number(form.incomeMultiplier), allowUnemployed: form.allowUnemployed, minimumBudget: Number(form.minimumBudget), maximumBudget: Number(form.maximumBudget) },
         messages: { welcome: form.welcomeMsg || null, qualified: form.qualifiedMsg || null, notQualified: form.notQualifiedMsg || null },
-        addons: form.addons,
+        // Not sent (security scan, 2026-09-14): whatsappNumber, plan, monthlyFee,
+        // status and addons are EasyBranding's to set. This modal is a client
+        // owner's, and the API ignores those fields from an owner.
       };
       const method = isEdit ? 'put' : 'post';
       const path   = isEdit ? `/tenants/${client._id}` : '/tenants';
@@ -151,7 +153,7 @@ export default function AdminClientModal({ client, onClose, onSave }) {
                 <option value="basic">Basic — 4 questions, no income check</option>
               </select>
               <p style={{ color: colors.muted, fontSize: '13px', marginBottom: '12px' }}>WhatsApp Number Format: <span style={{ color: colors.lime }}>whatsapp:+27211234567</span></p>
-              <input value={form.whatsappNumber} onChange={e => set('whatsappNumber', e.target.value)} placeholder="whatsapp:+27211234567" style={iStyle} />
+              <input value={form.whatsappNumber} onChange={e => set('whatsappNumber', e.target.value)} disabled title="Your WhatsApp number is connected by EasyBranding" placeholder="whatsapp:+27211234567" style={{ ...iStyle, opacity: 0.6, cursor: 'not-allowed' }} />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <p style={{ color: colors.muted, fontSize: '12px', marginBottom: '6px' }}>Income Multiplier</p>
@@ -190,8 +192,12 @@ export default function AdminClientModal({ client, onClose, onSave }) {
 
           {tab === 'billing' && (
             <div>
+              {/* Read-only (security scan, 2026-09-14): plan, fee and status are
+                  EasyBranding's to set, and the API ignores them from a client's
+                  owner. Shown so the owner can see what they are on. */}
+              <p style={{ color: colors.muted, fontSize: '11px', marginBottom: '10px' }}>Plan, fee and status are managed by EasyBranding. Message us to change them.</p>
               <p style={{ color: colors.muted, fontSize: '12px', marginBottom: '6px' }}>Plan</p>
-              <select value={form.plan} onChange={e => set('plan', e.target.value)} style={iStyle}>
+              <select value={form.plan} onChange={e => set('plan', e.target.value)} disabled style={{ ...iStyle, opacity: 0.6, cursor: 'not-allowed' }}>
                 {/* Plan is a FEATURE-LIMIT tier, not a price. Naming prices
                     here made it look like one and they were wrong anyway —
                     R950 and R2,450 are figures no tenant has ever paid. The
@@ -201,9 +207,9 @@ export default function AdminClientModal({ client, onClose, onSave }) {
                 <option value="growth">Growth</option>
                 <option value="enterprise">Enterprise</option>
               </select>
-              <input value={form.monthlyFee} onChange={e => set('monthlyFee', e.target.value)} type="number" placeholder="Monthly Fee (R)" style={iStyle} />
+              <input value={form.monthlyFee} onChange={e => set('monthlyFee', e.target.value)} disabled type="number" placeholder="Monthly Fee (R)" style={{ ...iStyle, opacity: 0.6, cursor: 'not-allowed' }} />
               <p style={{ color: colors.muted, fontSize: '12px', marginBottom: '6px' }}>Status</p>
-              <select value={form.status} onChange={e => set('status', e.target.value)} style={iStyle}>
+              <select value={form.status} onChange={e => set('status', e.target.value)} disabled style={{ ...iStyle, opacity: 0.6, cursor: 'not-allowed' }}>
                 <option value="trial">Trial</option>
                 <option value="active">Active</option>
                 <option value="suspended">Suspended</option>
@@ -213,9 +219,10 @@ export default function AdminClientModal({ client, onClose, onSave }) {
               {/* NEW: Add-ons — per-tenant paid top-ups, independent of
                   plan. What lets an R99 tenant unlock, say, invoicing
                   without moving to a whole new plan. See hasFeature() in
-                  the backend's config/planLimits.js. */}
+                  the backend's config/planLimits.js. Read-only here: they
+                  are paid for, so EasyBranding switches them on. */}
               <p style={{ color: colors.muted, fontSize: '12px', marginTop: '16px', marginBottom: '4px' }}>Add-ons</p>
-              <p style={{ color: colors.muted, fontSize: '11px', marginBottom: '10px' }}>Paid top-ups this client has bought, on top of whatever their plan already includes.</p>
+              <p style={{ color: colors.muted, fontSize: '11px', marginBottom: '10px' }}>Paid top-ups this client has bought, on top of whatever their plan already includes. Managed by EasyBranding.</p>
               <div style={{ background: '#1C1C19', borderRadius: '10px', padding: '14px 16px', border: `1px solid ${colors.borderDim}`, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 {[
                   { key: 'payments',  label: 'Payments' },
@@ -224,7 +231,7 @@ export default function AdminClientModal({ client, onClose, onSave }) {
                   { key: 'extraFlow', label: 'Extra Flow' },
                 ].map(({ key, label }) => (
                   <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input type="checkbox" id={'admin-addon-' + key} checked={form.addons[key]} onChange={() => toggleAddon(key)} style={{ cursor: 'pointer', accentColor: colors.lime, width: '16px', height: '16px' }} />
+                    <input type="checkbox" id={'admin-addon-' + key} checked={form.addons[key]} onChange={() => toggleAddon(key)} disabled style={{ cursor: 'not-allowed', accentColor: colors.lime, width: '16px', height: '16px' }} />
                     <label htmlFor={'admin-addon-' + key} style={{ color: colors.text, fontSize: '14px', cursor: 'pointer' }}>{label}</label>
                   </div>
                 ))}

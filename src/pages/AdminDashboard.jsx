@@ -721,16 +721,11 @@ export default function AdminDashboard() {
                         <p style={{ color: colors.text, fontWeight: '700', fontSize: '16px' }}>R{client.monthlyFee}</p>
                         <p style={{ color: colors.muted, fontSize: '10px' }}>/mo</p>
                       </div>
-                      {/* Quick suspend/activate toggle */}
-                      <button onClick={async () => {
-                        const newStatus = client.status === 'suspended' ? 'active' : 'suspended';
-                        try {
-                          await api.put(`/tenants/${client._id}`, { status: newStatus });
-                          loadData();
-                        } catch (err) { alert('Failed to update status'); }
-                      }} style={{ padding: '8px 14px', background: client.status === 'suspended' ? `${colors.lime}22` : `${colors.amber}22`, color: client.status === 'suspended' ? colors.lime : colors.amber, border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
-                        {client.status === 'suspended' ? '▶ Activate' : '⏸ Suspend'}
-                      </button>
+                      {/* No suspend/activate toggle here (security scan, 2026-09-14).
+                          This dashboard is a client owner's, and status is billing's
+                          to set: a suspended client could activate themselves with
+                          it. The API now ignores status from an owner, and platform
+                          staff change it from the Super Admin dashboard. */}
                       <button onClick={() => setClientModal(client)} style={{ padding: '8px 14px', background: `${colors.lime}22`, color: colors.lime, border: `1px solid ${colors.border}`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>Edit</button>
                       <button onClick={async () => {
                         try {
