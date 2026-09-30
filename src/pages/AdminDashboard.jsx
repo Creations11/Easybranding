@@ -9,6 +9,7 @@ import AdminApproveModal from '../components/AdminApproveModal';
 import AdminClientModal from '../components/AdminClientModal';
 import useMediaQuery, { MOBILE_QUERY } from '../hooks/useMediaQuery';
 import ChatTab from '../components/ChatTab';
+import DeliveryTab from '../components/DeliveryTab';
 import { colors } from '../utils/theme';
 
 
@@ -158,6 +159,10 @@ export default function AdminDashboard() {
   const [panelError,          setPanelError]          = useState('');
   const [showPasswordModal,   setShowPasswordModal]   = useState(false);
   const [tab, setTab] = useState('overview');
+  // Whether this tenant runs deliveries at all. Most do not, and a tab
+  // that opens on 'nothing here' for every other client is clutter, so the
+  // button only exists when there is something behind it.
+  const [hasDelivery, setHasDelivery] = useState(false);
   const isMobile = useMediaQuery(MOBILE_QUERY);
   // Which lead column is showing on a phone — the board is one-at-a-time there.
   const [mobileCol, setMobileCol] = useState('active');
@@ -254,6 +259,14 @@ export default function AdminDashboard() {
       setError('');
       setPanelError(rejected.length ? firstMessage : '');
     }
+
+    // Deliberately outside the allSettled above and never surfaced as an
+    // error: a tenant with no delivery service is the normal case, and the
+    // only consequence of this failing is one tab not appearing.
+    api.get('/delivery/overview')
+      .then((r) => setHasDelivery(!!(r.data?.data ?? r.data)?.enabled))
+      .catch(() => setHasDelivery(false));
+
     setLoading(false);
   };
 
@@ -301,6 +314,7 @@ export default function AdminDashboard() {
   const tabs = [
     'chat', 'overview', 'leads',
     'funnel', 'viewings', 'messages', 'alerts',
+    ...(hasDelivery ? ['delivery'] : []),
     ...(isSuperAdmin ? ['clients', 'users', 'platform'] : []),
     ...(isAdmin ? ['users'] : []),
   ];
@@ -432,6 +446,8 @@ export default function AdminDashboard() {
             that didn't exist anywhere in this dashboard before —
             closed leads were previously unreachable and unreopenable
             from here. */}
+        {tab === 'delivery' && <DeliveryTab />}
+
         {tab === 'chat' && (
           <ChatTab conversations={activeConversations} onRefresh={loadData} onExit={() => setTab('overview')} />
         )}
