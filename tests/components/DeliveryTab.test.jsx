@@ -59,6 +59,30 @@ const wire = ({ overview = OVERVIEW, orders = ORDERS, drivers = [], businesses =
 describe('DeliveryTab', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
+  // The bug that hid the whole feature: a platform session has no tenant, so
+  // it is asked which business rather than shown nothing.
+  it('asks a platform session which business, then loads that one', async () => {
+    api.get.mockImplementation((url) => {
+      if (url === '/delivery/overview') {
+        return reply({ enabled: true, needsTenant: true, tenants: [{ id: 't1', name: 'Kasi Delivery' }] })
+      }
+      if (url.startsWith('/delivery/overview?tenantId=t1')) return reply(OVERVIEW)
+      if (url.startsWith('/delivery/orders?tenantId=t1')) return reply(ORDERS)
+      return reply([])
+    })
+    render(<DeliveryTab />)
+
+    await waitFor(() => expect(screen.getByText('Kasi Delivery')).toBeInTheDocument())
+    expect(screen.getByText(/Which delivery business/i)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('Kasi Delivery'))
+
+
+    // Every call after the choice carries it.
+    await waitFor(() => expect(screen.getByText(/DLV-AAA111/)).toBeInTheDocument())
+    expect(api.get).toHaveBeenCalledWith('/delivery/orders?tenantId=t1')
+  })
+
   it('shows the day, and puts an order nobody has taken first', async () => {
     wire()
     render(<DeliveryTab />)

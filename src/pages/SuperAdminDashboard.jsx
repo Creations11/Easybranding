@@ -19,6 +19,7 @@ import api from '../api';
 import LeadDetailModal from '../components/LeadDetailModal';
 import OperationsSection from '../sections/OperationsSection';
 import ChatTab from '../components/ChatTab';
+import DeliveryTab from '../components/DeliveryTab';
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
 import StatCard from '../components/StatCard';
 import { useAuth } from '../context/AuthContext';
@@ -181,6 +182,11 @@ export default function SuperAdminDashboard() {
     // was only on AdminDashboard, which is where role=admin tenants land —
     // super_admin routes to THIS page and never saw it.
     s.push({ id: 'chat', icon: '💬', label: 'Chat', badge: 0 });
+    // Delivery here as well as on AdminDashboard, and for exactly the reason
+    // written above Chat: super_admin routes to THIS page. It shipped on
+    // AdminDashboard alone on 2026-09-30 and the owner could not find it,
+    // which is the same mistake twice in the same file.
+    if (!isEBAgent) { s.push({ id: 'delivery', icon: '🛵', label: 'Delivery', badge: 0 }); }
     if (!isEBAgent) { s.push({ id: 'operations', icon: '🏠', label: 'Operations', badge: alerts.length }); }
     if (!isEBAgent) { s.push({ id: 'clients',    icon: '👥', label: 'Clients',    badge: 0 }); }
     // FIX: PACMembersPanel had no nav entry anywhere — added here,
@@ -285,6 +291,8 @@ export default function SuperAdminDashboard() {
       <div className="main-content" style={{ marginLeft: sidebarOpen ? 220 : 64, flex: 1, minWidth: 0, padding: '32px', paddingTop: 96, transition: 'margin-left 0.2s ease', minHeight: '100vh' }}>
 
         {/* ════════ CHAT ════════ */}
+        {section === 'delivery' && <DeliveryTab />}
+
         {section === 'chat' && (
           <SectionErrorBoundary name="Chat" onRetry={refetch}>
             <ChatTab

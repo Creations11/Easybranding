@@ -87,6 +87,13 @@ const Row = ({ left, right }) => (
 );
 
 export default function DeliveryTab() {
+  // Which business is being looked at. A tenant`s own admin never sets this —
+  // their session already names one. A PLATFORM role (super_admin,
+  // eb_manager, eb_agent) carries no tenant at all, so it picks one, and
+  // every call below carries the choice. Getting this wrong hid the tab from
+  // the only person who runs deliveries (2026-10-01).
+  const [tenantId, setTenantId] = useState(null);
+  const [choices, setChoices] = useState([]);
   const [section, setSection] = useState('orders');
   const [data, setData] = useState({ overview: null, orders: [], drivers: [], businesses: [], payouts: null });
   const [open, setOpen] = useState(null);          // the reference being looked at
@@ -96,15 +103,23 @@ export default function DeliveryTab() {
 
   // allSettled, like AdminDashboard's own loader: one failing panel must not
   // blank the other three. A banner says which, and the rest still work.
+  const q = tenantId ? `?tenantId=${tenantId}` : '';
+
   const load = useCallback(async () => {
     const [overview, orders, drivers, businesses, payouts] = await Promise.allSettled([
-      api.get('/delivery/overview'),
-      api.get('/delivery/orders'),
-      api.get('/delivery/drivers'),
-      api.get('/delivery/businesses'),
-      api.get('/delivery/payouts'),
+      api.get(`/delivery/overview${q}`),
+      api.get(`/delivery/orders${q}`),
+      api.get(`/delivery/drivers${q}`),
+      api.get(`/delivery/businesses${q}`),
+      api.get(`/delivery/payouts${q}`),
     ]);
     const val = (r, fallback) => (r.status === 'fulfilled' ? (r.value.data?.data ?? r.value.data) : fallback);
+
+    // A platform session is asked which business rather than shown all of
+    // them: the other four calls only mean anything once one is named.
+    const head = val(overview, null);
+    setChoices(head?.needsTenant ? (head.tenants || []) : []);
+
     setData({
       overview: val(overview, null),
       orders: val(orders, []),
@@ -121,7 +136,7 @@ export default function DeliveryTab() {
     ].filter(Boolean);
     setProblem(failed.length ? `Could not load ${failed.join(', ')}. Everything else below is current.` : '');
     setLoading(false);
-  }, []);
+  }, [q]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -130,12 +145,12 @@ export default function DeliveryTab() {
     if (section !== 'orders') return undefined;
     const t = setInterval(async () => {
       try {
-        const r = await api.get('/delivery/orders');
+        const r = await api.get(`/delivery/orders${q}`);
         setData((d) => ({ ...d, orders: r.data?.data ?? r.data ?? [] }));
       } catch { /* a dropped poll is not worth a banner; the next one will do */ }
     }, REFRESH_MS);
     return () => clearInterval(t);
-  }, [section]);
+  }, [section, q]);
 
   // Opening and closing clears the old detail HERE rather than in an effect:
   // an effect that resets state synchronously just to react to its own
@@ -148,14 +163,36 @@ export default function DeliveryTab() {
   useEffect(() => {
     if (!open) return undefined;
     let live = true;
-    api.get(`/delivery/orders/${open}`)
+    api.get(`/delivery/orders/${open}${q}`)
       .then((r) => { if (live) setDetail(r.data?.data ?? r.data); })
       .catch(() => { if (live) setDetail({ error: 'That order could not be opened.' }); });
     return () => { live = false; };
-  }, [open]);
+  }, [open, q]);
 
   if (loading) {
     return <div style={{ padding: '60px', textAlign: 'center', color: colors.muted }}>Loading deliveries…</div>;
+  }
+
+  // Nobody has named a business yet, and this session has no tenant of its
+  // own. One tap rather than a dropdown: there are two or three of these, not
+  // twenty, and a list you can read is faster than a control you must open.
+  if (choices.length > 0 && !tenantId) {
+    return (
+      <div>
+        <div style={{ color: colors.muted, fontSize: '13px', marginBottom: '14px' }}>
+          Which delivery business?
+        </div>
+        {choices.map((t) => (
+          <Card key={t.id} onClick={() => setTenantId(t.id)}>
+            <div style={{ color: colors.text, fontWeight: 600, fontSize: '14px' }}>{t.name}</div>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (data.overview && data.overview.enabled === false) {
+    return <Empty>This business does not run deliveries.</Empty>;
   }
 
   const o = data.overview;
@@ -197,6 +234,15 @@ export default function DeliveryTab() {
             color: colors.muted, borderRadius: '999px', padding: '7px 14px', cursor: 'pointer', fontSize: '13px',
           }}
         >↻ Refresh</button>
+        {choices.length > 0 && (
+          <button
+            onClick={() => { setTenantId(null); setOpen(null); }}
+            style={{
+              background: 'transparent', border: `1px solid ${colors.borderDim}`,
+              color: colors.muted, borderRadius: '999px', padding: '7px 14px', cursor: 'pointer', fontSize: '13px',
+            }}
+          >⇄ Another business</button>
+        )}
       </div>
 
       {section === 'orders' && (
