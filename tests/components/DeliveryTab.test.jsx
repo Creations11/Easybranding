@@ -83,6 +83,62 @@ describe('DeliveryTab', () => {
     expect(api.get).toHaveBeenCalledWith('/delivery/orders?tenantId=t1')
   })
 
+  // Choosing a business makes every later overview carry a tenantId, so it
+  // stops answering needsTenant. Recomputing the list from that answer wiped
+  // it and took the way back with it: one business per page load.
+  it('keeps the way back to another business after one is picked', async () => {
+    api.get.mockImplementation((url) => {
+      if (url === '/delivery/overview') {
+        return reply({
+          enabled: true,
+          needsTenant: true,
+          tenants: [{ id: 't1', name: 'Kasi Delivery' }, { id: 't2', name: 'Soweto Runs' }],
+        })
+      }
+      if (url.startsWith('/delivery/overview?')) return reply(OVERVIEW)
+      if (url.startsWith('/delivery/orders?')) return reply(ORDERS)
+      return reply([])
+    })
+    render(<DeliveryTab />)
+
+    await waitFor(() => expect(screen.getByText(/Which delivery business/i)).toBeInTheDocument())
+    fireEvent.click(screen.getByText('Soweto Runs'))
+
+    await waitFor(() => expect(screen.getByText(/DLV-AAA111/)).toBeInTheDocument())
+    expect(screen.getByText(/Another business/i)).toBeInTheDocument()
+  })
+
+  // Nothing belonging to one business may be on screen under another's name,
+  // not even for the second a load takes.
+  it('empties the screen while a different business loads', async () => {
+    let release
+    const held = new Promise((r) => { release = r })
+    api.get.mockImplementation((url) => {
+      if (url === '/delivery/overview') {
+        return reply({
+          enabled: true,
+          needsTenant: true,
+          tenants: [{ id: 't1', name: 'Kasi Delivery' }, { id: 't2', name: 'Soweto Runs' }],
+        })
+      }
+      if (url.includes('tenantId=t2')) return held.then(() => ({ data: { success: true, data: [] } }))
+      if (url.startsWith('/delivery/overview?')) return reply(OVERVIEW)
+      if (url.startsWith('/delivery/orders?')) return reply(ORDERS)
+      return reply([])
+    })
+    render(<DeliveryTab />)
+
+    await waitFor(() => expect(screen.getByText(/Which delivery business/i)).toBeInTheDocument())
+    fireEvent.click(screen.getByText('Kasi Delivery'))
+    await waitFor(() => expect(screen.getByText(/DLV-AAA111/)).toBeInTheDocument())
+
+    fireEvent.click(screen.getByText(/Another business/i))
+    fireEvent.click(screen.getByText('Soweto Runs'))
+
+    expect(screen.queryByText(/DLV-AAA111/)).not.toBeInTheDocument()
+    release()
+  })
+
   it('shows the day, and puts an order nobody has taken first', async () => {
     wire()
     render(<DeliveryTab />)
@@ -131,11 +187,15 @@ describe('DeliveryTab', () => {
     expect(screen.getByText(/DLV-AAA111/)).toBeInTheDocument()
   })
 
+  // Not "today" and not "yet": the endpoint returns anything still moving,
+  // whatever its age, PLUS the last 24 hours — so an empty list means neither
+  // of those, and both words would be a claim the data does not support.
   it('says something useful when there is nothing yet', async () => {
     wire({ orders: [] })
     render(<DeliveryTab />)
 
-    await waitFor(() => expect(screen.getByText(/Nothing today yet/i)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(/last 24 hours/i)).toBeInTheDocument())
+    expect(screen.getByText(/nothing still moving/i)).toBeInTheDocument()
   })
 
   it('shows a wallet only for a subscriber', async () => {

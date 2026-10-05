@@ -23,8 +23,9 @@
 //
 // Orders refresh on a timer; the rest do not. A delivery changes every few
 // minutes and a driver's papers change once. Polling everything would be
-// noise and, on a phone on data, somebody's airtime.
-import { useState, useEffect, useCallback } from 'react';
+// noise and, on a phone on data, somebody's airtime. The order you have open
+// refreshes with the list, so its history never goes stale under your eyes.
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import api from '../api';
 import { colors } from '../utils/theme';
 
@@ -40,16 +41,23 @@ const STATUS_STYLE = {
   failed:     { label: 'stopped',     tint: colors.red },
 };
 
+const MOVING = ['assigned', 'collected', 'on_the_way', 'arrived'];
+
 const money = (n) => (n == null ? '—' : `R${Number(n).toFixed(2).replace(/\.00$/, '')}`);
 
+// floor, not round: 89 minutes is "1h ago", not "2h ago".
 const ago = (iso) => {
   if (!iso) return '';
-  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
   if (mins < 1) return 'just now';
   if (mins < 60) return `${mins} min ago`;
-  const hrs = Math.round(mins / 60);
-  return hrs < 24 ? `${hrs}h ago` : `${Math.round(hrs / 24)}d ago`;
+  const hrs = Math.floor(mins / 60);
+  return hrs < 24 ? `${hrs}h ago` : `${Math.floor(hrs / 24)}d ago`;
 };
+
+// Paid, nobody carrying it. The only state where someone at this screen can
+// change the outcome, so it is defined once and used everywhere.
+const isUnclaimed = (d) => d.status === 'pending' && d.paymentStatus === 'paid' && !d.driverName;
 
 const Chip = ({ text, tint }) => (
   <span style={{
@@ -59,17 +67,31 @@ const Chip = ({ text, tint }) => (
   }}>{text}</span>
 );
 
-const Card = ({ children, onClick, active }) => (
-  <div
-    onClick={onClick}
-    style={{
-      background: colors.card,
-      border: `1px solid ${active ? colors.lime : colors.borderDim}`,
-      borderRadius: '12px', padding: '14px', marginBottom: '10px',
-      cursor: onClick ? 'pointer' : 'default',
-    }}
-  >{children}</div>
-);
+const Card = ({ children, onClick, active }) => {
+  // Clickable cards are real buttons to the keyboard and to screen readers.
+  // The target check keeps Enter on an inner link from also toggling the card.
+  const key = onClick
+    ? (e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); }
+      }
+    : undefined;
+  return (
+    <div
+      onClick={onClick}
+      onKeyDown={key}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-expanded={onClick ? !!active : undefined}
+      style={{
+        background: colors.card,
+        border: `1px solid ${active ? colors.lime : colors.borderDim}`,
+        borderRadius: '12px', padding: '14px', marginBottom: '10px',
+        cursor: onClick ? 'pointer' : 'default',
+      }}
+    >{children}</div>
+  );
+};
 
 /** Says what is actually true, rather than "no data". */
 const Empty = ({ children }) => (
@@ -86,13 +108,24 @@ const Row = ({ left, right }) => (
   </div>
 );
 
+const pill = (selected, tint = colors.lime) => ({
+  background: selected ? `${tint}1A` : 'transparent',
+  border: `1px solid ${selected ? tint : colors.borderDim}`,
+  color: selected ? tint : colors.muted,
+  borderRadius: '999px', padding: '7px 14px', cursor: 'pointer',
+  fontSize: '13px', fontWeight: selected ? 600 : 400,
+});
+
 export default function DeliveryTab() {
-  // Which business is being looked at. A tenant`s own admin never sets this —
+  // Which business is being looked at. A tenant's own admin never sets this —
   // their session already names one. A PLATFORM role (super_admin,
   // eb_manager, eb_agent) carries no tenant at all, so it picks one, and
   // every call below carries the choice. Getting this wrong hid the tab from
   // the only person who runs deliveries (2026-10-01).
   const [tenantId, setTenantId] = useState(null);
+  // The list of businesses to pick from. Only ever REPLACED by a newer list,
+  // never blanked: once a business is chosen the overview stops asking, and
+  // clearing this then is what removed "Another business" from the screen.
   const [choices, setChoices] = useState([]);
   const [section, setSection] = useState('orders');
   const [data, setData] = useState({ overview: null, orders: [], drivers: [], businesses: [], payouts: null });
@@ -100,12 +133,19 @@ export default function DeliveryTab() {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [problem, setProblem] = useState('');
+  const [updatedAt, setUpdatedAt] = useState(null);
 
   // allSettled, like AdminDashboard's own loader: one failing panel must not
   // blank the other three. A banner says which, and the rest still work.
   const q = tenantId ? `?tenantId=${tenantId}` : '';
 
+  // Each load takes a ticket. If a newer load has started by the time this
+  // one answers (a quick change of business, a double tap on refresh), this
+  // one's answer is for the wrong screen and is dropped.
+  const ticket = useRef(0);
+
   const load = useCallback(async () => {
+    const mine = ++ticket.current;
     const [overview, orders, drivers, businesses, payouts] = await Promise.allSettled([
       api.get(`/delivery/overview${q}`),
       api.get(`/delivery/orders${q}`),
@@ -113,15 +153,17 @@ export default function DeliveryTab() {
       api.get(`/delivery/businesses${q}`),
       api.get(`/delivery/payouts${q}`),
     ]);
+    if (mine !== ticket.current) return;
+
     const val = (r, fallback) => (r.status === 'fulfilled' ? (r.value.data?.data ?? r.value.data) : fallback);
 
     // A platform session is asked which business rather than shown all of
     // them: the other four calls only mean anything once one is named.
     const head = val(overview, null);
-    setChoices(head?.needsTenant ? (head.tenants || []) : []);
+    if (head?.needsTenant) setChoices(head.tenants || []);
 
     setData({
-      overview: val(overview, null),
+      overview: head,
       orders: val(orders, []),
       drivers: val(drivers, []),
       businesses: val(businesses, []),
@@ -135,22 +177,33 @@ export default function DeliveryTab() {
       payouts.status === 'rejected' && 'payouts',
     ].filter(Boolean);
     setProblem(failed.length ? `Could not load ${failed.join(', ')}. Everything else below is current.` : '');
+    setUpdatedAt(new Date().toISOString());
     setLoading(false);
   }, [q]);
 
   useEffect(() => { load(); }, [load]);
 
-  // Only the moving part polls.
+  // Only the moving part polls: the order list, and the one order that is
+  // open, so its history keeps up with the list above it.
   useEffect(() => {
     if (section !== 'orders') return undefined;
+    let live = true;
     const t = setInterval(async () => {
       try {
         const r = await api.get(`/delivery/orders${q}`);
+        if (!live) return;
         setData((d) => ({ ...d, orders: r.data?.data ?? r.data ?? [] }));
+        setUpdatedAt(new Date().toISOString());
       } catch { /* a dropped poll is not worth a banner; the next one will do */ }
+
+      if (!open) return;
+      try {
+        const r = await api.get(`/delivery/orders/${open}${q}`);
+        if (live) setDetail(r.data?.data ?? r.data);
+      } catch { /* keep showing what we had rather than replacing it with an error */ }
     }, REFRESH_MS);
-    return () => clearInterval(t);
-  }, [section, q]);
+    return () => { live = false; clearInterval(t); };
+  }, [section, q, open]);
 
   // Opening and closing clears the old detail HERE rather than in an effect:
   // an effect that resets state synchronously just to react to its own
@@ -169,7 +222,18 @@ export default function DeliveryTab() {
     return () => { live = false; };
   }, [open, q]);
 
-  if (loading) {
+  // Switching business starts from a clean screen, so one shop's orders are
+  // never visible under another shop's name while the new ones load.
+  const pickBusiness = (id) => {
+    setData({ overview: null, orders: [], drivers: [], businesses: [], payouts: null });
+    setProblem('');
+    setOpen(null);
+    setDetail(null);
+    setLoading(true);
+    setTenantId(id);
+  };
+
+  if (loading && !choices.length) {
     return <div style={{ padding: '60px', textAlign: 'center', color: colors.muted }}>Loading deliveries…</div>;
   }
 
@@ -183,7 +247,7 @@ export default function DeliveryTab() {
           Which delivery business?
         </div>
         {choices.map((t) => (
-          <Card key={t.id} onClick={() => setTenantId(t.id)}>
+          <Card key={t.id} onClick={() => pickBusiness(t.id)}>
             <div style={{ color: colors.text, fontWeight: 600, fontSize: '14px' }}>{t.name}</div>
           </Card>
         ))}
@@ -191,11 +255,16 @@ export default function DeliveryTab() {
     );
   }
 
+  if (loading) {
+    return <div style={{ padding: '60px', textAlign: 'center', color: colors.muted }}>Loading deliveries…</div>;
+  }
+
   if (data.overview && data.overview.enabled === false) {
     return <Empty>This business does not run deliveries.</Empty>;
   }
 
   const o = data.overview;
+  const unclaimedCount = data.orders.filter(isUnclaimed).length;
   const sections = [
     ['orders', `📦 Orders${o?.open ? ` (${o.open})` : ''}`],
     ['drivers', '🛵 Drivers'],
@@ -209,7 +278,17 @@ export default function DeliveryTab() {
         <div style={{
           background: `${colors.amber}14`, border: `1px solid ${colors.amber}40`, color: colors.amber,
           borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', fontSize: '13px',
-        }}>{problem}</div>
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px',
+        }}>
+          <span>{problem}</span>
+          <button
+            onClick={load}
+            style={{
+              background: 'transparent', border: `1px solid ${colors.amber}60`, color: colors.amber,
+              borderRadius: '999px', padding: '4px 12px', cursor: 'pointer', fontSize: '12px',
+            }}
+          >Try again</button>
+        </div>
       )}
 
       {/* The four questions, as four buttons. */}
@@ -218,35 +297,19 @@ export default function DeliveryTab() {
           <button
             key={key}
             onClick={() => { setSection(key); openOrder(null); }}
-            style={{
-              background: section === key ? `${colors.lime}1A` : 'transparent',
-              border: `1px solid ${section === key ? colors.lime : colors.borderDim}`,
-              color: section === key ? colors.lime : colors.muted,
-              borderRadius: '999px', padding: '7px 14px', cursor: 'pointer',
-              fontSize: '13px', fontWeight: section === key ? 600 : 400,
-            }}
-          >{label}</button>
+            style={pill(section === key)}
+          >{label}{key === 'orders' && unclaimedCount > 0 ? ' ●' : ''}</button>
         ))}
-        <button
-          onClick={load}
-          style={{
-            marginLeft: 'auto', background: 'transparent', border: `1px solid ${colors.borderDim}`,
-            color: colors.muted, borderRadius: '999px', padding: '7px 14px', cursor: 'pointer', fontSize: '13px',
-          }}
-        >↻ Refresh</button>
+        <button onClick={load} style={{ ...pill(false), marginLeft: 'auto' }}>↻ Refresh</button>
         {choices.length > 0 && (
-          <button
-            onClick={() => { setTenantId(null); setOpen(null); }}
-            style={{
-              background: 'transparent', border: `1px solid ${colors.borderDim}`,
-              color: colors.muted, borderRadius: '999px', padding: '7px 14px', cursor: 'pointer', fontSize: '13px',
-            }}
-          >⇄ Another business</button>
+          <button onClick={() => { setTenantId(null); setOpen(null); setDetail(null); }} style={pill(false)}>
+            ⇄ Another business
+          </button>
         )}
       </div>
 
       {section === 'orders' && (
-        <Orders orders={data.orders} open={open} onOpen={openOrder} detail={detail} />
+        <Orders orders={data.orders} open={open} onOpen={openOrder} detail={detail} updatedAt={updatedAt} />
       )}
       {section === 'drivers' && <Drivers drivers={data.drivers} />}
       {section === 'businesses' && <Businesses businesses={data.businesses} />}
@@ -255,24 +318,91 @@ export default function DeliveryTab() {
   );
 }
 
-function Orders({ orders, open, onOpen, detail }) {
-  if (!orders.length) {
-    return <Empty>Nothing today yet. Orders appear here the moment a customer places one, or a shop sends NEW DELIVERY.</Empty>;
-  }
+const FILTERS = [
+  ['all',       'All',             () => true],
+  ['attention', 'Needs attention', (d) => isUnclaimed(d) || d.status === 'failed'],
+  ['moving',    'Moving',          (d) => MOVING.includes(d.status)],
+  ['done',      'Delivered',       (d) => d.status === 'delivered'],
+];
 
-  // The ones nobody is carrying come first: they are the only ones where
-  // somebody looking at this screen can change the outcome.
-  const sorted = [...orders].sort((a, b) => {
-    const stuck = (d) => (d.status === 'pending' && d.paymentStatus === 'paid' ? 0 : 1);
-    return stuck(a) - stuck(b) || new Date(b.createdAt) - new Date(a.createdAt);
-  });
+function Orders({ orders, open, onOpen, detail, updatedAt }) {
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
+
+  const counts = useMemo(() => {
+    const c = {};
+    FILTERS.forEach(([key,, test]) => { c[key] = orders.filter(test).length; });
+    return c;
+  }, [orders]);
+
+  const shown = useMemo(() => {
+    const test = FILTERS.find(([key]) => key === filter)[2];
+    const needle = search.trim().toLowerCase();
+    const hit = (d) => !needle || [d.reference, d.customerName, d.customerPhone, d.driverName, d.vendorName]
+      .some((v) => v && String(v).toLowerCase().includes(needle));
+
+    // The ones nobody is carrying come first: they are the only ones where
+    // somebody looking at this screen can change the outcome.
+    return orders
+      .filter((d) => test(d) && hit(d))
+      .sort((a, b) => (isUnclaimed(a) ? 0 : 1) - (isUnclaimed(b) ? 0 : 1)
+        || new Date(b.createdAt) - new Date(a.createdAt));
+  }, [orders, filter, search]);
+
+  if (!orders.length) {
+    // The endpoint returns anything still moving, whatever its age, plus
+    // everything from the last 24 hours (deliveryDashboardController's
+    // todaysFilter) — so an empty list is not "none ever", and saying "today"
+    // or "yet" would both be wrong once there is older history.
+    return <Empty>Nothing in the last 24 hours, and nothing still moving. Orders appear here the moment a customer places one, or a shop sends NEW DELIVERY.</Empty>;
+  }
 
   return (
     <div>
-      {sorted.map((d) => {
+      {counts.attention > 0 && filter !== 'attention' && (
+        <div
+          onClick={() => setFilter('attention')}
+          style={{
+            background: `${colors.red}14`, border: `1px solid ${colors.red}40`, color: colors.red,
+            borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', fontSize: '13px', cursor: 'pointer',
+          }}
+        >
+          {counts.attention} order{counts.attention === 1 ? ' needs' : 's need'} attention. Tap to see {counts.attention === 1 ? 'it' : 'them'}.
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+        {FILTERS.map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setFilter(key)}
+            style={{ ...pill(filter === key, key === 'attention' && counts.attention > 0 ? colors.red : colors.lime), padding: '5px 12px', fontSize: '12px' }}
+          >{label} ({counts[key]})</button>
+        ))}
+      </div>
+
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Find by reference, customer, driver or shop"
+        aria-label="Find an order"
+        style={{
+          width: '100%', boxSizing: 'border-box', background: colors.card, color: colors.text,
+          border: `1px solid ${colors.borderDim}`, borderRadius: '10px',
+          padding: '9px 12px', fontSize: '13px', marginBottom: '6px',
+        }}
+      />
+      {updatedAt && (
+        <div style={{ color: colors.muted, fontSize: '11px', marginBottom: '12px' }}>
+          Updated {ago(updatedAt)} · refreshes every {REFRESH_MS / 1000}s
+        </div>
+      )}
+
+      {!shown.length && <Empty>No orders match that.</Empty>}
+
+      {shown.map((d) => {
         const s = STATUS_STYLE[d.status] || { label: d.status, tint: colors.muted };
         const isOpen = open === d.reference;
-        const unclaimed = d.status === 'pending' && d.paymentStatus === 'paid' && !d.driverName;
         return (
           <Card key={d.reference} active={isOpen} onClick={() => onOpen(isOpen ? null : d.reference)}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center' }}>
@@ -290,7 +420,7 @@ function Orders({ orders, open, onOpen, detail }) {
               {d.total != null && ` · ${money(d.total)}`}
             </div>
 
-            {unclaimed && (
+            {isUnclaimed(d) && (
               <div style={{ color: colors.red, fontSize: '12px', marginTop: '6px' }}>
                 Paid, and nobody has taken it.
               </div>
@@ -320,7 +450,13 @@ function Orders({ orders, open, onOpen, detail }) {
                     <Row left="We keep" right={money(detail.kasiFee)} />
                     {detail.trackingUrl && (
                       <div style={{ marginTop: '10px' }}>
-                        <a href={detail.trackingUrl} target="_blank" rel="noreferrer" style={{ color: colors.lime, fontSize: '13px' }}>
+                        <a
+                          href={detail.trackingUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ color: colors.lime, fontSize: '13px' }}
+                        >
                           Open the customer's tracking page ↗
                         </a>
                       </div>
@@ -350,7 +486,9 @@ function Drivers({ drivers }) {
   if (!drivers.length) {
     return <Empty>No drivers yet, so orders come in and sit waiting. Add one from WhatsApp with ADDDRIVER Name 082…</Empty>;
   }
-  return drivers.map((d) => (
+  // Who can take a job right now first, then who is owed the most.
+  const sorted = [...drivers].sort((a, b) => (b.onShift ? 1 : 0) - (a.onShift ? 1 : 0) || (b.owed || 0) - (a.owed || 0));
+  return sorted.map((d) => (
     <Card key={d.phone}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center' }}>
         <div style={{ color: colors.text, fontWeight: 600, fontSize: '14px' }}>{d.name || d.phone}</div>
