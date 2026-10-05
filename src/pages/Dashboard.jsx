@@ -1,6 +1,7 @@
 // src/pages/Dashboard.jsx
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import api from '../api';
 import { colors } from '../utils/theme';
 
@@ -18,48 +19,43 @@ const STATUS_COLORS = {
   closed:                    colors.muted,
 };
 
+// Shared empty lists: a fresh [] each render would re-run the effect that
+// scrolls the chat to the bottom whenever the timeline changes.
+const NO_LEADS = [];
+const NO_TIMELINE = [];
 
-const dashMobileStyle = `
-  @media (max-width: 768px) {
-    .dash-grid { grid-template-columns: 1fr !important; }
-    .dash-conv-panel { display: none; }
-    .dash-conv-panel.active { display: block !important; }
-  }
-`;
+const loadLeads = () => api.get('/leads').then((res) => res.data.data?.leads || []);
+const loadTimeline = (leadId) =>
+  api.get(`/admin-ops/leads/${leadId}/timeline`).then((res) => res.data.data?.timeline || []);
 
 export default function Dashboard() {
-  const [leads,        setLeads]        = useState([]);
   const [selectedLead, setSelectedLead] = useState(null);
-  const [timeline,     setTimeline]     = useState([]);
   const [message,      setMessage]      = useState('');
-  const [loadingLeads, setLoadingLeads] = useState(true);
-  const [loadingChat,  setLoadingChat]  = useState(false);
   const [sending,      setSending]      = useState(false);
   const [takingOver,   setTakingOver]   = useState(false);
   const [resuming,     setResuming]     = useState(false);
   const [actionMsg,    setActionMsg]    = useState('');
-  const [error,        setError]        = useState('');
   const bottomRef = useRef(null);
   const navigate  = useNavigate();
 
-  // Load leads list
-  useEffect(() => {
-    api.get('/leads')
-      .then(res => setLeads(res.data.data?.leads || []))
-      .catch(() => setError('Failed to load leads'))
-      .finally(() => setLoadingLeads(false));
-  }, []);
+  // Both used to be effects that set state from whichever response arrived
+  // last, so opening lead A and then lead B on a slow connection could put A's
+  // messages under B's name, with the reply box sending to B. Queries since
+  // 2026-10-05: the timeline is keyed by lead, so a late answer for A can only
+  // ever land in A's entry.
+  const leadsQ = useQuery({ queryKey: ['leads'], queryFn: loadLeads });
+  const leads = leadsQ.data ?? NO_LEADS;
+  const loadingLeads = leadsQ.isPending;
+  const error = leadsQ.isError ? 'Failed to load leads' : '';
 
-  // Load timeline when lead selected
-  useEffect(() => {
-    if (!selectedLead) return;
-    setLoadingChat(true);
-    setTimeline([]);
-    api.get(`/admin-ops/leads/${selectedLead._id}/timeline`)
-      .then(res => setTimeline(res.data.data?.timeline || []))
-      .catch(() => setTimeline([]))
-      .finally(() => setLoadingChat(false));
-  }, [selectedLead]);
+  // A failed timeline load shows an empty chat, as it always did.
+  const chat = useQuery({
+    queryKey: ['lead-timeline', selectedLead?._id],
+    queryFn: () => loadTimeline(selectedLead._id),
+    enabled: !!selectedLead,
+  });
+  const timeline = chat.data ?? NO_TIMELINE;
+  const loadingChat = !!selectedLead && chat.isPending && chat.fetchStatus !== 'idle';
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -67,12 +63,14 @@ export default function Dashboard() {
   }, [timeline]);
 
   const refreshLead = async () => {
-    const res = await api.get('/leads');
-    const updated = res.data.data?.leads || [];
-    setLeads(updated);
+    const { data: updated = [] } = await leadsQ.refetch();
     if (selectedLead) {
       const fresh = updated.find(l => l._id === selectedLead._id);
       if (fresh) setSelectedLead(fresh);
+      // The takeover/resume note is in the timeline. Swapping in a fresh lead
+      // object used to refetch it as a side effect of the old effect; keyed by
+      // id, the query does not, so it is asked for explicitly.
+      chat.refetch();
     }
   };
 
@@ -113,9 +111,7 @@ export default function Dashboard() {
     try {
       await api.post(`/admin-ops/leads/${selectedLead._id}/message`, { message: message.trim() });
       setMessage('');
-      // Reload timeline
-      const res = await api.get(`/admin-ops/leads/${selectedLead._id}/timeline`);
-      setTimeline(res.data.data?.timeline || []);
+      await chat.refetch();
       setActionMsg('✅ Message sent');
       setTimeout(() => setActionMsg(''), 2000);
     } catch (err) {

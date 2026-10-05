@@ -4,6 +4,7 @@
 // Shows conversation history + all operator controls.
 // ─────────────────────────────────────────────────────────────
 import { useState, useEffect, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import api from '../api';
 // Styling here is inline (1,678 style props across src against 75
 // classNames), and inline styles cannot carry a media query — so the
@@ -102,14 +103,58 @@ function ViewingScheduler({ lead, onScheduled, onClose }) {
   );
 }
 
+const NO_TIMELINE = [];
+const NO_HISTORY = [];
+
+// FIX: these used to be fetched with Promise.all — if the takeover
+// history call 403'd (e.g. a closed lead left with a dangling
+// ActiveTakeover record from the WhatsApp CLOSE command), the whole
+// load() rejected and setLead() never ran, so the modal opened
+// completely blank with no indication of what went wrong. Fetching
+// independently means a failed history call just leaves that section
+// empty instead of hiding the entire lead.
+//
+// A failed TIMELINE call throws, though: as a query (2026-10-05) that keeps
+// whatever lead was already on screen after an action's reload fails, which
+// is what the old code did by simply not setting anything.
+async function loadLeadDetail(leadId) {
+  const [timelineResult, historyResult] = await Promise.allSettled([
+    api.get(`/admin-ops/leads/${leadId}/timeline`),
+    api.get(`/takeover/${leadId}/history`),
+  ]);
+
+  if (historyResult.status === 'rejected') {
+    console.error('Takeover history load error', historyResult.reason);
+  }
+  if (timelineResult.status === 'rejected') {
+    console.error('Lead timeline load error', timelineResult.reason);
+    throw timelineResult.reason;
+  }
+
+  const d = timelineResult.value.data.data;
+  return {
+    lead: d?.lead ?? null,
+    timeline: d?.timeline || [],
+    // The merged view: conversation PLUS payments, invoices, takeovers and
+    // admin actions, in one chronological list. Falls back to the
+    // messages-only `timeline` when the API hasn't got `events` (older deploy).
+    events: d?.events || null,
+    takeoverHistory: historyResult.status === 'fulfilled'
+      ? historyResult.value.data.data?.takeoverHistory || []
+      : [],
+  };
+}
+
+const storedNote = (leadId) => getAllNotes()[leadId] || null;
+
 export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
-  const [lead,          setLead]          = useState(null);
-  const [timeline,      setTimeline]      = useState([]);
-  // The merged view: conversation PLUS payments, invoices, takeovers and admin
-  // actions, in one chronological list. Falls back to the messages-only
-  // `timeline` when the API hasn't got `events` (older deploy).
-  const [events,        setEvents]        = useState(null);
-  const [takeoverHistory, setTakeoverHistory] = useState([]);
+  const detail = useQuery({ queryKey: ['lead-detail', leadId], queryFn: () => loadLeadDetail(leadId) });
+  const lead            = detail.data?.lead ?? null;
+  const timeline        = detail.data?.timeline ?? NO_TIMELINE;
+  const events          = detail.data?.events ?? null;
+  const takeoverHistory = detail.data?.takeoverHistory ?? NO_HISTORY;
+  const loading         = detail.isPending;
+  const load            = () => detail.refetch();
   // Spam takes the lead out of every live view, so it asks once first. A
   // stray click on a dashboard is far easier than mistyping "SPAM 3" on a
   // phone, and this is cheaper than a modal.
@@ -117,49 +162,21 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
   const [message,       setMessage]       = useState('');
   const [activeTab,     setActiveTab]     = useState('conversation');
   const [showViewing,   setShowViewing]   = useState(false);
-  const [loading,       setLoading]       = useState(true);
   const [actionLoading, setActionLoading] = useState('');
   const [actionMsg,     setActionMsg]     = useState('');
-  const [noteText,      setNoteText]      = useState('');
-  const [noteSavedAt,   setNoteSavedAt]   = useState(null);
+  const [noteText,      setNoteText]      = useState(() => storedNote(leadId)?.text || '');
+  const [noteSavedAt,   setNoteSavedAt]   = useState(() => storedNote(leadId)?.updatedAt || null);
+  // Opening a different lead in the same modal loads that lead's note. Done
+  // during render, not in an effect: an effect would paint the previous
+  // lead's note for a frame first (React's "adjusting state when a prop
+  // changes" pattern).
+  const [notesFor, setNotesFor] = useState(leadId);
+  if (notesFor !== leadId) {
+    setNotesFor(leadId);
+    setNoteText(storedNote(leadId)?.text || '');
+    setNoteSavedAt(storedNote(leadId)?.updatedAt || null);
+  }
   const bottomRef = useRef(null);
-
-  // FIX: these used to be fetched with Promise.all — if the takeover
-  // history call 403'd (e.g. a closed lead left with a dangling
-  // ActiveTakeover record from the WhatsApp CLOSE command), the whole
-  // load() rejected and setLead() never ran, so the modal opened
-  // completely blank with no indication of what went wrong. Fetching
-  // independently means a failed history call just leaves that section
-  // empty instead of hiding the entire lead.
-  const load = async () => {
-    const [timelineResult, historyResult] = await Promise.allSettled([
-      api.get(`/admin-ops/leads/${leadId}/timeline`),
-      api.get(`/takeover/${leadId}/history`),
-    ]);
-
-    if (timelineResult.status === 'fulfilled') {
-      setLead(timelineResult.value.data.data?.lead);
-      setTimeline(timelineResult.value.data.data?.timeline || []);
-      setEvents(timelineResult.value.data.data?.events || null);
-    } else {
-      console.error('Lead timeline load error', timelineResult.reason);
-    }
-
-    if (historyResult.status === 'fulfilled') {
-      setTakeoverHistory(historyResult.value.data.data?.takeoverHistory || []);
-    } else {
-      console.error('Takeover history load error', historyResult.reason);
-    }
-
-    setLoading(false);
-  };
-
-  useEffect(() => { load(); }, [leadId]);
-  useEffect(() => {
-    const existing = getAllNotes()[leadId];
-    setNoteText(existing?.text || '');
-    setNoteSavedAt(existing?.updatedAt || null);
-  }, [leadId]);
 
   const handleSaveNote = () => {
     saveNote(leadId, noteText);

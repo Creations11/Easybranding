@@ -17,7 +17,8 @@
 // details/whatsapp/workflow/billing/usage/test tabs. Only shown in
 // edit mode (isEdit), matching how usage/test already work, since
 // it needs a real client._id to call the agent-invite endpoints.
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import api from '../api';
 import AgentManager from './AgentManager';
 import { colors } from '../utils/theme';
@@ -62,7 +63,6 @@ export default function AdminClientModal({ client, onClose, onSave }) {
   const [saving,     setSaving]     = useState(false);
   const [error,      setError]      = useState('');
   const [tab,        setTab]        = useState('details');
-  const [usage,      setUsage]      = useState(null);
   const [testMsg,    setTestMsg]    = useState('Hi');
   const [testStage,  setTestStage]  = useState('awaiting_menu');
   const [testResult, setTestResult] = useState(null);
@@ -70,13 +70,14 @@ export default function AdminClientModal({ client, onClose, onSave }) {
   const set = (f, v) => setForm(p => ({ ...p, [f]: v }));
   const toggleAddon = (key) => setForm(p => ({ ...p, addons: { ...p.addons, [key]: !p.addons[key] } }));
 
-  useEffect(() => {
-    if (isEdit && tab === 'usage') {
-      api.get(`/tenants/${client._id}/usage`)
-        .then(res => setUsage(res.data.data))
-        .catch(() => {});
-    }
-  }, [tab, isEdit]);
+  // Only fetched once the Usage tab is opened, and keyed by client, so
+  // switching clients can never show the previous one's figures. A failed
+  // load leaves the tab empty, as it always did.
+  const { data: usage = null } = useQuery({
+    queryKey: ['tenant-usage', client?._id],
+    queryFn: () => api.get(`/tenants/${client._id}/usage`).then((res) => res.data.data),
+    enabled: isEdit && tab === 'usage',
+  });
 
   const handleTest = async () => {
     if (!isEdit) return;

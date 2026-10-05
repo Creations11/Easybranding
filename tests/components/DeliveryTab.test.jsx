@@ -8,7 +8,8 @@
 // absent must stay absent — plus the empty states, which on a pilot are what
 // the owner actually sees most days.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render as rtlRender, screen, waitFor, fireEvent } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import api from '../../src/api'
 import DeliveryTab from '../../src/components/DeliveryTab'
 
@@ -55,6 +56,14 @@ const wire = ({ overview = OVERVIEW, orders = ORDERS, drivers = [], businesses =
     return reply([])
   })
 }
+
+// A fresh query client per render, retries off: a test that fails a panel
+// wants the banner now, not after the real app's backoff.
+const render = (ui) => rtlRender(
+  <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    {ui}
+  </QueryClientProvider>
+)
 
 describe('DeliveryTab', () => {
   beforeEach(() => { vi.clearAllMocks() })

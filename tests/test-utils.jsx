@@ -2,7 +2,7 @@
 // Shared render helper for dashboard tests.
 //
 // Deliberately does NOT wrap with <AuthProvider> — useAuth()'s no-context
-// fallback (src/context/AuthContext.jsx) reads localStorage['eb_user']
+// fallback (src/context/auth.js) reads localStorage['eb_user']
 // synchronously with no network call, which is simpler and fully
 // sufficient for controlling auth state in these tests than mounting the
 // real provider (which would trigger a real GET /auth/me on mount).

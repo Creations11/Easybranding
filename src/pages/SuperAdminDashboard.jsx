@@ -22,11 +22,11 @@ import ChatTab from '../components/ChatTab';
 import DeliveryTab from '../components/DeliveryTab';
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
 import StatCard from '../components/StatCard';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/auth';
 import {
   useOverview, useAllLeads, useActiveLeads, useAlerts,
   useTenants, useTenantStats, useUsers, usePendingUsers,
-  useAgents, useHealth, useRefetchAll, useFlowTemplates,
+  useHealth, useRefetchAll, useFlowTemplates,
   getStoredScope, setStoredScope,
 } from '../hooks/useDashboardData';
 import ProspectingPanel from '../components/ProspectingPanel';
@@ -92,7 +92,6 @@ export default function SuperAdminDashboard() {
   const tenantStats  = useTenantStats().data;
   const allUsers     = useUsers().data || [];
   const pendingUsers = usePendingUsers().data || [];
-  const agents       = useAgents().data || [];
   const health       = useHealth().data;
   const flowTemplates = useFlowTemplates().data || [];
   const refetch      = useRefetchAll();
@@ -497,7 +496,7 @@ export default function SuperAdminDashboard() {
         {/* ════════ EB TEAM ════════ */}
         {section === 'ebteam' && (
           <SectionErrorBoundary name="EB Team" onRetry={refetch}>
-            <EBTeamPanel isSuperAdmin={isSuperAdmin} tenants={tenants} onReload={refetch} />
+            <EBTeamPanel isSuperAdmin={isSuperAdmin} />
           </SectionErrorBoundary>
         )}
 

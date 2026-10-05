@@ -14,7 +14,7 @@
 // ─────────────────────────────────────────────────────────────
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/auth';
 
 // ── Tenant scope (super-admin only) ──────────────────────────
 // A super-admin sees every tenant by default, which mixes platform

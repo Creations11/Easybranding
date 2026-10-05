@@ -15,7 +15,8 @@
 // The pending screen is still correct for INVITED users joining an existing
 // tenant: that approval gate exists to stop a stranger reaching another
 // business's data, and it still does.
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../api';
 import { loadProducts } from '../config/plans';
@@ -36,8 +37,8 @@ export default function Register() {
   // system, and one of the wrongest: R950 is nearly 10x what Venbus pays and
   // R2,450 is a figure no tenant has ever been charged. Somebody arriving
   // from a pricing link was greeted with a price we do not sell.
-  const [products, setProducts] = useState([]);
-  useEffect(() => { loadProducts().then(setProducts).catch(() => {}); }, []);
+  // A failed load just means no badge; the form works without it.
+  const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: loadProducts });
   const planBadge = products.find((p) => p.key === selectedPlan) || null;
 
   const [fullName,     setFullName]     = useState('');
@@ -48,28 +49,33 @@ export default function Register() {
   const [loading,      setLoading]      = useState(false);
   const [error,        setError]        = useState('');
   const [pending,      setPending]      = useState(false);
-  const [tenantName,   setTenantName]   = useState(null);
-  const [inviteValid,  setInviteValid]  = useState(null); // null=checking, true=valid, false=invalid
-  const [inviteChecking, setInviteChecking] = useState(false);
+  const [joinedTenant, setJoinedTenant] = useState(null);
 
-  // Validate invite token on load
-  useEffect(() => {
-    if (!inviteToken) { setInviteValid(null); return; }
-    setInviteChecking(true);
-    fetch(`${import.meta.env.VITE_API_URL}/invites/validate/${inviteToken}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) {
-          setTenantName(data.data?.businessName || data.data?.brandName);
-          setInviteValid(true);
-        } else {
-          setInviteValid(false);
-          setError('This invite link is invalid or has expired. Please request a new one.');
-        }
-      })
-      .catch(() => { setInviteValid(false); setError('Could not validate invite link.'); })
-      .finally(() => setInviteChecking(false));
-  }, [inviteToken]);
+  // ── The invite, validated once ──────────────────────────────────────
+  //
+  // A query since 2026-10-05, keyed by token. Validated once per visit, as
+  // the effect did: no retry, no refetch when the window regains focus. A
+  // second check landing while somebody types could flip the form to
+  // "invalid" under them, and an invite does not become valid by asking
+  // again.
+  const invite = useQuery({
+    queryKey: ['invite', inviteToken],
+    queryFn: () => fetch(`${import.meta.env.VITE_API_URL}/invites/validate/${inviteToken}`).then((r) => r.json()),
+    enabled: !!inviteToken,
+    retry: false,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
+  const inviteChecking = !!inviteToken && invite.isPending;
+  // null = no invite, or still checking; true = valid; false = invalid.
+  const inviteValid = !inviteToken || invite.isPending ? null : !invite.isError && !!invite.data?.success;
+  const inviteError = inviteValid !== false ? ''
+    : invite.isError ? 'Could not validate invite link.'
+    : 'This invite link is invalid or has expired. Please request a new one.';
+  const inviteTenant = inviteValid ? invite.data?.data?.businessName || invite.data?.data?.brandName : null;
+  // The registration response names the business they joined; until then,
+  // the invite does.
+  const tenantName = joinedTenant || inviteTenant || null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -84,7 +90,7 @@ export default function Register() {
         plan: selectedPlan || undefined,
       });
       const data = res.data.data || res.data;
-      setTenantName(data?.tenantName || tenantName);
+      setJoinedTenant(data?.tenantName || tenantName);
 
       // A self-served business is already signed in — the server set the
       // session cookie and returned pending: false. Send them straight into
@@ -261,9 +267,9 @@ export default function Register() {
 
         {inviteChecking && <p style={{ color: t.muted, fontSize: '13px', marginBottom: '16px' }}>Validating invite link...</p>}
 
-        {error && (
+        {(error || inviteError) && (
           <div style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px', color: t.red, fontSize: '14px' }}>
-            {error}
+            {error || inviteError}
           </div>
         )}
 

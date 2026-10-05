@@ -9,7 +9,8 @@
 // so this component only reads/removes via the tenant record.
 //
 // Usage: <AgentManager tenantId={tenant._id} />
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 
 const c = {
@@ -18,29 +19,31 @@ const c = {
   red: '#f87171', emerald: '#34d399', amber: '#fbbf24',
 };
 
+const NO_AGENTS = [];
+
 export default function AgentManager({ tenantId }) {
-  const [agents, setAgents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const loadData = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const tenantRes = await api.get(`/tenants/${tenantId}`);
-      setAgents(tenantRes.data.data?.tenant?.agentPhones || []);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Could not load agents');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (tenantId) loadData();
-  }, [tenantId]);
+  // Keyed by tenant (a query since 2026-10-05): the modal is reused across
+  // clients, and a slow answer for the previous client must never fill this
+  // one's agent list. Without a tenantId nothing is fetched and the panel
+  // stays on "loading", as before.
+  const agentsKey = ['tenant-agents', tenantId];
+  const agentsQ = useQuery({
+    queryKey: agentsKey,
+    queryFn: () => api.get(`/tenants/${tenantId}`).then((res) => res.data.data?.tenant?.agentPhones || []),
+    enabled: !!tenantId,
+  });
+  const agents = agentsQ.data ?? NO_AGENTS;
+  const loading = agentsQ.isPending;
+  const loadError = agentsQ.isError
+    ? agentsQ.error?.response?.data?.message || 'Could not load agents'
+    : '';
+  const error = actionError || loadError;
+  const setError = setActionError;
 
   const handleRemoveAgent = async (phoneToRemove) => {
     setError('');
@@ -50,7 +53,7 @@ export default function AgentManager({ tenantId }) {
     setSaving(true);
     try {
       await api.put(`/tenants/${tenantId}`, { agentPhones: updatedAgents });
-      setAgents(updatedAgents);
+      qc.setQueryData(agentsKey, updatedAgents);
       setSuccess('Agent removed.');
     } catch (err) {
       setError(err.response?.data?.message || 'Could not remove agent');

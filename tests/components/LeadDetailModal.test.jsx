@@ -9,6 +9,7 @@
 // every view the owner works from.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { seedUser } from '../test-utils'
 import api from '../../src/api'
 import LeadDetailModal from '../../src/components/LeadDetailModal'
@@ -54,7 +55,12 @@ const renderModal = async (leadOver = {}) => {
   mockLoad(leadOver)
   seedUser()
   const onUpdate = vi.fn()
-  render(<LeadDetailModal leadId={LEAD_ID} onClose={() => {}} onUpdate={onUpdate} />)
+  // A fresh query client each time, so no test reads another's cached lead.
+  render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <LeadDetailModal leadId={LEAD_ID} onClose={() => {}} onUpdate={onUpdate} />
+    </QueryClientProvider>
+  )
   await waitFor(() => expect(screen.queryByText('Loading...')).not.toBeInTheDocument())
   return { onUpdate }
 }

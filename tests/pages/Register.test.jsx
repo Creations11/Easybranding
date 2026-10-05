@@ -16,6 +16,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const post = vi.fn()
 const get = vi.fn()
@@ -27,9 +28,11 @@ import Register from '../../src/pages/Register'
 
 const renderPage = (path = '/register') =>
   render(
-    <MemoryRouter initialEntries={[path]}>
-      <Register />
-    </MemoryRouter>
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <MemoryRouter initialEntries={[path]}>
+        <Register />
+      </MemoryRouter>
+    </QueryClientProvider>
   )
 
 beforeEach(() => {
@@ -42,7 +45,7 @@ beforeEach(() => {
   // Invite validation uses raw fetch, not the api client — unmocked it
   // rejects, the page decides the invite is invalid, and it replaces the
   // whole form with "contact your agency admin".
-  global.fetch = vi.fn(async () => ({
+  globalThis.fetch = vi.fn(async () => ({
     json: async () => ({ success: true, data: { businessName: 'Acme' } }),
   }))
 })
@@ -114,6 +117,26 @@ describe('Register', () => {
     await waitFor(() => expect(screen.getByText(/pending approval/i)).toBeTruthy())
     expect(window.location.href).toBe('')
     expect(localStorage.getItem('eb_user')).toBeNull()
+  })
+
+  // Rewritten onto a query on 2026-10-05: validity, the "checking" line and
+  // the error are derived from the invite's answer instead of four pieces of
+  // state an effect kept in step by hand. A bad link must still say so, and
+  // must not let anybody submit into a tenant nobody invited them to.
+  it('refuses an invite link the server does not recognise', async () => {
+    globalThis.fetch = vi.fn(async () => ({ json: async () => ({ success: false }) }))
+    renderPage('/register?invite=expired123')
+
+    await waitFor(() => expect(screen.getByText(/invite link is invalid or has expired/i)).toBeTruthy())
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
+    expect(post).not.toHaveBeenCalled()
+  })
+
+  it('says it could not check the invite when the check itself fails', async () => {
+    globalThis.fetch = vi.fn(async () => { throw new Error('offline') })
+    renderPage('/register?invite=tok123')
+
+    await waitFor(() => expect(screen.getByText(/Could not validate invite link/i)).toBeTruthy())
   })
 
   it('never prints a hardcoded price', async () => {

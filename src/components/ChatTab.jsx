@@ -286,8 +286,6 @@ export default function ChatTab({ conversations = [], onRefresh, onExit }) {
   const [err, setErr] = useState('');
   const [query, setQuery] = useState('');
   const [broadcast, setBroadcast] = useState({ open: false, text: '', preview: null, result: null, busy: false });
-  const [reengaging, setReengaging] = useState(false);
-  const [reengageMsg, setReengageMsg] = useState(null);
   const endRef = useRef(null);
 
   const openThread = useCallback(async (id) => {
@@ -313,23 +311,6 @@ export default function ChatTab({ conversations = [], onRefresh, onExit }) {
 
   const isTakenOver = lead?.workflowStatus === 'taken_over';
   const isClosed    = lead?.workflowStatus === 'closed';
-
-  // An approved template is the ONLY thing that reaches someone outside the
-  // 24-hour window. On success the thread reloads so the recorded note shows
-  // — the owner should be able to see that they acted.
-  const reengage = async () => {
-    setReengaging(true);
-    setReengageMsg(null);
-    try {
-      const r = await api.post(`/admin-ops/leads/${selectedId}/reengage`);
-      setReengageMsg({ ok: !!r.data?.success, text: r.data?.message || 'Sent.' });
-      if (r.data?.success) await openThread(selectedId);
-    } catch (e) {
-      setReengageMsg({ ok: false, text: e.response?.data?.message || 'Could not reopen the chat.' });
-    } finally {
-      setReengaging(false);
-    }
-  };
 
   const send = async () => {
     const body = message.trim();

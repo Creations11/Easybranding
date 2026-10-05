@@ -4,7 +4,8 @@
 // Stats, province breakdown, consent tracking, payment status,
 // search, filter, pagination, member detail modal, CSV export
 // ─────────────────────────────────────────────────────────────
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import api from '../api';
 import Pagination from './Pagination';
 
@@ -15,50 +16,51 @@ const c = {
   borderDim: 'rgba(255,255,255,0.06)', surface: '#0D110C',
 };
 
+const NO_MEMBERS = { members: [], total: 0 };
+
 export default function PACMembersPanel() {
-  const [members, setMembers] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [provinceFilter, setProvinceFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [selectedMember, setSelectedMember] = useState(null);
   const ITEMS_PER_PAGE = 15;
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [mRes, sRes] = await Promise.all([
-        api.get('/admin-ops/members', {
-          params: {
-            page,
-            limit: ITEMS_PER_PAGE,
-            search: search || undefined,
-            province: provinceFilter !== 'all' ? provinceFilter : undefined,
-            status: statusFilter !== 'all' ? statusFilter : undefined,
-            payment: paymentFilter !== 'all' ? paymentFilter : undefined,
-          },
-        }),
-        api.get('/admin-ops/members/stats'),
-      ]);
-      setMembers(mRes.data.data?.members || []);
-      setTotal(mRes.data.data?.total || 0);
-      setStats(sRes.data.data?.stats || null);
-    } catch (err) {
-      console.error('Failed to load members', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 30000);
-    return () => clearInterval(interval);
-  }, [page, search, provinceFilter, statusFilter, paymentFilter]);
+  // Two queries since 2026-10-05, both polled every 30s as before.
+  //
+  // The list is keyed by every filter, so typing "ab" then "abc" can no longer
+  // have the slower "ab" answer land last and overwrite the "abc" results.
+  // keepPreviousData keeps the current rows on screen while a new filter
+  // loads, which is how the effect behaved (it never cleared them).
+  //
+  // Stats are their own query: they do not depend on the filters, so they are
+  // no longer re-fetched on every keystroke, and a failing stats call no
+  // longer hides the member list (Promise.all used to drop both).
+  const filters = { page, search, provinceFilter, statusFilter, paymentFilter };
+  const membersQ = useQuery({
+    queryKey: ['pac-members', filters],
+    queryFn: () => api.get('/admin-ops/members', {
+      params: {
+        page,
+        limit: ITEMS_PER_PAGE,
+        search: search || undefined,
+        province: provinceFilter !== 'all' ? provinceFilter : undefined,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+        payment: paymentFilter !== 'all' ? paymentFilter : undefined,
+      },
+    }).then((res) => ({ members: res.data.data?.members || [], total: res.data.data?.total || 0 })),
+    placeholderData: keepPreviousData,
+    refetchInterval: 30_000,
+  });
+  const statsQ = useQuery({
+    queryKey: ['pac-members-stats'],
+    queryFn: () => api.get('/admin-ops/members/stats').then((res) => res.data.data?.stats || null),
+    refetchInterval: 30_000,
+  });
+  const { members, total } = membersQ.data ?? NO_MEMBERS;
+  const stats = statsQ.data ?? null;
+  const loading = membersQ.isPending;
 
   const handleExport = async () => {
     try {
@@ -70,7 +72,7 @@ export default function PACMembersPanel() {
       document.body.appendChild(link);
       link.click();
       link.remove();
-    } catch (err) {
+    } catch {
       alert('Export failed');
     }
   };

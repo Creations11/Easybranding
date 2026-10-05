@@ -1,7 +1,7 @@
 // src/components/Nav.jsx — Mobile responsive with hamburger menu
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/auth';
 
 const t = {
   lime:    '#B8F040',
@@ -26,7 +26,11 @@ export default function Nav() {
     signOut();
   };
 
-  const NavLinks = ({ mobile = false }) => (
+  // A function that returns the links, not a component: a component declared
+  // inside Nav is a NEW component type on every render, so React threw the
+  // links away and rebuilt them each time Nav re-rendered (opening the menu,
+  // signing in). Called as navLinks(), its output is reconciled like any JSX.
+  const navLinks = (mobile = false) => (
     <>
       {/* ── Public Links ────────────────────────────────────── */}
       {!isAuthenticated && (
@@ -212,7 +216,7 @@ export default function Nav() {
 
           {/* Desktop links */}
           <div className="nav-desktop" style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            <NavLinks />
+            {navLinks()}
           </div>
 
           {/* Hamburger */}
@@ -270,7 +274,7 @@ export default function Nav() {
           padding: '8px 24px 24px', 
           fontFamily: "'Outfit', sans-serif" 
         }}>
-          <NavLinks mobile />
+          {navLinks(true)}
         </div>
       )}
     </>

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render as rtlRender, screen, waitFor, fireEvent } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { seedUser } from '../test-utils'
 import api from '../../src/api'
 import AdminDashboard from '../../src/pages/AdminDashboard'
@@ -8,11 +9,11 @@ vi.mock('../../src/api', () => ({
   default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
 }))
 
-// AdminDashboard fetches all 14 of these in one Promise.all (loadData,
-// src/pages/AdminDashboard.jsx) — unlike SuperAdminDashboard's React
-// Query hooks, there's no per-endpoint enable/disable, so every route
-// needs a default resolver or Promise.all rejects with "undefined is not
-// a function" style noise instead of the intended test scenario.
+// AdminDashboard fetches all 14 of these in one query (loadAdminData,
+// src/pages/AdminDashboard.jsx) — unlike SuperAdminDashboard's per-panel
+// hooks, there's no per-endpoint enable/disable, so every route needs a
+// default resolver or allSettled records noise instead of the intended
+// test scenario.
 const ROUTE_DEFAULTS = {
   '/admin-ops/overview': { data: { data: { overview: null } } },
   '/admin-ops/conversations/active': { data: { data: { leads: [] } } },
@@ -37,6 +38,15 @@ const mockApiGet = (overrides = {}) => {
     return Promise.reject(new Error(`Unmocked api.get call in test: ${url}`))
   })
 }
+
+// A fresh query client per render, so no test sees another's cached data.
+// Retries off: a test that makes every call fail wants the failure now, not
+// after the backoff the real app uses.
+const render = (ui) => rtlRender(
+  <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    {ui}
+  </QueryClientProvider>
+)
 
 beforeEach(() => {
   localStorage.clear()
@@ -156,9 +166,37 @@ describe('AdminDashboard', () => {
     fireEvent.click(screen.getByText('🔓 Reopen'))
 
     await waitFor(() => expect(api.post).toHaveBeenCalledWith('/admin-ops/leads/lead1/reopen'))
-    // handleReopen calls loadData() again on success — a full second
-    // 14-call Promise.all round, unlike SuperAdminDashboard's targeted
-    // refetch()/invalidateQueries.
+    // handleReopen refetches the dashboard query on success — a full second
+    // 14-call round, unlike SuperAdminDashboard's targeted per-panel refetch.
     await waitFor(() => expect(api.get.mock.calls.length).toBeGreaterThan(getCallsBeforeReopen))
+  })
+
+  // The loader used to be a mount effect that only ever ran once and then on
+  // demand; any reload that failed wholesale replaced the dashboard with an
+  // error page. As a query, a failed REFRESH keeps the last good panels: the
+  // page is only blanked when there was never anything to show.
+  it('keeps the loaded panels when a later refresh fails completely', async () => {
+    seedUser({ role: 'admin' })
+    mockApiGet({
+      '/admin-ops/leads/closed': { data: { data: { leads: [
+        { _id: 'lead1', name: 'Closed Lead', phone: '+27823333333', closeReason: 'Manually closed' },
+      ] } } },
+    })
+    api.post.mockResolvedValue({ data: { success: true } })
+
+    render(<AdminDashboard />)
+    await waitFor(() => expect(screen.queryByText('Loading Admin Operations Center...')).not.toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /^Leads/ }))
+    await waitFor(() => expect(screen.getByText('Closed Lead')).toBeInTheDocument())
+
+    // Every call fails from here on, as if the connection dropped.
+    api.get.mockImplementation(() => Promise.reject({ response: { data: { message: 'Session expired' } } }))
+    const callsBefore = api.get.mock.calls.length
+    fireEvent.click(screen.getByText('🔓 Reopen'))
+    await waitFor(() => expect(api.get.mock.calls.length).toBeGreaterThan(callsBefore))
+    await new Promise((r) => setTimeout(r, 0))
+
+    expect(screen.queryByText('Session expired')).not.toBeInTheDocument()
+    expect(screen.getByText('Closed Lead')).toBeInTheDocument()
   })
 })

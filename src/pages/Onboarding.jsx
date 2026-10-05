@@ -15,19 +15,22 @@
 //    used that word at all. Mapped plan values to the real public
 //    tier names and prices so the two can't drift apart again.
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import api from '../api';
 import ConnectWhatsApp from '../components/ConnectWhatsApp';
 import { loadProducts, loadIndustries, tenantFieldsFor } from '../config/plans';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/auth';
 
 const c = {
   bg: '#06080A', surface: '#0D110C', card: '#121710',
   lime: '#B8F040', earth: '#C4873A', moss: '#4A6741',
   cyan: '#22d3ee', emerald: '#34d399', amber: '#fbbf24',
-  text: '#EEF0E8', muted: '#8A9080',
+  text: '#EEF0E8', muted: '#8A9080', red: '#f87171',
   border: 'rgba(184,240,64,0.12)', borderDim: 'rgba(255,255,255,0.06)',
 };
+
+const NONE = [];
 
 // PLANS now lives in src/config/plans.js — imported above.
 //
@@ -46,18 +49,18 @@ export default function Onboarding() {
   // and no fallback: every hardcoded price in this system has been wrong at
   // least once, and a checkout that guesses charges somebody the wrong
   // amount. If this cannot load, the plan step says so.
-  const [products, setProducts] = useState([]);
-  const [priceError, setPriceError] = useState(null);
-  useEffect(() => {
-    loadProducts().then(setProducts).catch(() => setPriceError('Could not load pricing. Please reload.'));
-  }, []);
+  //
+  // It did not, until 2026-10-05: the error was written into a variable that
+  // nothing rendered, so a failed load showed an empty plan list with no
+  // explanation. Each list is its own query now, and each step shows its own
+  // failure (see loadError below).
+  const productsQ = useQuery({ queryKey: ['products'], queryFn: loadProducts });
+  const products = productsQ.data ?? NONE;
 
   // The industry bots, also served rather than copied. Same reasoning: a
   // templateId this list gets wrong is a bot that never answers.
-  const [industries, setIndustries] = useState([]);
-  useEffect(() => {
-    loadIndustries().then(setIndustries).catch(() => setPriceError('Could not load the bot list. Please reload.'));
-  }, []);
+  const industriesQ = useQuery({ queryKey: ['industries'], queryFn: loadIndustries });
+  const industries = industriesQ.data ?? NONE;
 
   // A platform operator (super_admin / eb_manager) onboarding a client is a
   // DIFFERENT job from a business owner signing themselves up, and the
@@ -67,8 +70,8 @@ export default function Onboarding() {
   const { user, isSuperAdmin, isEBManager } = useAuth();
   const isOperator = isSuperAdmin || isEBManager || user?.role === 'eb_agent';
 
-  // A self-served owner ALREADY has a tenant — registering created it. Seed
-  // its id so the last step PUTs to that tenant instead of POSTing a new one.
+  // A self-served owner ALREADY has a tenant — registering created it, and
+  // the last step must PUT to it instead of POSTing a new one.
   //
   // Without this the wizard creates a SECOND tenant for the same business:
   // form.tenantId was only ever set by the Embedded Signup callback, so
@@ -76,23 +79,10 @@ export default function Onboarding() {
   // Two rows for one business, and getTenantByNumber returning whichever it
   // finds first — the same double-creation bug Embedded Signup already had.
   //
-  // Prefills the details they typed at registration too, so the wizard reads
-  // as a continuation rather than asking the same questions again.
-  useEffect(() => {
-    if (isOperator || !user?.tenantId) return;
-    setForm((prev) => ({ ...prev, tenantId: prev.tenantId || user.tenantId }));
-    api.get('/onboarding/status')
-      .then((r) => {
-        const b = (r.data?.data || r.data)?.business;
-        if (!b) return;
-        setForm((prev) => ({
-          ...prev,
-          businessName: prev.businessName || b.name || '',
-          contactEmail: prev.contactEmail || user.email || '',
-        }));
-      })
-      .catch(() => {}); // prefill is a convenience; they can type it themselves
-  }, [isOperator, user?.tenantId, user?.email]);
+  // Derived from the session rather than copied into the form by an effect,
+  // so it is right on the first render and follows the session if it
+  // changes. The Embedded Signup callback's id, when there is one, wins.
+  const ownTenantId = isOperator ? '' : user?.tenantId || '';
   const [form, setForm] = useState({
     businessName: '',
     brandName: '',
@@ -114,6 +104,24 @@ export default function Onboarding() {
     // instead of creating a duplicate.
     tenantId: '',
   });
+
+  // Prefills the details they typed at registration, so the wizard reads as a
+  // continuation rather than asking the same questions again. A convenience:
+  // if it fails they type it themselves.
+  useEffect(() => {
+    if (isOperator || !user?.tenantId) return;
+    api.get('/onboarding/status')
+      .then((r) => {
+        const b = (r.data?.data || r.data)?.business;
+        if (!b) return;
+        setForm((prev) => ({
+          ...prev,
+          businessName: prev.businessName || b.name || '',
+          contactEmail: prev.contactEmail || user.email || '',
+        }));
+      })
+      .catch(() => {});
+  }, [isOperator, user?.tenantId, user?.email]);
 
   const steps = [
     {
@@ -177,6 +185,7 @@ export default function Onboarding() {
       title: 'Choose Your Bot',
       icon: '🤖',
       description: 'Which one matches your business? We will set it up for you.',
+      loadError: industriesQ.isError ? 'Could not load the bot list. Please reload.' : '',
       fields: [
         { name: 'templateId', label: 'Your industry', type: 'select', options: industries.map((t) => ({
           value: t.id,
@@ -191,6 +200,7 @@ export default function Onboarding() {
       title: 'Choose Your Plan',
       icon: '💳',
       description: 'Pick the plan that fits your business.',
+      loadError: productsQ.isError ? 'Could not load pricing. Please reload.' : '',
       fields: [
         { name: 'product', label: 'Plan', type: 'select', options: products.map((p) => ({
           value: p.key,
@@ -251,8 +261,12 @@ export default function Onboarding() {
         setLoading(false);
         return;
       }
+      // The business this wizard is finishing: the one Embedded Signup just
+      // created, else the owner's own (see ownTenantId), else none (POST).
+      const tenantId = form.tenantId || ownTenantId;
       const payload = {
         ...form,
+        tenantId,
         status: 'trial',
         plan: chosen.plan,
         monthlyFee: chosen.monthlyFee,
@@ -269,8 +283,8 @@ export default function Onboarding() {
       // page too. POSTing here as well would create a SECOND tenant on the
       // same WhatsApp number — two rows, one number, and getTenantByNumber
       // returning whichever it finds first.
-      if (form.tenantId) {
-        await api.put(`/tenants/${form.tenantId}`, payload);
+      if (tenantId) {
+        await api.put(`/tenants/${tenantId}`, payload);
       } else {
         await api.post('/tenants', payload);
       }
@@ -355,6 +369,11 @@ export default function Onboarding() {
           <p style={{ color: c.muted, fontSize: '15px', marginTop: '4px' }}>
             {currentStep.description}
           </p>
+          {currentStep.loadError && (
+            <p role="alert" style={{ color: c.red, fontSize: '14px', marginTop: '10px' }}>
+              {currentStep.loadError}
+            </p>
+          )}
         </div>
 
         {/* Progress Bar */}

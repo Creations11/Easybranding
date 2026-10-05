@@ -44,6 +44,8 @@ import LeadTrend from '../components/LeadTrend';
 import LadderConversion from '../components/LadderConversion';
 import SalesFunnel from '../components/SalesFunnel';
 
+const NONE = [];
+
 const STATUS_COLOR_KEYS = {
   qualified: 'lime', not_qualified: 'red', taken_over: 'orange',
   capture_name: 'cyan', capture_property_interest: 'cyan', capture_budget: 'cyan',
@@ -84,14 +86,16 @@ export default function OperationsSection({
   const qualifiedQ = useQualifiedLeads(opsScope);
   const rejectedQ  = useRejectedLeads(opsScope);
   const closedQ    = useClosedLeads(opsScope);
-  const activeLeads    = activeQ.data?.leads || [];
-  const qualifiedLeads = qualifiedQ.data?.leads || [];
-  const rejectedLeads  = rejectedQ.data?.leads || [];
-  const closedLeads    = closedQ.data?.leads || [];
-  const stages   = useStages(opsScope).data || [];
-  const viewings = useViewings(opsScope).data || [];
-  const messages = useMessages(opsScope).data || [];
-  const alerts   = useAlerts(opsScope).data || [];
+  // NONE, not a fresh []: these feed useMemo below, and a new empty array on
+  // every render made those memos recompute on every render too.
+  const activeLeads    = activeQ.data?.leads || NONE;
+  const qualifiedLeads = qualifiedQ.data?.leads || NONE;
+  const rejectedLeads  = rejectedQ.data?.leads || NONE;
+  const closedLeads    = closedQ.data?.leads || NONE;
+  const stages   = useStages(opsScope).data || NONE;
+  const viewings = useViewings(opsScope).data || NONE;
+  const messages = useMessages(opsScope).data || NONE;
+  const alerts   = useAlerts(opsScope).data || NONE;
 
   const [opsTab, setOpsTab] = useState('overview');
   const [msgSearch,   setMsgSearch]   = useState('');

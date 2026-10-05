@@ -30,27 +30,49 @@ const c = {
   border: 'rgba(184,240,64,0.12)',
 };
 
+// ── No token + a session = a refresh, so let them carry on ─────────────
+//
+// The token is consumed the moment this page loads, which is right: a
+// link that survives failure survives forwarding. But it meant a FAILED
+// attempt burned the link — NovaCare hit Meta's "JSSDK Option is Not
+// Toggled" error, and retrying after the fix would have needed a whole
+// new link minted by hand.
+//
+// Redemption already signed them in, so a session with no token in the
+// URL is somebody coming back: refresh, back button, or returning after
+// a config fix. Let them straight through.
+//
+// Decided from this browser's storage alone, so it is the page's starting
+// state rather than something an effect sets a frame later.
+function withoutToken() {
+  const existing = localStorage.getItem('eb_user');
+  if (existing) {
+    try {
+      return { state: 'ready', error: null, user: JSON.parse(existing) };
+    } catch {
+      localStorage.removeItem('eb_user'); // corrupt — fall through
+    }
+  }
+  return { state: 'failed', error: 'That link is missing its code. Ask us to send a fresh one.', user: null };
+}
+
 export default function Continue() {
   const [params] = useSearchParams();
   const token = params.get('t');
 
-  const [state, setState] = useState('checking'); // checking | ready | failed
-  const [error, setError] = useState(null);
-  const [user, setUser] = useState(null);
+  // checking | ready | failed
+  const [result, setResult] = useState(() =>
+    token ? { state: 'checking', error: null, user: null } : withoutToken());
+  const { state, error, user } = result;
   const [connected, setConnected] = useState(null);
 
+  // Deliberately an effect and NOT a query. The token is single use: a query
+  // retries failures and refetches when the window regains focus, and every
+  // repeat would spend it again and turn a success into "already used".
   useEffect(() => {
-    // ── No token + a session = a refresh, so let them carry on ─────────
-    //
-    // The token is consumed the moment this page loads, which is right: a
-    // link that survives failure survives forwarding. But it meant a FAILED
-    // attempt burned the link — NovaCare hit Meta's "JSSDK Option is Not
-    // Toggled" error, and retrying after the fix would have needed a whole
-    // new link minted by hand.
-    //
-    // Redemption already signed them in, so a session with no token in the
-    // URL is somebody coming back: refresh, back button, or returning after
-    // a config fix. Let them straight through.
+    if (!token) return undefined;
+
+    // ── The token always wins ─────────
     //
     // ORDER MATTERS, and getting it backwards is dangerous. A token in the
     // URL ALWAYS wins over an existing session, because the token names who
@@ -59,22 +81,6 @@ export default function Continue() {
     // otherwise connect the client's number to the OPERATOR's tenant — the
     // same owner-versus-operator confusion the onboarding wizard guards
     // against at its final step.
-    if (!token) {
-      const existing = localStorage.getItem('eb_user');
-      if (existing) {
-        try {
-          setUser(JSON.parse(existing));
-          setState('ready');
-          return;
-        } catch {
-          localStorage.removeItem('eb_user'); // corrupt — fall through
-        }
-      }
-      setState('failed');
-      setError('That link is missing its code. Ask us to send a fresh one.');
-      return;
-    }
-
     let cancelled = false;
     api.post('/auth/handoff', { token })
       .then((r) => {
@@ -83,17 +89,18 @@ export default function Continue() {
         // Token is in an httpOnly cookie now; store the user like Login does
         // so a refresh does not bounce them back out.
         if (data?.user) localStorage.setItem('eb_user', JSON.stringify(data.user));
-        setUser(data?.user || null);
-        setState('ready');
+        setResult({ state: 'ready', error: null, user: data?.user || null });
       })
       .catch((err) => {
         if (cancelled) return;
-        setState('failed');
         // The server deliberately gives one message for expired, used and
         // unknown — saying which would tell an attacker their guess was once
         // real. Show it as-is rather than inventing a more specific reason.
-        setError(err.response?.data?.message ||
-          'That link has expired or has already been used.');
+        setResult({
+          state: 'failed',
+          user: null,
+          error: err.response?.data?.message || 'That link has expired or has already been used.',
+        });
       });
 
     return () => { cancelled = true; };

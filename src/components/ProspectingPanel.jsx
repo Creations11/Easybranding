@@ -1,5 +1,6 @@
 // src/components/ProspectingPanel.jsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import api from '../api';
 import CampaignReport from './CampaignReport';
 
@@ -11,15 +12,47 @@ const c = {
   borderDim: 'rgba(255,255,255,0.06)', surface: '#0D110C',
 };
 
+const NO_DATA = { prospects: [], stats: null, templates: [] };
+
+// Each call degrades on its own: no templates still shows the contacts.
+async function loadProspecting(currentUser) {
+  const [pSettled, tSettled] = await Promise.allSettled([
+    api.get('/prospecting'),
+    api.get('/prospecting/templates'),
+  ]);
+  if (pSettled.status === 'rejected') console.error(pSettled.reason);
+  if (tSettled.status === 'rejected') console.error(tSettled.reason);
+  const pData = pSettled.status === 'fulfilled' ? pSettled.value.data.data || {} : {};
+  const tData = tSettled.status === 'fulfilled' ? tSettled.value.data.data || {} : {};
+  const allProspects = pData.prospects || [];
+  const isAgent = currentUser?.role === 'eb_agent';
+  return {
+    prospects: isAgent
+      ? allProspects.filter(p =>
+          p.assignedTo?.toString() === currentUser?.id?.toString() ||
+          p.createdBy?.toString() === currentUser?.id?.toString()
+        )
+      : allProspects,
+    stats: pData.stats,
+    templates: tData.templates || [],
+  };
+}
+
 export default function ProspectingPanel({ currentUser }) {
-  const [prospects, setProspects] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [templates, setTemplates] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // A query since 2026-10-05; keyed by who is looking, because an agent
+  // only ever sees their own contacts.
+  const prospectingQ = useQuery({
+    queryKey: ['prospecting', currentUser?.role, currentUser?.id],
+    queryFn: () => loadProspecting(currentUser),
+  });
+  const { prospects, stats, templates } = prospectingQ.data ?? NO_DATA;
+  const loading = prospectingQ.isPending;
+  const loadData = () => prospectingQ.refetch();
   const [sending, setSending] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [chosenTemplate, setSelectedTemplate] = useState('');
+  const selectedTemplate = chosenTemplate || templates[0]?.key || '';
   const [varName, setVarName] = useState('');
   const [varAgency, setVarAgency] = useState('');
   const [sendResult, setSendResult] = useState(null);
@@ -35,34 +68,6 @@ export default function ProspectingPanel({ currentUser }) {
 
   const iStyle = { width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid ' + c.borderDim, borderRadius: '10px', color: c.text, fontSize: '14px', outline: 'none', fontFamily: 'inherit', marginBottom: '10px' };
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [pSettled, tSettled] = await Promise.allSettled([
-        api.get('/prospecting'),
-        api.get('/prospecting/templates'),
-      ]);
-      const pRes = pSettled.status === 'fulfilled' ? pSettled.value : { data: { data: {} } };
-      const tRes = tSettled.status === 'fulfilled' ? tSettled.value : { data: { data: {} } };
-      const allProspects = pRes.data.data?.prospects || [];
-      const isAgent = currentUser?.role === 'eb_agent';
-      const myProspects = isAgent
-        ? allProspects.filter(p =>
-            p.assignedTo?.toString() === currentUser?.id?.toString() ||
-            p.createdBy?.toString() === currentUser?.id?.toString()
-          )
-        : allProspects;
-      setProspects(myProspects);
-      setStats(pRes.data.data?.stats);
-      setTemplates(tRes.data.data?.templates || []);
-      if (!selectedTemplate && tRes.data.data?.templates?.length) {
-        setSelectedTemplate(tRes.data.data.templates[0].key);
-      }
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => { loadData(); }, []);
 
   const handleAddSingle = async () => {
     if (!addPhone) return;
@@ -90,7 +95,7 @@ export default function ProspectingPanel({ currentUser }) {
       setMsg('✅ Added ' + added + ', skipped ' + skipped + ' duplicates');
       setTimeout(() => setMsg(''), 3000);
       loadData();
-    } catch (err) { setMsg('❌ Failed to add contacts'); }
+    } catch (err) { setMsg('❌ ' + (err.response?.data?.message || 'Failed to add contacts')); }
     finally { setBulkLoading(false); }
   };
 

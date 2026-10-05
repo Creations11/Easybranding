@@ -23,14 +23,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Blocking since 2026-10-05, when lint reached zero problems. It was
+      # informational before that, because 47 pre-existing problems would have
+      # kept every check red; as informational it grew to 53, and several of
+      # those were real bugs. `npm run lint` fails on warnings as well, so the
+      # count cannot creep back up one warning at a time. Runs before the tests
+      # so a lint failure is reported in seconds.
+      - name: Lint
+        run: npm run lint
+
       - name: Run tests
         run: npm test
-
-      # Non-blocking: 47 pre-existing problems (confirmed present before
-      # this workflow was added, unrelated to any test-suite work) would
-      # otherwise make this check permanently red regardless of what a
-      # given PR actually changes. Runs so new lint issues are still
-      # visible in the PR/Action log, but doesn't gate merges.
-      - name: Lint (informational)
-        run: npm run lint
-        continue-on-error: true

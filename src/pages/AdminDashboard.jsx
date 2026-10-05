@@ -1,7 +1,8 @@
 // src/pages/AdminDashboard.jsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/auth';
 import SuperAdminPanel from '../components/SuperAdminPanel';
 import LeadDetailModal from '../components/LeadDetailModal';
 import AssignModal from '../components/AssignModal';
@@ -129,40 +130,114 @@ const PLAN_COLORS   = { starter: colors.muted, growth: colors.lime, enterprise: 
 const STATUS_COLORS = { active: colors.lime, trial: colors.amber, suspended: colors.red, cancelled: colors.muted };
 
 // ── Main Admin Dashboard ──────────────────────────────────────
+// ── The dashboard's data, as one query ──────────────────────────────────
+//
+// One query rather than fourteen because the panels are judged together:
+// whether EVERY call failed decides between blanking the page and showing a
+// banner, and that needs all the results side by side. Moved from a mount
+// effect onto react-query on 2026-10-05, which gives it two things the effect
+// never had: a refresh that keeps the panels on screen while it runs, and a
+// failed refresh that keeps the last good data instead of an error page.
+const ADMIN_DASHBOARD_KEY = ['admin-dashboard'];
+
+// What the page shows before anything has loaded, and after a total failure.
+const NO_DATA = {
+  overview: null, activeConversations: [], qualifiedLeads: [], rejectedLeads: [],
+  closedLeads: [], alerts: [], agents: [], clients: [], clientStats: null,
+  pendingUsers: [], allUsers: [], tenants: [], stages: [], recentMessages: [],
+  viewingRequests: [], panelError: '',
+};
+
+async function loadAdminData() {
+  // ── Why this is allSettled and not Promise.all ────────────────────────
+  //
+  // These panels load in parallel, and with Promise.all a SINGLE rejected
+  // request rejected the whole batch — the catch below then blanked the
+  // entire page with "Failed to load admin data". No partial render, no
+  // clue which call failed.
+  //
+  // That is exactly what happened to every client (2026-08-07):
+  // /tenants/stats is platform-wide (all tenants, MRR) and super_admin-only
+  // by design, so it correctly 403s a tenant admin — and that one deliberate
+  // 403 took down the whole dashboard for every paying client. It is now
+  // only requested by users who can actually see platform data, and any
+  // other failure degrades a single panel instead of the page.
+  const wantsPlatformStats = ['super_admin', 'eb_manager'].includes(getStoredUser().role);
+
+  // Kicked off first so it still runs in parallel, but kept OUT of the
+  // results tally below: a client skips it entirely, and a skipped call must
+  // not count as a success when deciding whether everything failed.
+  const statsPromise = wantsPlatformStats
+    ? api.get('/tenants/stats').catch(() => null)
+    : null;
+
+  const results = await Promise.allSettled([
+    api.get('/admin-ops/overview'),
+    api.get('/admin-ops/conversations/active'),
+    api.get('/admin-ops/leads/qualified'),
+    api.get('/admin-ops/leads/rejected'),
+    api.get('/admin-ops/leads/closed'),
+    api.get('/admin-ops/alerts'),
+    api.get('/admin-ops/agents'),
+    api.get('/tenants'),
+    api.get('/users/pending'),
+    api.get('/users'),
+    api.get('/admin-ops/stages'),
+    api.get('/admin-ops/messages/recent'),
+    api.get('/admin-ops/viewings'),
+  ]);
+
+  const [ovRes, activeRes, qualRes, rejRes, closedRes, alertRes, agentRes,
+         clientRes, pendingRes, usersRes, stagesRes, messagesRes,
+         viewingsRes] = results.map(r => (r.status === 'fulfilled' ? r.value : null));
+  const statsRes = statsPromise ? await statsPromise : null;
+
+  // Only a wholesale failure is worth blanking the page for — a dead API or
+  // an expired token fails every call, and a dashboard of empty panels with
+  // no message would look like "you have no business" rather than "we could
+  // not load it". Thrown, not returned: a query that throws keeps whatever it
+  // last loaded, so a refresh that fails on a bad connection does not take
+  // working panels away.
+  const rejected = results.filter(r => r.status === 'rejected');
+  const firstMessage = rejected[0]?.reason?.response?.data?.message || 'Failed to load admin data';
+  if (rejected.length && rejected.length === results.length) throw new Error(firstMessage);
+
+  return {
+    overview: ovRes?.data.data?.overview ?? null,
+    activeConversations: activeRes?.data.data?.leads || [],
+    qualifiedLeads: qualRes?.data.data?.leads || [],
+    rejectedLeads: rejRes?.data.data?.leads || [],
+    closedLeads: closedRes?.data.data?.leads || [],
+    alerts: alertRes?.data.data?.alerts || [],
+    agents: agentRes?.data.data?.agents || [],
+    clients: clientRes?.data.data?.tenants || [],
+    clientStats: statsRes?.data.data?.stats ?? null,
+    pendingUsers: pendingRes?.data.data?.users || [],
+    allUsers: usersRes?.data.data?.users || [],
+    tenants: clientRes?.data.data?.tenants || [],
+    stages: stagesRes?.data.data?.stages || [],
+    // Grouped by sender. Falls back to the flat array so the tab still
+    // renders against an older API that has not deployed `conversations` yet.
+    recentMessages: messagesRes?.data.data?.conversations
+      || messagesRes?.data.data?.messages
+      || [],
+    viewingRequests: viewingsRes?.data.data?.viewings || [],
+    // A PARTIAL failure still has to be visible, though: an empty panel is
+    // indistinguishable from a panel with nothing in it, so the user is told
+    // which way it is — just without losing the panels that did load.
+    panelError: rejected.length ? firstMessage : '',
+  };
+}
+
 export default function AdminDashboard() {
-  const [overview,            setOverview]            = useState(null);
-  const [activeConversations, setActiveConversations] = useState([]);
-  const [qualifiedLeads,      setQualifiedLeads]      = useState([]);
-  const [rejectedLeads,       setRejectedLeads]       = useState([]);
-  const [closedLeads,         setClosedLeads]         = useState([]);
-  const [alerts,              setAlerts]              = useState([]);
-  const [agents,              setAgents]              = useState([]);
-  const [clients,             setClients]             = useState([]);
-  const [clientStats,         setClientStats]         = useState(null);
-  const [pendingUsers,        setPendingUsers]        = useState([]);
-  const [allUsers,            setAllUsers]            = useState([]);
-  const [tenants,             setTenants]             = useState([]);
-  const [stages,              setStages]              = useState([]);
-  const [recentMessages,      setRecentMessages]      = useState([]);
-  const [viewingRequests,     setViewingRequests]     = useState([]);
   const [assignModal,         setAssignModal]         = useState(null);
   const [clientModal,         setClientModal]         = useState(null);
   const [approveModal,        setApproveModal]        = useState(null);
   const [leadDetailId,        setLeadDetailId]        = useState(null);
   const [inviteModal,         setInviteModal]         = useState(null);
   const [inviteUrl,           setInviteUrl]           = useState('');
-  const [loading,             setLoading]             = useState(true);
-  const [error,               setError]               = useState('');
-  // Partial failure: some panels are empty because their call failed, not
-  // because the business has no data. Shown as a banner, never as a
-  // page-replacing error — see loadData.
-  const [panelError,          setPanelError]          = useState('');
   const [showPasswordModal,   setShowPasswordModal]   = useState(false);
   const [tab, setTab] = useState('overview');
-  // Whether this tenant runs deliveries at all. Most do not, and a tab
-  // that opens on 'nothing here' for every other client is clutter, so the
-  // button only exists when there is something behind it.
-  const [hasDelivery, setHasDelivery] = useState(false);
   const isMobile = useMediaQuery(MOBILE_QUERY);
   // Which lead column is showing on a phone — the board is one-at-a-time there.
   const [mobileCol, setMobileCol] = useState('active');
@@ -176,104 +251,39 @@ export default function AdminDashboard() {
   const [clientSearch,        setClientSearch]        = useState('');
   const [clientFilter,        setClientFilter]        = useState('all');
 
-  const loadData = async () => {
-    // ── Why this is allSettled and not Promise.all ────────────────────────
-    //
-    // These panels load in parallel, and with Promise.all a SINGLE rejected
-    // request rejected the whole batch — the catch below then blanked the
-    // entire page with "Failed to load admin data". No partial render, no
-    // clue which call failed.
-    //
-    // That is exactly what happened to every client (2026-08-07):
-    // /tenants/stats is platform-wide (all tenants, MRR) and super_admin-only
-    // by design, so it correctly 403s a tenant admin — and that one deliberate
-    // 403 took down the whole dashboard for every paying client. It is now
-    // only requested by users who can actually see platform data, and any
-    // other failure degrades a single panel instead of the page.
-    const wantsPlatformStats = ['super_admin', 'eb_manager'].includes(getStoredUser().role);
+  const qc = useQueryClient();
+  const dash = useQuery({ queryKey: ADMIN_DASHBOARD_KEY, queryFn: loadAdminData });
+  const {
+    overview, activeConversations, qualifiedLeads, rejectedLeads, closedLeads,
+    alerts, agents, clients, clientStats, pendingUsers, allUsers, tenants,
+    stages, recentMessages, viewingRequests, panelError,
+  } = dash.data ?? NO_DATA;
+  const loading = dash.isPending;
+  // Only when there is nothing to show. A refetch that fails keeps the last
+  // good panels on screen; the query still holds them, so nothing is blanked.
+  const error = dash.isError && !dash.data ? dash.error.message : '';
+  // Every caller that used to re-run the mount effect's loader still calls
+  // this, so "reload everything after a change" behaves as it always did.
+  const loadData = () => dash.refetch();
 
-    // Kicked off first so it still runs in parallel, but kept OUT of the
-    // results tally below: a client skips it entirely, and a skipped call must
-    // not count as a success when deciding whether everything failed.
-    const statsPromise = wantsPlatformStats
-      ? api.get('/tenants/stats').catch(() => null)
-      : null;
+  // Whether this tenant runs deliveries at all. Most do not, and a tab
+  // that opens on 'nothing here' for every other client is clutter, so the
+  // button only exists when there is something behind it. Its own query and
+  // never surfaced as an error: a tenant with no delivery service is the
+  // normal case, and the only consequence of this failing is one tab not
+  // appearing.
+  const { data: hasDelivery = false } = useQuery({
+    queryKey: ['delivery-enabled'],
+    queryFn: () => api.get('/delivery/overview').then((r) => !!(r.data?.data ?? r.data)?.enabled),
+  });
 
-    const results = await Promise.allSettled([
-      api.get('/admin-ops/overview'),
-      api.get('/admin-ops/conversations/active'),
-      api.get('/admin-ops/leads/qualified'),
-      api.get('/admin-ops/leads/rejected'),
-      api.get('/admin-ops/leads/closed'),
-      api.get('/admin-ops/alerts'),
-      api.get('/admin-ops/agents'),
-      api.get('/tenants'),
-      api.get('/users/pending'),
-      api.get('/users'),
-      api.get('/admin-ops/stages'),
-      api.get('/admin-ops/messages/recent'),
-      api.get('/admin-ops/viewings'),
-    ]);
-
-    const [ovRes, activeRes, qualRes, rejRes, closedRes, alertRes, agentRes,
-           clientRes, pendingRes, usersRes, stagesRes, messagesRes,
-           viewingsRes] = results.map(r => (r.status === 'fulfilled' ? r.value : null));
-    const statsRes = statsPromise ? await statsPromise : null;
-
-    setOverview(ovRes?.data.data?.overview ?? null);
-    setActiveConversations(activeRes?.data.data?.leads || []);
-    setQualifiedLeads(qualRes?.data.data?.leads || []);
-    setRejectedLeads(rejRes?.data.data?.leads || []);
-    setClosedLeads(closedRes?.data.data?.leads || []);
-    setAlerts(alertRes?.data.data?.alerts || []);
-    setAgents(agentRes?.data.data?.agents || []);
-    setClients(clientRes?.data.data?.tenants || []);
-    setClientStats(statsRes?.data.data?.stats ?? null);
-    setPendingUsers(pendingRes?.data.data?.users || []);
-    setAllUsers(usersRes?.data.data?.users || []);
-    setTenants(clientRes?.data.data?.tenants || []);
-    setStages(stagesRes?.data.data?.stages || []);
-    // Grouped by sender. Falls back to the flat array so the tab still
-    // renders against an older API that has not deployed `conversations` yet.
-    setRecentMessages(
-      messagesRes?.data.data?.conversations
-      || messagesRes?.data.data?.messages
-      || []
-    );
-    setViewingRequests(viewingsRes?.data.data?.viewings || []);
-
-    // Only a wholesale failure is worth blanking the page for — a dead API or
-    // an expired token fails every call, and a dashboard of empty panels with
-    // no message would look like "you have no business" rather than "we could
-    // not load it".
-    //
-    // A PARTIAL failure still has to be visible, though: an empty panel is
-    // indistinguishable from a panel with nothing in it, so the user is told
-    // which way it is — just without losing the panels that did load.
-    const rejected = results.filter(r => r.status === 'rejected');
-    const firstMessage = rejected[0]?.reason?.response?.data?.message || 'Failed to load admin data';
-    if (rejected.length && rejected.length === results.length) {
-      setError(firstMessage);
-      setPanelError('');
-    } else {
-      setError('');
-      setPanelError(rejected.length ? firstMessage : '');
-    }
-
-    // Deliberately outside the allSettled above and never surfaced as an
-    // error: a tenant with no delivery service is the normal case, and the
-    // only consequence of this failing is one tab not appearing.
-    api.get('/delivery/overview')
-      .then((r) => setHasDelivery(!!(r.data?.data ?? r.data)?.enabled))
-      .catch(() => setHasDelivery(false));
-
-    setLoading(false);
-  };
-
-  useEffect(() => { loadData(); }, []);
+  // The edits below change the cached lists in place, as the old local state
+  // did, instead of refetching fourteen endpoints to show one change.
+  const patch = (field, update) =>
+    qc.setQueryData(ADMIN_DASHBOARD_KEY, (prev) => (prev ? { ...prev, [field]: update(prev[field]) } : prev));
 
   const handleClientSave = (tenant) => {
-    setClients(prev => {
+    patch('clients', prev => {
       const exists = prev.find(c => c._id === tenant._id);
       return exists ? prev.map(c => c._id === tenant._id ? tenant : c) : [tenant, ...prev];
     });
@@ -283,13 +293,13 @@ export default function AdminDashboard() {
   const handleDeleteClient = async (client) => {
     if (!window.confirm(`Delete ${client.businessName}?`)) return;
     await api.delete(`/tenants/${client._id}`);
-    setClients(prev => prev.filter(c => c._id !== client._id));
+    patch('clients', prev => prev.filter(c => c._id !== client._id));
   };
 
   const handleRejectUser = async (user) => {
     if (!window.confirm(`Reject ${user.fullName}? Their account will be deactivated.`)) return;
     await api.post(`/users/${user._id}/reject`, { reason: 'Application rejected by admin' });
-    setPendingUsers(prev => prev.filter(u => u._id !== user._id));
+    patch('pendingUsers', prev => prev.filter(u => u._id !== user._id));
   };
 
   const handleReopen = async (e, leadId) => {
@@ -749,7 +759,7 @@ export default function AdminDashboard() {
                           setInviteUrl(res.data.data?.inviteUrl || '');
                           setInviteModal(client);
                           loadData();
-                        } catch (err) { alert('Failed to generate invite link'); }
+                        } catch (err) { alert(err.response?.data?.message || 'Failed to generate invite link'); }
                       }} style={{ padding: '8px 14px', background: `${colors.cyan}22`, color: colors.cyan, border: `1px solid ${colors.cyan}33`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>🔗 Invite</button>
                       <button onClick={() => handleDeleteClient(client)} style={{ padding: '8px 14px', background: `${colors.red}22`, color: colors.red, border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>Delete</button>
                     </div>

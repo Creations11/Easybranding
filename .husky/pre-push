@@ -2,4 +2,10 @@
 # ci.yml) gates on `npm test`, but there was no local gate — so a commit that
 # broke the SuperAdminDashboard tests was pushed and only caught by a red CI
 # run (2026-07-23). This blocks that push locally, matching the backend repo.
-npm test
+#
+# Lint first, and blocking since 2026-10-05, when it reached zero problems.
+# It ran in CI as informational for months while the count grew to 53, and
+# several of those were real bugs (a docs search that searched nothing, an
+# error the signup wizard computed and never showed). It is cheap and runs
+# before the slower tests so a lint failure is reported in seconds.
+npm run lint && npm test

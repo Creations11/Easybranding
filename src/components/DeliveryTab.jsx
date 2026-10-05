@@ -25,7 +25,12 @@
 // minutes and a driver's papers change once. Polling everything would be
 // noise and, on a phone on data, somebody's airtime. The order you have open
 // refreshes with the list, so its history never goes stale under your eyes.
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+//
+// Every call is a react-query query, keyed by business (since 2026-10-05).
+// The key is what keeps one shop's answer out of another shop's screen; it
+// replaced a hand-rolled "ticket" that did the same job less reliably.
+import { useState, useCallback, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 import { colors } from '../utils/theme';
 
@@ -116,6 +121,16 @@ const pill = (selected, tint = colors.lime) => ({
   fontSize: '13px', fontWeight: selected ? 600 : 400,
 });
 
+const NONE = [];
+const unwrap = (r) => r.data?.data ?? r.data;
+
+// The roles that carry no business of their own and pick one (see below).
+const PLATFORM_ROLES = ['super_admin', 'eb_manager', 'eb_agent'];
+const storedRole = () => {
+  try { return JSON.parse(localStorage.getItem('eb_user') || '{}').role; }
+  catch { return undefined; }
+};
+
 export default function DeliveryTab() {
   // Which business is being looked at. A tenant's own admin never sets this —
   // their session already names one. A PLATFORM role (super_admin,
@@ -123,113 +138,74 @@ export default function DeliveryTab() {
   // every call below carries the choice. Getting this wrong hid the tab from
   // the only person who runs deliveries (2026-10-01).
   const [tenantId, setTenantId] = useState(null);
-  // The list of businesses to pick from. Only ever REPLACED by a newer list,
-  // never blanked: once a business is chosen the overview stops asking, and
-  // clearing this then is what removed "Another business" from the screen.
-  const [choices, setChoices] = useState([]);
   const [section, setSection] = useState('orders');
-  const [data, setData] = useState({ overview: null, orders: [], drivers: [], businesses: [], payouts: null });
   const [open, setOpen] = useState(null);          // the reference being looked at
-  const [detail, setDetail] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [problem, setProblem] = useState('');
-  const [updatedAt, setUpdatedAt] = useState(null);
+  const qc = useQueryClient();
 
-  // allSettled, like AdminDashboard's own loader: one failing panel must not
-  // blank the other three. A banner says which, and the rest still work.
+  const scope = tenantId ?? '';
   const q = tenantId ? `?tenantId=${tenantId}` : '';
+  const scoped = (path) => () => api.get(`/delivery/${path}${q}`).then(unwrap);
 
-  // Each load takes a ticket. If a newer load has started by the time this
-  // one answers (a quick change of business, a double tap on refresh), this
-  // one's answer is for the wrong screen and is dropped.
-  const ticket = useRef(0);
+  // The session's own overview, always asked for. For a business owner it IS
+  // the overview. For a platform role it carries the businesses to pick from,
+  // and staying subscribed to it is what keeps that list, and the "Another
+  // business" button, after one is picked: the scoped overview stops
+  // answering needsTenant once a business is named, and recomputing the list
+  // from that answer is what once took the way back away.
+  const home = useQuery({ queryKey: ['delivery', '', 'overview'], queryFn: () => api.get('/delivery/overview').then(unwrap) });
+  const choices = home.data?.needsTenant ? home.data.tenants || NONE : NONE;
 
-  const load = useCallback(async () => {
-    const mine = ++ticket.current;
-    const [overview, orders, drivers, businesses, payouts] = await Promise.allSettled([
-      api.get(`/delivery/overview${q}`),
-      api.get(`/delivery/orders${q}`),
-      api.get(`/delivery/drivers${q}`),
-      api.get(`/delivery/businesses${q}`),
-      api.get(`/delivery/payouts${q}`),
-    ]);
-    if (mine !== ticket.current) return;
-
-    const val = (r, fallback) => (r.status === 'fulfilled' ? (r.value.data?.data ?? r.value.data) : fallback);
-
-    // A platform session is asked which business rather than shown all of
-    // them: the other four calls only mean anything once one is named.
-    const head = val(overview, null);
-    if (head?.needsTenant) setChoices(head.tenants || []);
-
-    setData({
-      overview: head,
-      orders: val(orders, []),
-      drivers: val(drivers, []),
-      businesses: val(businesses, []),
-      payouts: val(payouts, null),
-    });
-    const failed = [
-      overview.status === 'rejected' && 'the summary',
-      orders.status === 'rejected' && 'orders',
-      drivers.status === 'rejected' && 'drivers',
-      businesses.status === 'rejected' && 'businesses',
-      payouts.status === 'rejected' && 'payouts',
-    ].filter(Boolean);
-    setProblem(failed.length ? `Could not load ${failed.join(', ')}. Everything else below is current.` : '');
-    setUpdatedAt(new Date().toISOString());
-    setLoading(false);
-  }, [q]);
-
-  useEffect(() => { load(); }, [load]);
+  // A platform session has nothing to show until a business is named. Asking
+  // anyway only collects refusals, and their retries, before the picker can
+  // appear. A business owner's panels all load at once, as they always did.
+  const canLoad = !!tenantId || !PLATFORM_ROLES.includes(storedRole());
 
   // Only the moving part polls: the order list, and the one order that is
   // open, so its history keeps up with the list above it.
-  useEffect(() => {
-    if (section !== 'orders') return undefined;
-    let live = true;
-    const t = setInterval(async () => {
-      try {
-        const r = await api.get(`/delivery/orders${q}`);
-        if (!live) return;
-        setData((d) => ({ ...d, orders: r.data?.data ?? r.data ?? [] }));
-        setUpdatedAt(new Date().toISOString());
-      } catch { /* a dropped poll is not worth a banner; the next one will do */ }
+  const polling = section === 'orders' ? REFRESH_MS : false;
 
-      if (!open) return;
-      try {
-        const r = await api.get(`/delivery/orders/${open}${q}`);
-        if (live) setDetail(r.data?.data ?? r.data);
-      } catch { /* keep showing what we had rather than replacing it with an error */ }
-    }, REFRESH_MS);
-    return () => { live = false; clearInterval(t); };
-  }, [section, q, open]);
+  const scopedOverview = useQuery({ queryKey: ['delivery', scope, 'overview'], queryFn: scoped('overview'), enabled: !!tenantId });
+  const overviewQ   = tenantId ? scopedOverview : home;
+  const ordersQ     = useQuery({ queryKey: ['delivery', scope, 'orders'], queryFn: scoped('orders'), enabled: canLoad, refetchInterval: polling });
+  const driversQ    = useQuery({ queryKey: ['delivery', scope, 'drivers'], queryFn: scoped('drivers'), enabled: canLoad });
+  const businessesQ = useQuery({ queryKey: ['delivery', scope, 'businesses'], queryFn: scoped('businesses'), enabled: canLoad });
+  const payoutsQ    = useQuery({ queryKey: ['delivery', scope, 'payouts'], queryFn: scoped('payouts'), enabled: canLoad });
 
-  // Opening and closing clears the old detail HERE rather than in an effect:
-  // an effect that resets state synchronously just to react to its own
-  // dependency is a cascading render, and the event already knows.
-  const openOrder = useCallback((reference) => {
-    setOpen(reference);
-    setDetail(null);
-  }, []);
+  const data = {
+    overview: overviewQ.data ?? null,
+    orders: ordersQ.data ?? NONE,
+    drivers: driversQ.data ?? NONE,
+    businesses: businessesQ.data ?? NONE,
+    payouts: payoutsQ.data ?? null,
+  };
 
-  useEffect(() => {
-    if (!open) return undefined;
-    let live = true;
-    api.get(`/delivery/orders/${open}${q}`)
-      .then((r) => { if (live) setDetail(r.data?.data ?? r.data); })
-      .catch(() => { if (live) setDetail({ error: 'That order could not be opened.' }); });
-    return () => { live = false; };
-  }, [open, q]);
+  // One failing panel must not blank the other four; a banner says which,
+  // and the rest still work. The page waits for every panel's first answer,
+  // success or failure, as the old allSettled loader did.
+  const panels = [[overviewQ, 'the summary'], [ordersQ, 'orders'], [driversQ, 'drivers'], [businessesQ, 'businesses'], [payoutsQ, 'payouts']];
+  const loading = panels.some(([query]) => query.isPending && query.fetchStatus !== 'idle');
+  const failed = panels.filter(([query]) => query.isError).map(([, name]) => name);
+  const problem = failed.length ? `Could not load ${failed.join(', ')}. Everything else below is current.` : '';
+  const updatedAt = ordersQ.dataUpdatedAt ? new Date(ordersQ.dataUpdatedAt).toISOString() : null;
+  const load = () => qc.invalidateQueries({ queryKey: ['delivery'] });
 
-  // Switching business starts from a clean screen, so one shop's orders are
-  // never visible under another shop's name while the new ones load.
+  const detailQ = useQuery({
+    queryKey: ['delivery', scope, 'order', open],
+    queryFn: () => api.get(`/delivery/orders/${open}${q}`).then(unwrap),
+    enabled: !!open,
+    refetchInterval: polling,
+  });
+  // A failed first open says so; a failed refresh keeps what was on screen.
+  const detail = !open ? null
+    : detailQ.data ?? (detailQ.isError ? { error: 'That order could not be opened.' } : null);
+
+  const openOrder = useCallback((reference) => setOpen(reference), []);
+
+  // Switching business needs no clearing: every query is keyed by business,
+  // so the new one starts empty and loading, and nothing of the previous
+  // shop's can appear under the new shop's name.
   const pickBusiness = (id) => {
-    setData({ overview: null, orders: [], drivers: [], businesses: [], payouts: null });
-    setProblem('');
     setOpen(null);
-    setDetail(null);
-    setLoading(true);
     setTenantId(id);
   };
 
@@ -302,7 +278,7 @@ export default function DeliveryTab() {
         ))}
         <button onClick={load} style={{ ...pill(false), marginLeft: 'auto' }}>↻ Refresh</button>
         {choices.length > 0 && (
-          <button onClick={() => { setTenantId(null); setOpen(null); setDetail(null); }} style={pill(false)}>
+          <button onClick={() => { setTenantId(null); setOpen(null); }} style={pill(false)}>
             ⇄ Another business
           </button>
         )}

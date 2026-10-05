@@ -1,5 +1,5 @@
 // src/components/WhatsAppStatus.jsx
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import api from '../api';
 
 const c = {
@@ -10,21 +10,15 @@ const c = {
 };
 
 export default function WhatsAppStatus() {
-  const [status, setStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchStatus = async () => {
-    try {
-      const res = await api.get('/admin-ops/whatsapp/status');
-      setStatus(res.data.data);
-    } catch {
-      setStatus({ connected: false, error: 'Failed to fetch status' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { fetchStatus(); }, []);
+  const q = useQuery({
+    queryKey: ['whatsapp-status'],
+    queryFn: () => api.get('/admin-ops/whatsapp/status').then((res) => res.data.data),
+  });
+  // A failed check reads as "not connected", as it always has: it is the
+  // honest answer to "can I send right now?" when we cannot even ask.
+  const status = q.isError ? { connected: false, error: 'Failed to fetch status' } : q.data;
+  const loading = q.isPending;
+  const fetchStatus = () => q.refetch();
 
   if (loading) return (
     <div style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>

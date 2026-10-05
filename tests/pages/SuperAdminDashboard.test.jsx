@@ -491,7 +491,7 @@ describe('SuperAdminDashboard — money panel', () => {
   // a person would actually read on the screen.
   const shows = (text) =>
     screen.getByText((_, el) =>
-      el?.children.length === 0 && el.textContent.replace(/ /g, ' ') === text)
+      el?.children.length === 0 && el.textContent.replace(/\u00a0/g, ' ') === text)
 
   it('puts the month’s figures on the screen', async () => {
     withMoney(MONEY)
@@ -513,7 +513,7 @@ describe('SuperAdminDashboard — money panel', () => {
     await waitFor(() => expect(screen.getByText('R400')).toBeInTheDocument())
     expect(screen.getByText('1 payment not confirmed')).toBeInTheDocument()
     // 12500 + 400 would be 12900 — that number must not appear anywhere.
-    expect(screen.queryByText((_, el) => el?.textContent?.replace(/ /g,' ') === 'R12 900')).not.toBeInTheDocument()
+    expect(screen.queryByText((_, el) => el?.textContent?.replace(/\u00a0/g,' ') === 'R12 900')).not.toBeInTheDocument()
   })
 
   it('says nothing about change when there is no baseline to compare against', async () => {

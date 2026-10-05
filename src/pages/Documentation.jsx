@@ -1,6 +1,8 @@
 // src/pages/Documentation.jsx
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { loadProducts } from '../config/plans';
 
 const c = {
   bg: '#06080A', surface: '#0D110C', card: '#121710',
@@ -13,6 +15,16 @@ const c = {
 export default function Documentation() {
   const [search, setSearch] = useState('');
   const [section, setSection] = useState('getting-started');
+
+  // Prices come from the one place they live, /api/products, as the landing
+  // page's do. This answer was a typed-in table until 2026-10-05, quoting
+  // plans that do not exist ("Business: R2,499", "Enterprise: Custom") on a
+  // public page linked from the site's nav. Until the list arrives, or if it
+  // cannot load, the answer names no price at all rather than a guessed one.
+  const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: loadProducts });
+  const pricingAnswer = products.length
+    ? products.map((p) => `${p.label}, R${p.price} a month\n${p.pitch}`).join('\n\n')
+    : 'Current prices are shown when you sign up.';
 
   const sections = [
     { id: 'getting-started', icon: '🚀', label: 'Getting Started' },
@@ -246,11 +258,11 @@ export default function Documentation() {
         },
         {
           heading: 'How much does it cost?',
-          body: 'Professional: R999/month — 1 WhatsApp number, 5 agents\nBusiness: R2,499/month — 2 WhatsApp numbers, unlimited agents\nEnterprise: Custom — unlimited numbers, white-label, dedicated support',
+          body: pricingAnswer,
         },
         {
           heading: 'Can I cancel anytime?',
-          body: 'Yes. No contracts. No setup fees. First 30 days free. Cancel anytime.',
+          body: "Yes, with 30 days' written notice to ayanda@easybranding.co.za. There is no fixed-term contract and no setup fee. Months already paid are not refunded; our Refund Policy has the details.",
         },
       ],
     },
@@ -324,7 +336,12 @@ export default function Documentation() {
             maxHeight: '70vh',
             overflowY: 'auto',
           }}>
-            {sections.map(s => (
+            {/* The search box above filters this list. It was computed and never
+                used, so typing in it changed nothing (fixed 2026-10-05). */}
+            {filteredSections.length === 0 && (
+              <p style={{ color: c.muted, fontSize: '13px', padding: '10px 14px' }}>No sections match.</p>
+            )}
+            {filteredSections.map(s => (
               <button
                 key={s.id}
                 onClick={() => setSection(s.id)}

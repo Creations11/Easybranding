@@ -1,5 +1,6 @@
 // src/components/EBTeamPanel.jsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import api from '../api';
 
 const c = {
@@ -22,34 +23,37 @@ function StatCard({ label, value, icon, color }) {
   );
 }
 
-export default function EBTeamPanel({ isSuperAdmin, tenants, onReload }) {
-  const [team, setTeam] = useState([]);
-  const [prospects, setProspects] = useState([]);
-  const [loading, setLoading] = useState(true);
+const NO_TEAM = { team: [], prospects: [] };
+
+// Each call degrades on its own: a failing /prospecting leaves the activity
+// columns at zero rather than hiding the team.
+async function loadTeamData() {
+  const [uSettled, pSettled] = await Promise.allSettled([
+    api.get('/users'),
+    api.get('/prospecting'),
+  ]);
+  if (uSettled.status === 'rejected') console.error(uSettled.reason);
+  if (pSettled.status === 'rejected') console.error(pSettled.reason);
+  const allUsers = uSettled.status === 'fulfilled' ? uSettled.value.data.data?.users || [] : [];
+  return {
+    team: allUsers.filter(u => ['eb_agent', 'eb_manager', 'super_admin'].includes(u.role)),
+    prospects: pSettled.status === 'fulfilled' ? pSettled.value.data.data?.prospects || [] : [],
+  };
+}
+
+export default function EBTeamPanel({ isSuperAdmin }) {
+  // A query since 2026-10-05. A reload after removing someone keeps the list
+  // on screen instead of flashing back to "loading".
+  const teamQ = useQuery({ queryKey: ['eb-team'], queryFn: loadTeamData });
+  const { team, prospects } = teamQ.data ?? NO_TEAM;
+  const loading = teamQ.isPending;
+  const loadTeam = () => teamQ.refetch();
   const [inviteModal, setInviteModal] = useState(false);
   const [inviteUrl, setInviteUrl] = useState('');
   const [inviteRole, setInviteRole] = useState('eb_agent');
   const [sending, setSending] = useState(false);
   const [msg, setMsg] = useState('');
 
-  const loadTeam = async () => {
-    setLoading(true);
-    try {
-      const [uSettled, pSettled] = await Promise.allSettled([
-        api.get('/users'),
-        api.get('/prospecting'),
-      ]);
-      const usersRes = uSettled.status === 'fulfilled' ? uSettled.value : { data: { data: {} } };
-      const prospectsRes = pSettled.status === 'fulfilled' ? pSettled.value : { data: { data: {} } };
-      const allUsers = usersRes.data.data?.users || [];
-      const ebTeam = allUsers.filter(u => ['eb_agent', 'eb_manager', 'super_admin'].includes(u.role));
-      setTeam(ebTeam);
-      setProspects(prospectsRes.data.data?.prospects || []);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => { loadTeam(); }, []);
 
   const getActivity = (userId) => {
     const userProspects = prospects.filter(p => p.assignedTo?.toString() === userId?.toString());
@@ -62,10 +66,16 @@ export default function EBTeamPanel({ isSuperAdmin, tenants, onReload }) {
     };
   };
 
+  // Removal is the account's soft delete: deactivated, stamped with who did
+  // it, and gone from every list. It used to demote them to `borrower` (the
+  // old loan-app role), which left a working account behind and changed
+  // nothing for a session they already had: platform access for up to the
+  // seven days a session lasts. The API now checks the account on every
+  // request, so a removed member is locked out of the session they hold too.
   const handleRemove = async (u) => {
-    if (!window.confirm('Remove ' + u.fullName + ' from the team?')) return;
+    if (!window.confirm('Remove ' + u.fullName + ' from the team? Their access ends immediately, including on any device they are signed in on.')) return;
     try {
-      await api.put('/users/' + u._id, { role: 'borrower' });
+      await api.delete('/users/' + u._id);
       setMsg('✅ ' + u.fullName + ' removed from team');
       setTimeout(() => setMsg(''), 3000);
       loadTeam();

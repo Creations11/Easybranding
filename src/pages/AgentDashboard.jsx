@@ -1,6 +1,7 @@
 // src/pages/AgentDashboard.jsx
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import api from '../api';
 import { colors } from '../utils/theme';
 
@@ -86,19 +87,59 @@ function ViewingModal({ lead, onClose, onScheduled }) {
   );
 }
 
+// ── The page's data ───────────────────────────────────────────
+//
+// Was a mount effect that set five pieces of state; a query since 2026-10-05.
+// A refresh now keeps the panels on screen while it runs, and the selected
+// lead's conversation is keyed by the lead, so a slow answer for one lead can
+// never land in another lead's chat.
+const AGENT_DASHBOARD_KEY = ['agent-dashboard'];
+const NO_DATA = { overview: null, leads: [], viewings: [], queue: null, alerts: [] };
+// One shared empty list: a fresh [] on every render would re-run the
+// scroll-to-bottom effect that watches the timeline.
+const NO_TIMELINE = [];
+
+async function loadAgentData() {
+  // /admin-ops/alerts is verifyAdmin-gated and an "agent" is deliberately
+  // not an admin role, so it 403s for the very users this page is for.
+  // Under the old Promise.all that one rejection took the four /agent/*
+  // calls down with it and the catch only console.error'd — an agent saw an
+  // empty dashboard and no reason why (fixed 2026-08-07). Alerts are only
+  // requested by roles that may actually have them, and allSettled keeps one
+  // failing panel from emptying the rest.
+  const canSeeAdminAlerts = ['admin', 'super_admin', 'eb_manager'].includes(getStoredUser().role);
+
+  const results = await Promise.allSettled([
+    api.get('/agent/overview'),
+    api.get('/agent/leads'),
+    api.get('/agent/viewings'),
+    api.get('/agent/takeover-queue'),
+    canSeeAdminAlerts ? api.get('/admin-ops/alerts') : Promise.resolve(null),
+  ]);
+
+  const [ovRes, leadsRes, viewRes, queueRes, alertRes] =
+    results.map(r => (r.status === 'fulfilled' ? r.value : null));
+
+  const failed = results.filter(r => r.status === 'rejected');
+  if (failed.length) console.error('Some agent panels failed to load', failed.map(f => f.reason));
+
+  return {
+    overview: ovRes?.data.data?.overview ?? null,
+    leads: leadsRes?.data.data?.leads || [],
+    viewings: viewRes?.data.data?.viewings || [],
+    queue: queueRes?.data.data ?? null,
+    alerts: alertRes?.data.data?.alerts || [],
+  };
+}
+
+const loadConversation = (leadId) =>
+  api.get(`/agent/leads/${leadId}/conversation`).then((res) => res.data.data?.timeline || []);
+
 // ── Main Agent Dashboard ──────────────────────────────────────
 export default function AgentDashboard() {
-  const [overview,     setOverview]     = useState(null);
-  const [leads,        setLeads]        = useState([]);
   const [selectedLead, setSelectedLead] = useState(null);
-  const [timeline,     setTimeline]     = useState([]);
-  const [viewings,     setViewings]     = useState([]);
-  const [queue,        setQueue]        = useState(null);
-  const [alerts,       setAlerts]       = useState([]);
   const [message,      setMessage]      = useState('');
   const [tab,          setTab]          = useState('leads');   // leads | viewings | queue | alerts
-  const [loading,      setLoading]      = useState(true);
-  const [loadingChat,  setLoadingChat]  = useState(false);
   const [sending,      setSending]      = useState(false);
   const [takingOver,   setTakingOver]   = useState(false);
   const [resuming,     setResuming]     = useState(false);
@@ -108,48 +149,19 @@ export default function AgentDashboard() {
   const navigate  = useNavigate();
   const user      = getStoredUser();
 
-  const loadData = async () => {
-    // /admin-ops/alerts is verifyAdmin-gated and an "agent" is deliberately
-    // not an admin role, so it 403s for the very users this page is for.
-    // Under the old Promise.all that one rejection took the four /agent/*
-    // calls down with it and the catch only console.error'd — an agent saw an
-    // empty dashboard and no reason why (fixed 2026-08-07). Alerts are only
-    // requested by roles that may actually have them, and allSettled keeps one
-    // failing panel from emptying the rest.
-    const canSeeAdminAlerts = ['admin', 'super_admin', 'eb_manager'].includes(getStoredUser().role);
+  const dash = useQuery({ queryKey: AGENT_DASHBOARD_KEY, queryFn: loadAgentData });
+  const { overview, leads, viewings, queue, alerts } = dash.data ?? NO_DATA;
+  const loading = dash.isPending;
+  const loadData = () => dash.refetch();
 
-    const results = await Promise.allSettled([
-      api.get('/agent/overview'),
-      api.get('/agent/leads'),
-      api.get('/agent/viewings'),
-      api.get('/agent/takeover-queue'),
-      canSeeAdminAlerts ? api.get('/admin-ops/alerts') : Promise.resolve(null),
-    ]);
-
-    const [ovRes, leadsRes, viewRes, queueRes, alertRes] =
-      results.map(r => (r.status === 'fulfilled' ? r.value : null));
-
-    setOverview(ovRes?.data.data?.overview ?? null);
-    setLeads(leadsRes?.data.data?.leads || []);
-    setViewings(viewRes?.data.data?.viewings || []);
-    setQueue(queueRes?.data.data ?? null);
-    setAlerts(alertRes?.data.data?.alerts || []);
-
-    const failed = results.filter(r => r.status === 'rejected');
-    if (failed.length) console.error('Some agent panels failed to load', failed.map(f => f.reason));
-    setLoading(false);
-  };
-
-  useEffect(() => { loadData(); }, []);
-
-  useEffect(() => {
-    if (!selectedLead) return;
-    setLoadingChat(true);
-    api.get(`/agent/leads/${selectedLead._id}/conversation`)
-      .then(res => setTimeline(res.data.data?.timeline || []))
-      .catch(() => setTimeline([]))
-      .finally(() => setLoadingChat(false));
-  }, [selectedLead]);
+  // A failed conversation load shows an empty chat, as it always did.
+  const chat = useQuery({
+    queryKey: ['agent-conversation', selectedLead?._id],
+    queryFn: () => loadConversation(selectedLead._id),
+    enabled: !!selectedLead,
+  });
+  const timeline = chat.data ?? NO_TIMELINE;
+  const loadingChat = !!selectedLead && chat.isPending && chat.fetchStatus !== 'idle';
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [timeline]);
 
@@ -161,10 +173,13 @@ export default function AgentDashboard() {
         notifyLead: false,
       });
       setActionMsg('✅ Conversation taken over');
-      await loadData();
-      const fresh = (await api.get('/agent/leads')).data.data?.leads || [];
-      const updated = fresh.find(l => l._id === selectedLead._id);
+      const { data: fresh } = await loadData();
+      const updated = fresh?.leads.find(l => l._id === selectedLead._id);
       if (updated) setSelectedLead(updated);
+      // The takeover note is in the conversation. Swapping in a fresh lead
+      // object used to refetch it as a side effect of the old effect; keyed by
+      // id, the query does not, so it is asked for explicitly.
+      chat.refetch();
     } catch (err) {
       setActionMsg(`❌ ${err.response?.data?.message || 'Takeover failed'}`);
     } finally { setTakingOver(false); }
@@ -190,8 +205,7 @@ export default function AgentDashboard() {
     try {
       await api.post(`/takeover/${selectedLead._id}/send`, { message: message.trim() });
       setMessage('');
-      const res = await api.get(`/agent/leads/${selectedLead._id}/conversation`);
-      setTimeline(res.data.data?.timeline || []);
+      await chat.refetch();
       setActionMsg('✅ Sent');
       setTimeout(() => setActionMsg(''), 2000);
     } catch (err) {
