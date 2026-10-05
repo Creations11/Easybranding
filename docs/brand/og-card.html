@@ -1,0 +1,71 @@
+<!doctype html>
+<!--
+  The link-preview card: what WhatsApp, Facebook and LinkedIn show when
+  someone shares easybranding.co.za. Built from the brand style guide
+  (EasyBrandingAI_Brand_Style_Guide.docx): white page, Ink spine with a Lime
+  tick, Arial, Lime as the only accent, one bold element.
+
+  The words are the landing page's own, not new claims. No price on it: a
+  price in an image cannot be fetched from /api/products, so it would be the
+  first copy to go stale.
+
+  Regenerate public/og-card.png after editing (1200x630, the size every
+  crawler expects; WhatsApp drops a preview image over ~300 KB):
+
+    "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe" --headless=new \
+      --disable-gpu --hide-scrollbars --window-size=1200,630 \
+      --screenshot="public/og-card.png" "file:///<repo>/docs/brand/og-card.html"
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --ink: #0B0F0B; --lime: #7CB518; --body: #23291F; --grey: #767E76;
+    --faint: #9AA39A; --line: #E4E8E1;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; background: #FFFFFF; }
+  body { font-family: Arial, Helvetica, sans-serif; color: var(--body); position: relative; }
+
+  .spine { position: absolute; left: 0; top: 0; bottom: 0; width: 18px; background: var(--ink); }
+  .tick  { position: absolute; left: 0; top: 140px; width: 18px; height: 56px; background: var(--lime); }
+
+  .page { position: absolute; left: 96px; right: 88px; top: 0; bottom: 0; }
+
+  header { height: 140px; display: flex; align-items: flex-end; padding-bottom: 34px;
+           border-bottom: 1px solid var(--line); }
+  .wordmark { font-weight: 700; font-size: 30px; letter-spacing: 0.04em; color: var(--ink); }
+  .wordmark b { color: var(--lime); }
+
+  main { padding-top: 64px; }
+  .eyebrow { font-weight: 700; font-size: 17px; letter-spacing: 0.2em; text-transform: uppercase;
+             color: var(--lime); margin-bottom: 20px; }
+  h1 { font-weight: 700; font-size: 62px; line-height: 1.08; letter-spacing: -0.01em; color: var(--ink);
+       max-width: 900px; }
+  p  { font-size: 25px; line-height: 1.45; color: var(--grey); margin-top: 26px; max-width: 900px; }
+
+  footer { position: absolute; left: 0; right: 0; bottom: 0; height: 74px;
+           border-top: 1px solid var(--line); display: flex; align-items: center;
+           justify-content: space-between; }
+  .tagline { font-size: 14px; letter-spacing: 0.32em; color: var(--faint); }
+  .site    { font-size: 17px; color: var(--grey); font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="spine"></div>
+  <div class="tick"></div>
+  <div class="page">
+    <header><div class="wordmark">EASY BRANDING <b>AI</b></div></header>
+    <main>
+      <div class="eyebrow">WABOS</div>
+      <h1>A WhatsApp operating system for small businesses.</h1>
+      <p>It qualifies leads, books jobs, takes payments and sends invoices, inside the WhatsApp you already use.</p>
+    </main>
+    <footer>
+      <span class="tagline">QUALIFY &nbsp;·&nbsp; AUTOMATE &nbsp;·&nbsp; CLOSE</span>
+      <span class="site">easybranding.co.za</span>
+    </footer>
+  </div>
+</body>
+</html>

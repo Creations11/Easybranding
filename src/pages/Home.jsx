@@ -189,9 +189,14 @@ export default function Home() {
   // name. So a lead clicked an R99 ad, arrived here, and was told R999.
   //
   // Fetched rather than retyped: a hardcoded number here is how it came to
-  // disagree with the ad in the first place. Falls back to the existing copy
-  // if the list cannot load — a price page that renders "From R/month" is
-  // worse than one showing the old figure.
+  // disagree with the ad in the first place.
+  //
+  // Until it arrives, or if it never does, the price paragraph is not shown
+  // at all. This used to fall back to a typed-in "R999/month." — the exact
+  // figure the paragraph above says a visitor from the R99 ad must not see,
+  // and a fallback price of the kind plans.js refuses on purpose ("Every
+  // fallback price in this system has been wrong at least once"). Showing
+  // no price is honest; showing a guessed one is not.
   const [fromPrice, setFromPrice] = useState(null);
   useEffect(() => {
     loadProducts()
@@ -708,12 +713,16 @@ export default function Home() {
       {/* ── ACT 8: THE COST ──────────────────────────────────── */}
       <section className="section" style={{ background: t.boneDim, textAlign: 'center' }}>
         <div className="wrap-narrow">
-          <p className="pricing-line">
-            {fromPrice ? `From R${fromPrice}/month.` : 'R999/month.'}<br />
-            Less than one missed job.<br />
-            Less than one late-night admin session.<br />
-            Less than the cost of wondering.
-          </p>
+          {/* The three lines below compare against the price, so they only
+              make sense with a real one in front of them. */}
+          {fromPrice && (
+            <p className="pricing-line">
+              From R{fromPrice}/month.<br />
+              Less than one missed job.<br />
+              Less than one late-night admin session.<br />
+              Less than the cost of wondering.
+            </p>
+          )}
           <a
             href="https://wa.me/27653318266?text=Hi"
             target="_blank"

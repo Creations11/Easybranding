@@ -8,14 +8,20 @@ const t = {
   dim: 'rgba(255,255,255,0.06)', border: 'rgba(184,240,64,0.12)',
 };
 
-// Using placeholder - replace with your actual image later
-const BASE_IMAGE_URL = 'https://placehold.co/1200x630/06080A/B8F040?text=Easy+Branding+AI';
+// The same card index.html gives crawlers (built from docs/brand/og-card.html).
+// These Helmet tags only matter to clients that run JavaScript; WhatsApp and
+// Facebook read index.html's static ones instead.
+const SITE = 'https://easybranding.co.za';
+const BASE_IMAGE_URL = `${SITE}/og-card.png`;
 
+// The site has only ever been served from easybranding.co.za. This fell back
+// to a GitHub Pages address that the organisation's structured data named as
+// its home, so search engines were told the company lived somewhere else.
 const getCurrentUrl = () => {
   if (typeof window !== 'undefined') {
     return window.location.href;
   }
-  return 'https://creations11.github.io/Easybranding';
+  return SITE;
 };
 
 function LegalLayout({ title, subtitle, children, pageDescription }) {
@@ -40,7 +46,7 @@ function LegalLayout({ title, subtitle, children, pageDescription }) {
         {/* ⚠️ CRITICAL: Explicit og:image tag - This fixes the warning! */}
         <meta property="og:image" content={BASE_IMAGE_URL} />
         <meta property="og:image:secure_url" content={BASE_IMAGE_URL} />
-        <meta property="og:image:type" content="image/jpeg" />
+        <meta property="og:image:type" content="image/png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         
@@ -61,7 +67,7 @@ function LegalLayout({ title, subtitle, children, pageDescription }) {
             "publisher": {
               "@type": "Organization",
               "name": "Easy Branding AI (Pty) Ltd",
-              "url": "https://creations11.github.io/Easybranding"
+              "url": SITE
             }
           })}
         </script>
@@ -137,8 +143,8 @@ export function TermsOfUse() {
   return (
     <LegalLayout 
       title="Terms of Use" 
-      subtitle="Last updated: 11 June 2026"
-      pageDescription="Terms of Use for Easy Branding AI — the WhatsApp lead qualification automation platform for South African rental agencies."
+      subtitle="Last updated: 5 October 2026"
+      pageDescription="Terms of Use for WABOS by Easy Branding AI, a WhatsApp operating system for small businesses."
     >
       <Section title="1. Acceptance of Terms" body={`By accessing or using Easy Branding AI ("the Platform"), operated by Easy Branding AI (Pty) Ltd (Registration No. 2026/453740/07), you agree to be bound by these Terms of Use. If you do not agree, you may not use the Platform.
 
@@ -170,7 +176,7 @@ We reserve the right to suspend or terminate accounts that provide false informa
 
 Your selected plan is billed monthly via Paystack. We reserve the right to change pricing with 30 days written notice, and a change never applies to a billing period you have already paid for.`}/>
       <Section title="5. Refund and Cancellation" body={`You may cancel your subscription at any time by providing 30 days written notice to ayanda@easybranding.co.za. No refunds are issued for partial months already paid. Full details are in our Refund Policy.`}/>
-      <Section title="6. WhatsApp and Third-Party Services" body={`The Platform integrates with WhatsApp Business API (via Twilio), subject to Meta's terms of service. You agree to only message customers who have opted in to receive communications and to comply with WhatsApp's messaging policies. We are not liable for disruptions caused by WhatsApp, Twilio, Paystack, or other third-party services.`}/>
+      <Section title="6. WhatsApp and Third-Party Services" body={`The Platform integrates with Meta's WhatsApp Business Platform, subject to Meta's terms of service. You agree to only message customers who have opted in to receive communications and to comply with WhatsApp's messaging policies. We are not liable for disruptions caused by WhatsApp, Paystack, or other third-party services.`}/>
       <Section title="7. Data and Privacy" body={`We comply with the Protection of Personal Information Act (POPIA). Your customer data is stored securely, never sold or shared with third parties, and is isolated per client. Full details are in our Privacy Policy.`}/>
       <Section title="8. Acceptable Use" body={`You may not use the Platform to send spam, harass customers, collect data without consent, violate South African law, or resell the Platform without written permission. Violations may result in immediate account suspension.`}/>
       <Section title="9. Intellectual Property" body={`All intellectual property in the Platform belongs to Easy Branding AI (Pty) Ltd. You are granted a limited licence to use the Platform during your subscription. Your customer data remains your property at all times.`}/>
@@ -190,7 +196,7 @@ export function PrivacyPolicy() {
   return (
     <LegalLayout 
       title="Privacy Policy" 
-      subtitle="Last updated: 3 July 2026"
+      subtitle="Last updated: 5 October 2026"
       pageDescription="How Easy Branding AI (Pty) Ltd collects, uses, stores, and protects personal information in compliance with POPIA."
     >
       <Section title="1. Introduction" body={`Easy Branding AI (Pty) Ltd is committed to protecting your personal information in accordance with the Protection of Personal Information Act 4 of 2013 (POPIA).
@@ -202,6 +208,7 @@ This Privacy Policy explains how we collect, use, store, and protect personal in
 • Contact details: name, email address, phone number, WhatsApp number
 • Account credentials: username and encrypted password
 • Customer data: lead information collected via WhatsApp on behalf of our clients
+• Delivery drivers: a photo of your driver's licence and vehicle licence disc, a photo of you holding your licence, and a bank confirmation letter, used to confirm who you are and where to pay you
 • Usage data: platform activity, login times, features used
 • Payment information: processed securely via Paystack — we do not store card details`}/>
       <Section title="3. How We Use Your Information" body={`We use collected information to:
@@ -219,7 +226,7 @@ We do not sell, rent, or share your personal information with third parties for 
 You are responsible for obtaining consent from your customers to process their data via WhatsApp automation.
 
 How an end customer can request deletion: If you are a customer who messaged a business using our Platform and want your data deleted, you may either (a) message that business directly on WhatsApp and request deletion, or (b) contact Easy Branding AI directly at ayanda@easybranding.co.za with the phone number you messaged from and the name of the business you contacted. We will verify the request and delete your data within 30 days, in compliance with POPIA.`}/>
-      <Section title="5. Data Storage and Security" body={`Your data is stored on MongoDB Atlas, Render, and Cloudinary — all encrypted. We implement SSL/TLS encryption, role-based access control, and conduct regular security reviews.
+      <Section title="5. Data Storage and Security" body={`Your data is stored on MongoDB Atlas and Render, both encrypted. Delivery drivers' verification documents are stored in Google Drive, and our database keeps only a reference to each file. We implement SSL/TLS encryption, role-based access control, and conduct regular security reviews.
 
 We will notify you within 72 hours of becoming aware of any data breach affecting your information.`}/>
       <Section title="6. Data Retention" body={`• Active accounts: retained for the duration of your subscription
@@ -227,7 +234,7 @@ We will notify you within 72 hours of becoming aware of any data breach affectin
 • Payment records: 5 years as required by South African tax law
 
 As a client, you may request deletion of your account data at any time by contacting ayanda@easybranding.co.za. For end-customer (lead) data deletion requests, see Section 4 above.`}/>
-      <Section title="7. Third-Party Services" body={`We use: Twilio (WhatsApp), Anthropic (AI), Google Gemini (content), Paystack (payments), SendGrid (email), Cloudinary (documents). We only share the minimum data necessary for each service to function.`}/>
+      <Section title="7. Third-Party Services" body={`We use: Meta (WhatsApp messaging), Anthropic (AI), Paystack (payments), Google (email, and storage of delivery drivers' verification documents), BulkSMS (SMS messages), and the public OSRM routing service, which receives only the two map points of a delivery to measure its distance, never a name or phone number. We only share the minimum data necessary for each service to function.`}/>
       <Section title="8. Your Rights Under POPIA" body={`You have the right to access, correct, delete, and object to the processing of your personal information. Contact us at ayanda@easybranding.co.za. We will respond within 30 days.
 
 You may also lodge a complaint with the Information Regulator of South Africa at inforegulator.org.za.`}/>
@@ -245,7 +252,7 @@ export function RefundPolicy() {
   return (
     <LegalLayout 
       title="Refund & Cancellation Policy" 
-      subtitle="Last updated: 11 June 2026"
+      subtitle="Last updated: 5 October 2026"
       pageDescription="Refund and cancellation policy for Easy Branding AI subscriptions — 30-day free trial, monthly billing, cancellation terms."
     >
       <Section title="1. Free Trial" body={`All Easy Branding AI plans include a 30-day free trial.
@@ -276,7 +283,7 @@ Refunds will be considered for:
 • Incorrect billing amounts
 
 Contact ayanda@easybranding.co.za within 7 days of a disputed charge. Approved refunds processed within 5-10 business days.`}/>
-      <Section title="5. Platform Failure" body={`If the Platform experiences downtime exceeding 72 consecutive hours due to our infrastructure, you may request a pro-rata credit. Downtime caused by third-party services (WhatsApp, Twilio, Paystack) is not eligible for credit.`}/>
+      <Section title="5. Platform Failure" body={`If the Platform experiences downtime exceeding 72 consecutive hours due to our infrastructure, you may request a pro-rata credit. Downtime caused by third-party services (WhatsApp, Paystack) is not eligible for credit.`}/>
       <Section title="6. Data After Cancellation" body={`After cancellation, your data is retained for 30 days. You may request a data export within those 30 days. After 30 days, all data is permanently deleted.`}/>
       <Section title="7. Contact Us" body={`Easy Branding AI (Pty) Ltd
 Email: ayanda@easybranding.co.za
@@ -321,7 +328,7 @@ export function ContactPage() {
     <LegalLayout 
       title="Contact Us" 
       subtitle="We respond within 1 business day"
-      pageDescription="Contact Easy Branding AI — WhatsApp lead qualification automation for South African rental agencies. Email, WhatsApp, and business information."
+      pageDescription="Contact Easy Branding AI, makers of WABOS, a WhatsApp operating system for small businesses. Email, WhatsApp, and business information."
     >
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))', gap:'16px', marginBottom:'48px' }}>
         {[
