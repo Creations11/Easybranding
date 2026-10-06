@@ -44,6 +44,8 @@ const ROUTE_DEFAULTS = {
   '/users/pending': { data: { data: { users: [] } } },
   '/admin-ops/agents': { data: { data: { agents: [] } } },
   '/admin-ops/automation/flow-templates': { data: { data: { templates: [] } } },
+  // The Rentals tab's badge: listings waiting for review.
+  '/rentals/admin/listings': { data: { data: { listings: [] } } },
 }
 
 const mockApiGet = (overrides = {}) => {

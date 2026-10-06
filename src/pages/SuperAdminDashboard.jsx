@@ -46,6 +46,8 @@ import PACMembersPanel from '../components/PACMembersPanel';
 import AutomationPanel from '../components/AutomationPanel';
 import BillingPanel from '../components/BillingPanel';
 import SystemHealthPanel from '../components/SystemHealthPanel';
+import RentalsPanel from '../components/RentalsPanel';
+import { useRentalListings } from '../hooks/useRentalsModeration';
 
 // ── Design tokens ─────────────────────────────────────────────
 const c = {
@@ -95,6 +97,10 @@ export default function SuperAdminDashboard() {
   const health       = useHealth().data;
   const flowTemplates = useFlowTemplates().data || [];
   const refetch      = useRefetchAll();
+  // EasyRentals listings waiting for a person to approve them: the sidebar
+  // badge. The API allows super_admin and eb_manager only, so nobody else asks.
+  const isRentalsStaff = isSuperAdmin || user?.role === 'eb_manager';
+  const rentalsWaiting = useRentalListings('pending_review', { enabled: isRentalsStaff }).data?.length || 0;
 
   const isLoading = !isEBAgent && (!overview && !tenants.length && !activeLeads.length);
 
@@ -186,6 +192,9 @@ export default function SuperAdminDashboard() {
     // AdminDashboard alone on 2026-09-30 and the owner could not find it,
     // which is the same mistake twice in the same file.
     if (!isEBAgent) { s.push({ id: 'delivery', icon: '🛵', label: 'Delivery', badge: 0 }); }
+    // EasyRentals moderation (2026-10-06). Every listing needs a person to
+    // approve it, so the badge is the number waiting.
+    if (isRentalsStaff) { s.push({ id: 'rentals', icon: '🏘️', label: 'Rentals', badge: rentalsWaiting }); }
     if (!isEBAgent) { s.push({ id: 'operations', icon: '🏠', label: 'Operations', badge: alerts.length }); }
     if (!isEBAgent) { s.push({ id: 'clients',    icon: '👥', label: 'Clients',    badge: 0 }); }
     // FIX: PACMembersPanel had no nav entry anywhere — added here,
@@ -204,7 +213,7 @@ export default function SuperAdminDashboard() {
     if (isSuperAdmin || user?.role === 'eb_manager') { s.push({ id: 'health', icon: '🩺', label: 'Health', badge: 0 }); }
     if (isSuperAdmin) { s.push({ id: 'platform', icon: '⚙️', label: 'Platform', badge: 0 }); }
     return s;
-  }, [isEBAgent, isSuperAdmin, user?.role, alerts.length, pendingUsers.length]);
+  }, [isEBAgent, isSuperAdmin, user?.role, alerts.length, pendingUsers.length, isRentalsStaff, rentalsWaiting]);
 
 
   // ── Loading ────────────────────────────────────────────────
@@ -291,6 +300,13 @@ export default function SuperAdminDashboard() {
 
         {/* ════════ CHAT ════════ */}
         {section === 'delivery' && <DeliveryTab />}
+
+        {/* ════════ RENTALS ════════ */}
+        {section === 'rentals' && isRentalsStaff && (
+          <SectionErrorBoundary name="Rentals" onRetry={refetch}>
+            <RentalsPanel />
+          </SectionErrorBoundary>
+        )}
 
         {section === 'chat' && (
           <SectionErrorBoundary name="Chat" onRetry={refetch}>
