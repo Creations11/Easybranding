@@ -15,6 +15,10 @@
 // that one authenticates with an API key, and an API key in a browser is a
 // key given to anybody who opens the developer tools.
 //
+// Drivers and shops are also managed here (add, edit, suspend, approve,
+// remove) through /api/delivery/manage, since 2026-10-07. Money is not:
+// payouts and how a shop is paid stay on WhatsApp.
+//
 // ── Deliberate shape ──────────────────────────────────────────
 //
 // Four sections, because the owner asks four different questions and they
@@ -33,6 +37,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 import { colors } from '../utils/theme';
+import { useDeliveryManage, useShopCategories, manageErrorMessage } from '../hooks/useDeliveryManage';
 
 const REFRESH_MS = 20000;
 
@@ -287,8 +292,8 @@ export default function DeliveryTab() {
       {section === 'orders' && (
         <Orders orders={data.orders} open={open} onOpen={openOrder} detail={detail} updatedAt={updatedAt} />
       )}
-      {section === 'drivers' && <Drivers drivers={data.drivers} />}
-      {section === 'businesses' && <Businesses businesses={data.businesses} />}
+      {section === 'drivers' && <Drivers drivers={data.drivers} q={q} />}
+      {section === 'businesses' && <Businesses businesses={data.businesses} q={q} />}
       {section === 'money' && <Money overview={o} payouts={data.payouts} />}
     </div>
   );
@@ -458,49 +463,346 @@ function Orders({ orders, open, onOpen, detail, updatedAt }) {
   );
 }
 
-function Drivers({ drivers }) {
-  if (!drivers.length) {
-    return <Empty>No drivers yet, so orders come in and sit waiting. Add one from WhatsApp with ADDDRIVER Name 082…</Empty>;
-  }
-  // Who can take a job right now first, then who is owed the most.
-  const sorted = [...drivers].sort((a, b) => (b.onShift ? 1 : 0) - (a.onShift ? 1 : 0) || (b.owed || 0) - (a.owed || 0));
-  return sorted.map((d) => (
-    <Card key={d.phone}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center' }}>
-        <div style={{ color: colors.text, fontWeight: 600, fontSize: '14px' }}>{d.name || d.phone}</div>
-        <Chip text={d.onShift ? 'on shift' : 'off'} tint={d.onShift ? colors.emerald : colors.muted} />
+// ── Managing drivers and shops (useDeliveryManage) ───────────
+//
+// Since 2026-10-07 the owner can do here what ADDDRIVER, REMOVEDRIVER,
+// SUSPENDDRIVER, VERIFYDRIVER, ADDSHOP and APPROVESHOP do on WhatsApp. The API
+// enforces the same rules and says why when it refuses, and that sentence is
+// shown as it is. Anything that messages a driver or a shop says so in its
+// confirmation first. Money (payouts, how a shop is paid) is still WhatsApp.
+
+const input = {
+  width: '100%', boxSizing: 'border-box', background: colors.card, color: colors.text,
+  border: `1px solid ${colors.borderDim}`, borderRadius: '10px', padding: '8px 12px', fontSize: '13px',
+};
+const act = (tint, disabled) => ({
+  background: `${tint}14`, color: tint, border: `1px solid ${tint}44`, borderRadius: '999px',
+  padding: '5px 12px', fontSize: '12px', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
+});
+
+/** Run an action; its outcome is the line under the card. */
+function useRun() {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+  const run = async (fn, ok) => {
+    setBusy(true);
+    try {
+      const data = await fn();
+      setResult({ tint: colors.emerald, text: typeof ok === 'function' ? ok(data) : ok });
+      return data;
+    } catch (err) {
+      setResult({ tint: colors.red, text: manageErrorMessage(err) });
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  };
+  return { busy, result, run, clear: () => setResult(null) };
+}
+
+const Said = ({ result }) => (result ? (
+  <div role="status" style={{ color: result.tint, fontSize: '12px', marginTop: '8px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{result.text}</div>
+) : null);
+
+const Field = ({ label, children }) => (
+  <label style={{ display: 'grid', gap: '4px', fontSize: '12px', color: colors.muted }}>{label}{children}</label>
+);
+
+const VEHICLES = [['', 'Not given'], ['motorbike', 'Motorbike'], ['motorcycle', 'Motorcycle'], ['car', 'Car']];
+
+function DriverForm({ initial, submitLabel, onSubmit, onCancel, busy }) {
+  const [f, setF] = useState({
+    name: initial?.name || '', phone: initial?.phone || '', fullName: initial?.fullName || '',
+    vehicleType: initial?.vehicleType || '', vehicleRegistration: initial?.vehicleRegistration || '',
+  });
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit(f); }} style={{ display: 'grid', gap: '8px', marginTop: '10px' }}>
+      <Field label="Name on the job card"><input aria-label="Driver name" value={f.name} onChange={set('name')} style={input} /></Field>
+      <Field label="Cellphone"><input aria-label="Driver phone" value={f.phone} onChange={set('phone')} placeholder="0821234567" style={input} /></Field>
+      {initial && <Field label="Name on their licence"><input aria-label="Licence name" value={f.fullName} onChange={set('fullName')} style={input} /></Field>}
+      <Field label="Vehicle">
+        <select aria-label="Vehicle" value={f.vehicleType} onChange={set('vehicleType')} style={input}>
+          {VEHICLES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+      </Field>
+      <Field label="Registration"><input aria-label="Registration" value={f.vehicleRegistration} onChange={set('vehicleRegistration')} style={input} /></Field>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <button type="submit" disabled={busy} style={act(colors.lime, busy)}>{submitLabel}</button>
+        <button type="button" onClick={onCancel} style={act(colors.muted, false)}>Cancel</button>
       </div>
-      <div style={{ color: colors.muted, fontSize: '12px', marginTop: '6px' }}>{d.phone}</div>
+    </form>
+  );
+}
+
+/** Only the fields that changed, so an edit never re-sends what nobody touched. */
+const changed = (before, after, keys) => {
+  const out = {};
+  for (const k of keys) {
+    const a = typeof after[k] === 'string' ? after[k].trim() : after[k];
+    const b = before[k] ?? (typeof a === 'boolean' ? false : '');
+    if (String(a ?? '') !== String(b ?? '')) out[k] = a === '' ? null : a;
+  }
+  return out;
+};
+
+function AddDriver({ q }) {
+  const { addDriver } = useDeliveryManage(q);
+  const { busy, result, run, clear } = useRun();
+  const [open, setOpen] = useState(false);
+  if (!open) {
+    return (
+      <div style={{ marginBottom: '12px' }}>
+        <button onClick={() => { clear(); setOpen(true); }} style={act(colors.lime, false)}>+ Add driver</button>
+        <Said result={result} />
+      </div>
+    );
+  }
+  const submit = async (f) => {
+    const data = await run(
+      () => addDriver({ name: f.name.trim(), phone: f.phone.trim(), vehicleType: f.vehicleType || null, vehicleRegistration: f.vehicleRegistration.trim() || null }),
+      (d) => `${d.driver.name} is added. No real job reaches them until they have done one practice run and you have checked their papers.\n\nSend them this link to start: ${d.joinLink}`,
+    );
+    if (data) setOpen(false);
+  };
+  return (
+    <Card>
+      <div style={{ color: colors.text, fontWeight: 600, fontSize: '14px' }}>Add a driver</div>
+      <DriverForm submitLabel="Add driver" onSubmit={submit} onCancel={() => setOpen(false)} busy={busy} />
+      <Said result={result} />
+    </Card>
+  );
+}
+
+function DriverCard({ d, q }) {
+  const m = useDeliveryManage(q);
+  const { busy, result, run } = useRun();
+  const [editing, setEditing] = useState(false);
+  const who = d.name || d.phone;
+  const suspended = d.status === 'suspended';
+  const papersWaiting = d.kycStatus === 'pending';
+
+  const save = async (f) => {
+    const fields = changed(d, f, ['name', 'phone', 'fullName', 'vehicleType', 'vehicleRegistration']);
+    if (!Object.keys(fields).length) { setEditing(false); return; }
+    if (await run(() => m.updateDriver(d.phone, fields), `${f.name.trim() || who} is updated.`)) setEditing(false);
+  };
+  const suspend = () => {
+    if (!window.confirm(`Suspend ${who}? No new jobs reach them, and their shift ends. They are not messaged.`)) return;
+    run(() => m.suspendDriver(d.phone), (r) => `${who} is suspended.${r.carrying ? ` They are still out with ${r.carrying} job${r.carrying > 1 ? 's' : ''}: re-dispatch if they will not finish.` : ''}`);
+  };
+  const activate = () => {
+    if (!window.confirm(`Make ${who} active again?`)) return;
+    run(() => m.activateDriver(d.phone), `${who} is active again.`);
+  };
+  const verify = () => {
+    if (!window.confirm(`Accept ${who}'s papers? They get a WhatsApp saying they are approved and can go online.`)) return;
+    run(() => m.verifyDriver(d.phone), `${who}'s papers are accepted, and they have been told.`);
+  };
+  const reject = () => {
+    const reason = window.prompt(`Why are ${who}'s papers not accepted? They get this on WhatsApp and are asked to send them again.`);
+    if (reason && reason.trim()) run(() => m.rejectDriver(d.phone, reason.trim()), `${who} has been told, and asked to send their papers again.`);
+  };
+  const remove = () => {
+    if (!window.confirm(`Remove ${who} from your drivers? What they are owed stays on the books.`)) return;
+    run(() => m.removeDriver(d.phone), `${who} is removed.`);
+  };
+
+  return (
+    <Card>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center' }}>
+        <div style={{ color: colors.text, fontWeight: 600, fontSize: '14px' }}>{who}</div>
+        <Chip text={suspended ? 'suspended' : d.onShift ? 'on shift' : 'off'} tint={suspended ? colors.red : d.onShift ? colors.emerald : colors.muted} />
+      </div>
+      <div style={{ color: colors.muted, fontSize: '12px', marginTop: '6px' }}>
+        {d.phone}{d.vehicleType ? ` · ${d.vehicleType}` : ''}{d.vehicleRegistration ? ` · ${d.vehicleRegistration}` : ''}
+      </div>
       <div style={{ marginTop: '8px' }}>
         <Row left="Papers" right={d.kycStatus || 'not asked for'} />
         <Row left="Practice run" right={d.practiceDoneAt ? 'done' : d.practiceRequired ? 'not done — no jobs reach them' : 'not required'} />
         <Row left="Carrying" right={d.carrying || 'nothing'} />
         <Row left="Owed" right={money(d.owed)} />
       </div>
+      {editing
+        ? <DriverForm initial={d} submitLabel="Save" onSubmit={save} onCancel={() => setEditing(false)} busy={busy} />
+        : (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
+            <button onClick={() => setEditing(true)} disabled={busy} style={act(colors.cyan, busy)}>Edit</button>
+            {papersWaiting && <button onClick={verify} disabled={busy} style={act(colors.emerald, busy)}>Accept papers</button>}
+            {papersWaiting && <button onClick={reject} disabled={busy} style={act(colors.amber, busy)}>Send papers back</button>}
+            {suspended
+              ? <button onClick={activate} disabled={busy} style={act(colors.emerald, busy)}>Activate</button>
+              : <button onClick={suspend} disabled={busy} style={act(colors.amber, busy)}>Suspend</button>}
+            <button onClick={remove} disabled={busy} style={act(colors.red, busy)}>Remove</button>
+          </div>
+        )}
+      <Said result={result} />
     </Card>
-  ));
+  );
 }
 
-function Businesses({ businesses }) {
-  if (!businesses.length) return <Empty>No shops yet. Invite one from WhatsApp with ADDSHOP.</Empty>;
-  return businesses.map((v) => (
-    <Card key={v.id}>
+function Drivers({ drivers, q }) {
+  // Who can take a job right now first, then who is owed the most.
+  const sorted = [...drivers].sort((a, b) => (b.onShift ? 1 : 0) - (a.onShift ? 1 : 0) || (b.owed || 0) - (a.owed || 0));
+  return (
+    <div>
+      <AddDriver q={q} />
+      {!drivers.length && <Empty>No drivers yet, so orders come in and sit waiting. Add one above, or from WhatsApp with ADDDRIVER Name 082…</Empty>}
+      {sorted.map((d) => <DriverCard key={d.phone} d={d} q={q} />)}
+    </div>
+  );
+}
+
+function ShopForm({ initial, submitLabel, onSubmit, onCancel, busy, categories }) {
+  const [f, setF] = useState({
+    name: initial?.name || '', category: initial?.category || '', phone: initial?.phone || '',
+    contactName: initial?.contactName || '', address: initial?.address || '',
+    commissionPct: initial?.commissionPct ?? 0, prepMinutes: initial?.prepMinutes ?? '',
+    deliveryOnly: !!initial?.deliveryOnly,
+  });
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit(f); }} style={{ display: 'grid', gap: '8px', marginTop: '10px' }}>
+      <Field label="Shop name"><input aria-label="Shop name" value={f.name} onChange={set('name')} style={input} /></Field>
+      <Field label="Category">
+        <select aria-label="Category" value={f.category} onChange={set('category')} style={input}>
+          <option value="">Choose…</option>
+          {(categories || []).map((cat) => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
+        </select>
+      </Field>
+      <Field label="Shop's WhatsApp number"><input aria-label="Shop phone" value={f.phone} onChange={set('phone')} placeholder="0821234567" style={input} /></Field>
+      <Field label="Contact person"><input aria-label="Contact person" value={f.contactName} onChange={set('contactName')} style={input} /></Field>
+      {initial && <Field label="Address"><input aria-label="Address" value={f.address} onChange={set('address')} style={input} /></Field>}
+      <label style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '13px', color: colors.text }}>
+        <input type="checkbox" aria-label="Delivery only" checked={f.deliveryOnly} onChange={(e) => setF({ ...f, deliveryOnly: e.target.checked })} />
+        Delivery only (no menu, no commission)
+      </label>
+      {!f.deliveryOnly && (
+        <Field label="Commission %"><input aria-label="Commission" type="number" min="0" max="100" step="0.5" value={f.commissionPct} onChange={set('commissionPct')} style={input} /></Field>
+      )}
+      {initial && <Field label="Preparation time, minutes"><input aria-label="Preparation minutes" type="number" min="0" max="240" value={f.prepMinutes} onChange={set('prepMinutes')} style={input} /></Field>}
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <button type="submit" disabled={busy} style={act(colors.lime, busy)}>{submitLabel}</button>
+        <button type="button" onClick={onCancel} style={act(colors.muted, false)}>Cancel</button>
+      </div>
+    </form>
+  );
+}
+
+function AddShop({ q, categories }) {
+  const { addShop } = useDeliveryManage(q);
+  const { busy, result, run, clear } = useRun();
+  const [open, setOpen] = useState(false);
+  if (!open) {
+    return (
+      <div style={{ marginBottom: '12px' }}>
+        <button onClick={() => { clear(); setOpen(true); }} style={act(colors.lime, false)}>+ Add shop</button>
+        <Said result={result} />
+      </div>
+    );
+  }
+  const submit = async (f) => {
+    const data = await run(
+      () => addShop({
+        name: f.name.trim(), category: f.category, phone: f.phone.trim(), contactName: f.contactName.trim() || null,
+        deliveryOnly: f.deliveryOnly, commissionPct: f.deliveryOnly ? 0 : Number(f.commissionPct || 0),
+      }),
+      (d) => `${d.shop.name} is added, switched off until you approve it.\n\nSend the shop this link. It takes them through setting up: ${d.joinLink}\nJoin code: ${d.shop.joinCode}`,
+    );
+    if (data) setOpen(false);
+  };
+  return (
+    <Card>
+      <div style={{ color: colors.text, fontWeight: 600, fontSize: '14px' }}>Add a shop</div>
+      <ShopForm submitLabel="Add shop" onSubmit={submit} onCancel={() => setOpen(false)} busy={busy} categories={categories} />
+      <Said result={result} />
+    </Card>
+  );
+}
+
+function ShopCard({ v, q, categories }) {
+  const m = useDeliveryManage(q);
+  const { busy, result, run } = useRun();
+  const [editing, setEditing] = useState(false);
+  const settingUp = !!v.onboardingStep;
+  const waiting = v.onboardingStep === 'review';
+
+  const save = async (f) => {
+    const fields = changed(v, f, ['name', 'category', 'phone', 'contactName', 'address', 'deliveryOnly']);
+    if (!f.deliveryOnly && Number(f.commissionPct || 0) !== Number(v.commissionPct || 0)) fields.commissionPct = Number(f.commissionPct || 0);
+    if (String(f.prepMinutes ?? '') !== String(v.prepMinutes ?? '')) fields.prepMinutes = f.prepMinutes === '' ? null : Number(f.prepMinutes);
+    if (!Object.keys(fields).length) { setEditing(false); return; }
+    if (await run(() => m.updateShop(v.id, fields), `${f.name.trim() || v.name} is updated.`)) setEditing(false);
+  };
+  const approve = () => {
+    if (!window.confirm(`Approve ${v.name}? They get a WhatsApp saying they are live, and customers see them once they send OPEN.`)) return;
+    run(() => m.approveShop(v.id), `${v.name} is approved, and has been told.`);
+  };
+  const off = () => {
+    if (!window.confirm(`Switch ${v.name} off? It closes now, gets no orders, and customers stop seeing it. The shop is not messaged.`)) return;
+    run(() => m.switchShopOff(v.id), `${v.name} is switched off.`);
+  };
+  const on = () => {
+    if (!window.confirm(`Switch ${v.name} back on? Customers see it again once it sends OPEN.`)) return;
+    run(() => m.switchShopOn(v.id), `${v.name} is switched on.`);
+  };
+  const remove = () => {
+    if (!window.confirm(`Delete ${v.name}? Only a shop that has never had an order can be deleted; one with orders has to be switched off instead.`)) return;
+    run(() => m.removeShop(v.id), `${v.name} is deleted.`);
+  };
+
+  let state = ['closed', colors.muted];
+  if (waiting) state = ['waiting for approval', colors.amber];
+  else if (settingUp) state = ['setting up', colors.cyan];
+  else if (!v.active) state = ['switched off', colors.red];
+  else if (v.open) state = ['open', colors.emerald];
+
+  return (
+    <Card>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center' }}>
         <div style={{ color: colors.text, fontWeight: 600, fontSize: '14px' }}>{v.name}</div>
-        <Chip
-          text={v.open ? 'open' : 'closed'}
-          tint={v.open ? colors.emerald : colors.muted}
-        />
+        <Chip text={state[0]} tint={state[1]} />
       </div>
-      <div style={{ color: colors.muted, fontSize: '12px', marginTop: '6px' }}>{v.phone} · {v.category}</div>
+      <div style={{ color: colors.muted, fontSize: '12px', marginTop: '6px' }}>{v.phone} · {v.category}{v.contactName ? ` · ${v.contactName}` : ''}</div>
       <div style={{ marginTop: '8px' }}>
         <Row left="Plan" right={v.plan === 'subscriber' ? 'subscriber' : 'pay as you go'} />
         {v.plan === 'subscriber' && <Row left="Wallet" right={money(v.wallet)} />}
         <Row left="Paid by" right={v.paystackSubaccount ? 'split at checkout' : 'by hand'} />
+        {!v.deliveryOnly && <Row left="Commission" right={`${v.commissionPct || 0}%`} />}
+        {v.address && <Row left="Address" right={v.address} />}
         {v.onboardingStep && <Row left="Setting up" right={v.onboardingStep} />}
+        {v.joinCode && <Row left="Join code" right={v.joinCode} />}
       </div>
+      {v.joinLink && (
+        <div style={{ fontSize: '12px', marginTop: '6px', wordBreak: 'break-all' }}>
+          <a href={v.joinLink} target="_blank" rel="noreferrer" style={{ color: colors.lime }}>Their join link ↗</a>
+        </div>
+      )}
+      {editing
+        ? <ShopForm initial={v} submitLabel="Save" onSubmit={save} onCancel={() => setEditing(false)} busy={busy} categories={categories} />
+        : (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
+            <button onClick={() => setEditing(true)} disabled={busy} style={act(colors.cyan, busy)}>Edit</button>
+            {waiting && <button onClick={approve} disabled={busy} style={act(colors.emerald, busy)}>Approve</button>}
+            {!settingUp && v.active && <button onClick={off} disabled={busy} style={act(colors.amber, busy)}>Switch off</button>}
+            {!settingUp && !v.active && <button onClick={on} disabled={busy} style={act(colors.emerald, busy)}>Switch on</button>}
+            <button onClick={remove} disabled={busy} style={act(colors.red, busy)}>Delete</button>
+          </div>
+        )}
+      <Said result={result} />
     </Card>
-  ));
+  );
+}
+
+function Businesses({ businesses, q }) {
+  const categories = useShopCategories().data;
+  return (
+    <div>
+      <AddShop q={q} categories={categories} />
+      {!businesses.length && <Empty>No shops yet. Add one above, or invite one from WhatsApp with ADDSHOP.</Empty>}
+      {businesses.map((v) => <ShopCard key={v.id} v={v} q={q} categories={categories} />)}
+    </div>
+  );
 }
 
 function Money({ overview, payouts }) {

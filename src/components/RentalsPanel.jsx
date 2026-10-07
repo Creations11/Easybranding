@@ -240,9 +240,105 @@ function ListingsView({ status }) {
   return data.map((l) => <ListingCard key={l.id} listing={l} />);
 }
 
-function AccountRow({ account }) {
-  const { suspend, reinstate } = useRentalsActions();
+const field = {
+  width: '100%', boxSizing: 'border-box', padding: '8px 12px', fontSize: 13, fontFamily: 'inherit',
+  borderRadius: 8, background: c.surface, color: c.text, border: '1px solid ' + c.borderDim,
+};
+const ROLES = [['landlord', 'Landlord'], ['renter', 'Renter']];
+
+/**
+ * The temporary password the API made, shown once. Staff give it to the
+ * person; it is not stored anywhere this screen can show it again.
+ */
+function TemporaryPassword({ who, password, onDone }) {
+  return (
+    <div role="status" style={{ marginTop: 10, padding: '10px 12px', borderRadius: 8, fontSize: 13, background: c.lime + '14', border: '1px solid ' + c.lime + '44', color: c.text }}>
+      <div>Temporary password for {who}. Give it to them now: it is not shown again.</div>
+      <code data-testid="temporary-password" style={{ display: 'inline-block', marginTop: 6, fontSize: 15, fontWeight: 700, color: c.lime, userSelect: 'all' }}>{password}</code>
+      <div style={{ marginTop: 8 }}><button onClick={onDone} style={btn(c.muted, false)}>Done</button></div>
+    </div>
+  );
+}
+
+/** Name, email, number and roles: the same form for a new account and an edit. */
+function AccountForm({ initial, submitLabel, onSubmit, onCancel, busy }) {
+  const [form, setForm] = useState({
+    fullName: initial?.fullName || '', email: initial?.email || '', phone: initial?.phone || '',
+    roles: initial?.roles || ['renter'],
+  });
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+  const toggle = (role) => setForm({
+    ...form, roles: form.roles.includes(role) ? form.roles.filter((r) => r !== role) : [...form.roles, role],
+  });
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+      <input aria-label="Full name" placeholder="Full name" value={form.fullName} onChange={set('fullName')} style={field} />
+      <input aria-label="Email" placeholder="Email" type="email" value={form.email} onChange={set('email')} style={field} />
+      <input aria-label="Cellphone" placeholder="Cellphone, e.g. 0821234567" value={form.phone} onChange={set('phone')} style={field} />
+      <div style={{ display: 'flex', gap: 16, fontSize: 13, color: c.text }}>
+        {ROLES.map(([id, label]) => (
+          <label key={id} style={{ display: 'flex', gap: 6, alignItems: 'center', cursor: 'pointer' }}>
+            <input type="checkbox" checked={form.roles.includes(id)} onChange={() => toggle(id)} /> {label}
+          </label>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button type="submit" disabled={busy || !form.roles.length} style={btn(c.lime, busy || !form.roles.length)}>{submitLabel}</button>
+        <button type="button" onClick={onCancel} style={btn(c.muted, false)}>Cancel</button>
+      </div>
+    </form>
+  );
+}
+
+/** Only what changed, so an edit never re-sends a field nobody touched. */
+const changes = (before, after) => {
+  const out = {};
+  for (const k of ['fullName', 'email', 'phone']) if (after[k].trim() !== (before[k] || '')) out[k] = after[k].trim();
+  if ([...after.roles].sort().join() !== [...before.roles].sort().join()) out.roles = after.roles;
+  return out;
+};
+
+function NewAccount() {
+  const { createAccount } = useRentalsActions();
+  const [open, setOpen] = useState(false);
+  const [made, setMade] = useState(null);
   const { busy, result, act } = useAct();
+  if (made) return <div style={card}><TemporaryPassword who={made.account.fullName} password={made.temporaryPassword} onDone={() => setMade(null)} /></div>;
+  if (!open) return <button onClick={() => setOpen(true)} style={{ ...btn(c.lime, false), marginBottom: 14 }}>+ New account</button>;
+  const onSubmit = (form) => act(async () => {
+    const data = await createAccount({ ...form, fullName: form.fullName.trim(), email: form.email.trim(), phone: form.phone.trim() });
+    setOpen(false);
+    setMade(data);
+  }, 'Account made.');
+  return (
+    <div style={card}>
+      <div style={{ fontWeight: 700, color: c.text }}>New EasyRentals account</div>
+      <div style={{ fontSize: 12, color: c.muted }}>The API makes a temporary password and shows it once, for you to give the person.</div>
+      <AccountForm submitLabel="Make account" onSubmit={onSubmit} onCancel={() => setOpen(false)} busy={busy} />
+      <Result result={result} />
+    </div>
+  );
+}
+
+function AccountRow({ account }) {
+  const { suspend, reinstate, updateAccount, resetPassword, deleteAccount } = useRentalsActions();
+  const { busy, result, act } = useAct();
+  const [editing, setEditing] = useState(false);
+  const [password, setPassword] = useState(null);
+  const onSave = (form) => {
+    const fields = changes(account, form);
+    if (!Object.keys(fields).length) { setEditing(false); return; }
+    act(async () => { await updateAccount(account.id, fields); setEditing(false); }, `${form.fullName.trim()} is updated.`);
+  };
+  const onReset = () => {
+    if (!window.confirm(`Make a new password for ${account.fullName}? Their current one stops working at once.`)) return;
+    act(async () => setPassword((await resetPassword(account.id)).temporaryPassword), 'New password made.');
+  };
+  const onDelete = () => {
+    const listings = account.listings ? ` Their ${account.listings === 1 ? 'listing is' : `${account.listings} listings are`} archived and everyone waiting on them is told.` : '';
+    if (!window.confirm(`Delete ${account.fullName}'s account? They cannot sign in again with it.${listings} Their own open applications are withdrawn.`)) return;
+    act(() => deleteAccount(account.id), `${account.fullName}'s account is deleted.`);
+  };
   const onSuspend = () => {
     const reason = askReason(`Why are you suspending ${account.fullName}? They are signed out at once and all their listings leave the site.`);
     if (reason) act(() => suspend(account.id, reason), `${account.fullName} is suspended.`);
@@ -267,11 +363,19 @@ function AccountRow({ account }) {
         <span>joined {when(account.createdAt)}</span>
         <span>{account.lastLoginAt ? `last signed in ${when(account.lastLoginAt)}` : 'never signed in again'}</span>
       </div>
-      <div style={{ marginTop: 8 }}>
-        {account.isActive
-          ? <button onClick={onSuspend} disabled={busy} style={btn(c.red, busy)}>Suspend</button>
-          : <button onClick={onReinstate} disabled={busy} style={btn(c.emerald, busy)}>Reinstate</button>}
-      </div>
+      {editing
+        ? <AccountForm initial={account} submitLabel="Save" onSubmit={onSave} onCancel={() => setEditing(false)} busy={busy} />
+        : (
+          <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <button onClick={() => setEditing(true)} disabled={busy} style={btn(c.cyan, busy)}>Edit</button>
+            <button onClick={onReset} disabled={busy} style={btn(c.amber, busy)}>Reset password</button>
+            {account.isActive
+              ? <button onClick={onSuspend} disabled={busy} style={btn(c.red, busy)}>Suspend</button>
+              : <button onClick={onReinstate} disabled={busy} style={btn(c.emerald, busy)}>Reinstate</button>}
+            <button onClick={onDelete} disabled={busy} style={btn(c.red, busy)}>Delete</button>
+          </div>
+        )}
+      {password && <TemporaryPassword who={account.fullName} password={password} onDone={() => setPassword(null)} />}
       <Result result={result} />
     </div>
   );
@@ -283,6 +387,7 @@ function AccountsView() {
   const { data, isLoading, isError, error } = useRentalAccounts(q);
   return (
     <div>
+      <NewAccount />
       <form onSubmit={(e) => { e.preventDefault(); setQ(typed.trim()); }} style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
         <input aria-label="Find an account" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Name, email or number"
           style={{ flex: 1, maxWidth: 360, padding: '8px 12px', fontSize: 13, fontFamily: 'inherit', borderRadius: 8, background: c.surface, color: c.text, border: '1px solid ' + c.borderDim }} />

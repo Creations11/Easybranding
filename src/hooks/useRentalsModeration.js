@@ -61,5 +61,11 @@ export function useRentalsActions() {
     takeDown: (listingId, reason) => run(api.post(`${ADMIN}/listings/${listingId}/unpublish`, { reason })),
     suspend: (accountId, reason) => run(api.post(`${ADMIN}/accounts/${accountId}/suspend`, { reason })),
     reinstate: (accountId) => run(api.post(`${ADMIN}/accounts/${accountId}/reinstate`, {})),
+    // Making an account, and resetting a password, answer with a temporary
+    // password the API shows exactly once: {account, temporaryPassword}.
+    createAccount: (fields) => run(api.post(`${ADMIN}/accounts`, fields)),
+    updateAccount: (accountId, fields) => run(api.patch(`${ADMIN}/accounts/${accountId}`, fields)),
+    resetPassword: (accountId) => run(api.post(`${ADMIN}/accounts/${accountId}/reset-password`, {})),
+    deleteAccount: (accountId) => run(api.delete(`${ADMIN}/accounts/${accountId}`)),
   };
 }
