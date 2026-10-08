@@ -482,7 +482,7 @@ export default function AdminDashboard() {
                 device. The hint below it said "mouse wheel, trackpad, or drag
                 the scrollbar", none of which exist on a phone.
 
-                Same resolution LeadsBoard already uses: one column at a time,
+                One column at a time on a phone,
                 picked by a chip. */}
             {isMobile ? (
               <div style={{ display: 'flex', gap: 6, marginBottom: 14, overflowX: 'auto', paddingBottom: 4 }}>

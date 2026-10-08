@@ -23,6 +23,7 @@ vi.mock('../../src/api', () => ({
 // keyed by the exact URL each hook calls — see src/hooks/useDashboardData.js.
 const ROUTE_DEFAULTS = {
   '/admin-ops/overview': { data: { data: { overview: null } } },
+  '/admin-ops/crm/leads': { data: { data: { buckets: [], staffStages: [], leads: [], summary: { total: 0, waiting: 0, followUpsDue: 0, hot: 0, newThisWeek: 0, byBucket: { new: 0, talking: 0, offered: 0, committed: 0, link_sent: 0, won: 0, lost: 0 } } } } },
   '/leads': { data: { data: { leads: [] } } },
   '/admin-ops/conversations/active': { data: { data: { leads: [] } } },
   '/admin-ops/leads/qualified': { data: { data: { leads: [] } } },
@@ -60,12 +61,12 @@ const mockApiGet = (overrides = {}) => {
   })
 }
 
-// The three charts live behind the Trends tab — they answer "why?", which is
+// The charts live behind the Reports view — they answer "why?", which is
 // the question you ask second. Open it before asserting on them.
 const openTrends = async () => {
   renderWithProviders(<SuperAdminDashboard />)
-  await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
-  fireEvent.click(screen.getByRole('button', { name: 'trends' }))
+  await waitFor(() => expect(screen.getByRole('tab', { name: /Reports/ })).toBeInTheDocument())
+  fireEvent.click(screen.getByRole('tab', { name: /Reports/ }))
 }
 
 beforeEach(() => {
@@ -92,179 +93,86 @@ describe('SuperAdminDashboard', () => {
     expect(screen.getByText('Loading platform data...')).toBeInTheDocument()
   })
 
-  it('renders Operations/Overview stat cards and a lead name once data loads', async () => {
-    mockApiGet({
-      '/admin-ops/overview': { data: { data: { overview: {
-        totalLeads: 42, activeConversations: 5, qualifiedLeads: 10,
-        rejectedLeads: 3, todayLeads: 2, qualificationRate: 24,
-      } } } },
-      '/admin-ops/conversations/active': { data: { data: { leads: [
-        { _id: 'lead1', name: 'Naledi', phone: '+27821111111', workflowStatus: 'qualified' },
-      ] } } },
-    })
+  // Operations as a CRM (2026-10-08): one request draws it, and it opens on
+  // Today, with whoever is waiting longest for a reply.
+  const CRM = {
+    buckets: [
+      { key: 'new', label: 'New' }, { key: 'talking', label: 'Talking' }, { key: 'offered', label: 'Offered' },
+      { key: 'committed', label: 'Committed' }, { key: 'link_sent', label: 'Link sent' }, { key: 'won', label: 'Paid' }, { key: 'lost', label: 'Lost' },
+    ],
+    staffStages: ['discovery'],
+    leads: [
+      { id: 'l1', name: 'John Mdau', phone: '+27821000001', bucket: 'link_sent', stage: 'payment_sent', intent: 'hot', waitingSince: new Date(Date.now() - 3 * 86400e3).toISOString(), lastActivityAt: new Date(Date.now() - 3 * 86400e3).toISOString(), lastText: 'I can pay and send proof of payment', tenantId: 't1', business: 'EasyBranding AI' },
+      { id: 'l2', name: 'Lerato', phone: '+27821000002', bucket: 'talking', stage: 'discovery', intent: 'warm', waitingSince: null, lastActivityAt: new Date(Date.now() - 3600e3).toISOString(), lastText: 'Thanks', tenantId: 't1' },
+      { id: 'l3', name: 'Gone', phone: '+27821000003', bucket: 'lost', stage: 'discovery', intent: null, waitingSince: null, lastActivityAt: new Date(Date.now() - 9 * 86400e3).toISOString(), closeReason: 'Lost: no budget', tenantId: 't1' },
+    ],
+    summary: { total: 3, byBucket: { new: 0, talking: 1, offered: 0, committed: 0, link_sent: 1, won: 0, lost: 1 }, waiting: 1, followUpsDue: 0, newThisWeek: 2, hot: 1 },
+  }
+  const withCrm = (extra = {}) => mockApiGet({
+    '/admin-ops/overview': { data: { data: { overview: {} } } },
+    '/admin-ops/crm/leads': { data: { data: CRM } },
+    ...extra,
+  })
+  const loaded = () => waitFor(() => expect(screen.getByRole('tab', { name: /Pipeline/ })).toBeInTheDocument())
 
+  it('opens Operations on Today with the headline numbers, and none of the rental bot', async () => {
+    withCrm()
     renderWithProviders(<SuperAdminDashboard />)
-
-    await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
-    expect(screen.getByText('42')).toBeInTheDocument()
-    expect(screen.getByText('Naledi')).toBeInTheDocument()
+    await loaded()
+    expect(screen.getByRole('tab', { name: /Today/, selected: true })).toBeInTheDocument()
+    const waiting = screen.getByText('Waiting on us', { selector: 'div' }).closest('button')
+    await waitFor(() => expect(waiting).toHaveTextContent('1'))
+    expect(screen.getByText('Open pipeline', { selector: 'div' }).closest('button')).toHaveTextContent('2')
+    // The rental bot's statuses are gone.
+    expect(screen.queryByText('Qual. Rate')).toBeNull()
+    expect(screen.queryByText('Total Leads')).toBeNull()
+    expect(screen.queryByRole('tab', { name: /Viewings/ })).toBeNull()
+    expect(api.get.mock.calls.map(([u]) => u.split('?')[0])).not.toContain('/admin-ops/leads/closed')
   })
 
-  it('the Leads CRM board renders column counts and lead cards after switching tabs', async () => {
-    mockApiGet({
-      '/admin-ops/overview': { data: { data: { overview: { totalLeads: 1, activeConversations: 1, qualifiedLeads: 0, rejectedLeads: 0, todayLeads: 0, qualificationRate: 0 } } } },
-      '/admin-ops/conversations/active': { data: { data: { leads: [
-        { _id: 'lead1', name: 'Sipho', phone: '+27822222222', workflowStatus: 'new', takenOver: false },
-      ] } } },
-    })
-
+  it('shows the pipeline by sales stage, and folds Lost away until asked', async () => {
+    withCrm()
     renderWithProviders(<SuperAdminDashboard />)
-    await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
-
-    fireEvent.click(screen.getByRole('button', { name: 'leads' }))
-
-    await waitFor(() => expect(screen.getByText('Sipho')).toBeInTheDocument())
-    expect(screen.getByText('✋ Take over')).toBeInTheDocument()
+    await loaded()
+    fireEvent.click(screen.getByRole('tab', { name: /Pipeline/ }))
+    const linkSent = await screen.findByRole('region', { name: 'Link sent' })
+    expect(within(linkSent).getByText('John Mdau')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Talking' })).getByText('Lerato')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Lost' })).toBeNull()
+    fireEvent.click(screen.getByLabelText(/Show lost/))
+    expect(within(screen.getByRole('region', { name: 'Lost' })).getByText('Gone')).toBeInTheDocument()
   })
 
-  it('clicking Take over calls api.post with the right takeover endpoint', async () => {
-    mockApiGet({
-      '/admin-ops/overview': { data: { data: { overview: { totalLeads: 1, activeConversations: 1, qualifiedLeads: 0, rejectedLeads: 0, todayLeads: 0, qualificationRate: 0 } } } },
-      '/admin-ops/conversations/active': { data: { data: { leads: [
-        { _id: 'lead1', name: 'Sipho', phone: '+27822222222', workflowStatus: 'new', takenOver: false },
-      ] } } },
-    })
-    api.post.mockResolvedValue({ data: { success: true } })
-
+  it('turns a headline number into the list behind it', async () => {
+    withCrm()
     renderWithProviders(<SuperAdminDashboard />)
-    await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: 'leads' }))
-    await waitFor(() => expect(screen.getByText('Sipho')).toBeInTheDocument())
-
-    fireEvent.click(screen.getByText('✋ Take over'))
-
-    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/admin-ops/leads/lead1/takeover'))
+    await loaded()
+    fireEvent.click(screen.getByText('Waiting on us', { selector: 'div' }))
+    expect(screen.getByRole('tab', { name: /Leads/, selected: true })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByTestId('lead-row-l1')).toBeInTheDocument())
+    expect(screen.queryByTestId('lead-row-l2')).toBeNull()
   })
 
-  it('a rejected takeover call surfaces the API error message via alert', async () => {
-    mockApiGet({
-      '/admin-ops/overview': { data: { data: { overview: { totalLeads: 1, activeConversations: 1, qualifiedLeads: 0, rejectedLeads: 0, todayLeads: 0, qualificationRate: 0 } } } },
-      '/admin-ops/conversations/active': { data: { data: { leads: [
-        { _id: 'lead1', name: 'Sipho', phone: '+27822222222', workflowStatus: 'new', takenOver: false },
-      ] } } },
-    })
-    api.post.mockRejectedValue({ response: { data: { message: 'Takeover failed: cap reached' } } })
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
-
-    renderWithProviders(<SuperAdminDashboard />)
-    await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: 'leads' }))
-    await waitFor(() => expect(screen.getByText('Sipho')).toBeInTheDocument())
-
-    fireEvent.click(screen.getByText('✋ Take over'))
-
-    await waitFor(() => expect(alertSpy).toHaveBeenCalledWith('Takeover failed: cap reached'))
-  })
-
-  // The four status endpoints default to limit=20 server-side, and the Leads
-  // board has no per-column pagination — anything they don't return lands in
-  // the "Other" column, so truncation looks like miscategorisation rather than
-  // truncation. Production had 70 closed leads, 20 returned, and 50 showing as
-  // uncategorised (2026-07-27).
-  it('asks for more than the default 20 on every status column', async () => {
-    // Needs a LOADED page: Operations owns these queries now
-    // (sections/OperationsSection.jsx), and the page's loading gate means the
-    // section doesn't mount — so doesn't fetch — until something has arrived.
-    mockApiGet({
-      '/admin-ops/overview': { data: { data: { overview: {
-        totalLeads: 1, activeConversations: 1, qualifiedLeads: 0,
-        rejectedLeads: 0, todayLeads: 0, qualificationRate: 0,
-      } } } },
+  it('opens the lead page from a card', async () => {
+    withCrm({
+      '/admin-ops/leads/l1/timeline': { data: { data: { lead: { _id: 'l1', name: 'John Mdau', phone: '+27821000001', salesStage: 'payment_sent', salesIntent: 'hot' }, timeline: [], events: [] } } },
+      '/takeover/l1/history': { data: { data: { takeoverHistory: [] } } },
+      '/admin-ops/crm/leads/l1/notes': { data: { data: { notes: [] } } },
     })
     renderWithProviders(<SuperAdminDashboard />)
-    await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
-
-    const urls = api.get.mock.calls.map(c => c[0])
-    for (const path of ['/admin-ops/leads/closed', '/admin-ops/leads/qualified', '/admin-ops/leads/rejected', '/admin-ops/conversations/active']) {
-      const call = urls.find(u => u.startsWith(path))
-      expect(call, `${path} was never requested`).toBeTruthy()
-      const limit = Number(new URLSearchParams(call.split('?')[1] || '').get('limit'))
-      expect(limit, `${path} must request more than the server default of 20`).toBeGreaterThan(20)
-    }
+    await loaded()
+    fireEvent.click(screen.getByRole('tab', { name: /Pipeline/ }))
+    fireEvent.click(await screen.findByTestId('lead-card-l1'))
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith('/admin-ops/leads/l1/timeline'))
+    expect(await screen.findByText('Payment link sent')).toBeInTheDocument()
   })
 
-  // Phase 1 of the dashboard plan: the board must never mislead. A column that
-  // is truncated, still loading, or failed to load must each look different
-  // from a column that is genuinely empty — all four rendered as "None".
-  describe('columns are honest about their state', () => {
-    const openLeads = async () => {
-      renderWithProviders(<SuperAdminDashboard />)
-      await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
-      fireEvent.click(screen.getByRole('button', { name: 'leads' }))
-    }
-
-    it('says how many exist when the server holds more than it returned', async () => {
-      mockApiGet({
-        '/admin-ops/overview': { data: { data: { overview: { totalLeads: 70, activeConversations: 0, qualifiedLeads: 0, rejectedLeads: 0, todayLeads: 0, qualificationRate: 0 } } } },
-        // 2 rows returned, 70 exist — exactly the shape of the real bug.
-        '/admin-ops/leads/closed': { data: { data: { total: 70, leads: [
-          { _id: 'c1', name: 'Closed One', phone: '+27820000001', workflowStatus: 'closed' },
-          { _id: 'c2', name: 'Closed Two', phone: '+27820000002', workflowStatus: 'closed' },
-        ] } } },
-      })
-      await openLeads()
-
-      await waitFor(() => expect(screen.getByText('Closed One')).toBeInTheDocument())
-      expect(screen.getByText('of 70')).toBeInTheDocument()
-    })
-
-    it('shows an error with a retry when a column fails, not "None"', async () => {
-      const routes = { ...ROUTE_DEFAULTS,
-        '/admin-ops/overview': { data: { data: { overview: { totalLeads: 1, activeConversations: 0, qualifiedLeads: 0, rejectedLeads: 0, todayLeads: 0, qualificationRate: 0 } } } },
-      }
-      api.get.mockImplementation((url) => {
-        const path = url.split('?')[0]
-        if (path === '/admin-ops/leads/closed') return Promise.reject(new Error('boom'))
-        if (path in routes) return Promise.resolve(routes[path])
-        throw new Error(`Unmocked api.get call in test: ${url}`)
-      })
-      await openLeads()
-
-      // useIfNotAgent sets retry: 2 per query, which overrides the test
-      // client's retry: false — so the column legitimately retries with
-      // backoff before surfacing an error. That is the right production
-      // behaviour (a blip shouldn't flash red), so wait it out rather than
-      // weakening the retry.
-      await waitFor(() => expect(screen.getByText("Couldn't load this column")).toBeInTheDocument(), { timeout: 8000 })
-      expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
-    })
-
-    it('states how old the figures are', async () => {
-      mockApiGet({
-        '/admin-ops/overview': { data: { data: { overview: { totalLeads: 4, activeConversations: 1, qualifiedLeads: 0, rejectedLeads: 0, todayLeads: 0, qualificationRate: 0 } } } },
-      })
-      renderWithProviders(<SuperAdminDashboard />)
-      await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
-
-      // Freshness is on the Operations header, which is the default section.
-      await waitFor(() => expect(screen.getByText(/Updated just now|Refreshing…/)).toBeInTheDocument())
-      expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument()
-    })
-
-    it('does not claim a column is empty while it is still loading', async () => {
-      const routes = { ...ROUTE_DEFAULTS,
-        '/admin-ops/overview': { data: { data: { overview: { totalLeads: 1, activeConversations: 0, qualifiedLeads: 0, rejectedLeads: 0, todayLeads: 0, qualificationRate: 0 } } } },
-      }
-      api.get.mockImplementation((url) => {
-        const path = url.split('?')[0]
-        if (path === '/admin-ops/leads/closed') return new Promise(() => {}) // never resolves
-        if (path in routes) return Promise.resolve(routes[path])
-        throw new Error(`Unmocked api.get call in test: ${url}`)
-      })
-      await openLeads()
-
-      await waitFor(() => expect(screen.getByText('Loading…')).toBeInTheDocument())
-    })
+  it('states how old the figures are', async () => {
+    withCrm()
+    renderWithProviders(<SuperAdminDashboard />)
+    await loaded()
+    await waitFor(() => expect(screen.getByText(/Updated just now|Refreshing…/)).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument()
   })
 
   // The Allocate control on the Clients tab turns an industry template into a
@@ -289,7 +197,7 @@ describe('SuperAdminDashboard', () => {
 
     const openClients = async () => {
       renderWithProviders(<SuperAdminDashboard />)
-      await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
+      await waitFor(() => expect(screen.getByRole('tab', { name: /Pipeline/ })).toBeInTheDocument())
       fireEvent.click(screen.getByRole('button', { name: /clients/i }))
       await waitFor(() => expect(screen.getByText('Glow Salon')).toBeInTheDocument())
     }
@@ -441,6 +349,10 @@ describe('SuperAdminDashboard — action rail', () => {
       '/admin-ops/leads/lead1/timeline': { data: { data: { lead: null, timeline: [] } } },
       // LeadDetailModal fetches timeline and takeover history in parallel.
       '/takeover/lead1/history': { data: { data: { history: [] } } },
+      '/admin-ops/crm/leads/lead1/notes': { data: { data: { notes: [] } } },
+      '/admin-ops/crm/leads': { data: { data: { buckets: [{ key: 'new', label: 'New' }], staffStages: [], summary: { waiting: 1, byBucket: { new: 1 } }, leads: [
+        { id: 'lead1', name: 'Muhumo', phone: '+27821111111', bucket: 'new', waitingSince: new Date().toISOString(), lastActivityAt: new Date().toISOString() },
+      ] } } },
     })
     renderWithProviders(<SuperAdminDashboard />)
 
@@ -570,12 +482,17 @@ describe('LeadDetailModal — merged timeline', () => {
         events,
       } } },
       '/takeover/lead1/history': { data: { data: { history: [] } } },
+      '/admin-ops/crm/leads/lead1/notes': { data: { data: { notes: [] } } },
+      '/admin-ops/crm/leads': { data: { data: { buckets: [{ key: 'new', label: 'New' }], staffStages: [], summary: { waiting: 1, byBucket: { new: 1 } }, leads: [
+        { id: 'lead1', name: 'Muhumo', phone: '+27821111111', bucket: 'new', waitingSince: new Date().toISOString(), lastActivityAt: new Date().toISOString() },
+      ] } } },
     })
 
   const open = async () => {
     renderWithProviders(<SuperAdminDashboard />)
-    await waitFor(() => expect(screen.getByText('Muhumo')).toBeInTheDocument())
-    fireEvent.click(screen.getByText('Muhumo'))
+    await waitFor(() => expect(screen.getByRole('tab', { name: /Pipeline/ })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('tab', { name: /Pipeline/ }))
+    fireEvent.click(await screen.findByTestId('lead-card-lead1'))
   }
 
   it('shows payments and takeovers inline with the conversation', async () => {
@@ -611,6 +528,10 @@ describe('LeadDetailModal — merged timeline', () => {
         // no `events` — an older backend
       } } },
       '/takeover/lead1/history': { data: { data: { history: [] } } },
+      '/admin-ops/crm/leads/lead1/notes': { data: { data: { notes: [] } } },
+      '/admin-ops/crm/leads': { data: { data: { buckets: [{ key: 'new', label: 'New' }], staffStages: [], summary: { waiting: 1, byBucket: { new: 1 } }, leads: [
+        { id: 'lead1', name: 'Muhumo', phone: '+27821111111', bucket: 'new', waitingSince: new Date().toISOString(), lastActivityAt: new Date().toISOString() },
+      ] } } },
     })
     await open()
 
@@ -749,66 +670,6 @@ describe('SuperAdminDashboard — today’s verdict', () => {
   }, 10000)
 })
 
-// ── Mobile leads board (Phase 3) ───────────────────────────────────────
-// This business is run from a phone. The multi-column board is the worst
-// thing on a small screen: a horizontal scroll containing columns that each
-// scroll vertically, so a thumb-drag is ambiguous and most of the board is
-// undiscoverable.
-describe('LeadsBoard — on a phone', () => {
-  const withLeads = () =>
-    mockApiGet({
-      '/admin-ops/overview': { data: { data: { overview: {
-        totalLeads: 2, activeConversations: 1, qualifiedLeads: 1,
-        rejectedLeads: 0, todayLeads: 0, qualificationRate: 50,
-      } } } },
-      '/admin-ops/conversations/active': { data: { data: { leads: [
-        { _id: 'lead1', name: 'Sipho', phone: '+27822222222', workflowStatus: 'new' },
-      ] } } },
-      '/admin-ops/leads/qualified': { data: { data: { leads: [
-        { _id: 'lead2', name: 'Naledi', phone: '+27823333333', workflowStatus: 'qualified' },
-      ] } } },
-    })
-
-  const openLeads = async () => {
-    renderWithProviders(<SuperAdminDashboard />)
-    await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: 'leads' }))
-  }
-
-  it('shows every column side by side on a desktop', async () => {
-    setViewport(false)
-    withLeads()
-    await openLeads()
-
-    await waitFor(() => expect(screen.getByText('Sipho')).toBeInTheDocument())
-    expect(screen.getByText('Naledi')).toBeInTheDocument() // a different column
-  })
-
-  it('shows one column at a time behind a status picker on a phone', async () => {
-    setViewport(true)
-    withLeads()
-    await openLeads()
-
-    await waitFor(() => expect(screen.getByText('Sipho')).toBeInTheDocument())
-    // Only the selected column's leads render — no horizontal hunting.
-    expect(screen.queryByText('Naledi')).not.toBeInTheDocument()
-    // And the sideways-scroll instruction is gone, because there is none.
-    expect(screen.queryByText(/Scroll sideways/)).not.toBeInTheDocument()
-  })
-
-  it('switches column when a status chip is tapped', async () => {
-    setViewport(true)
-    withLeads()
-    await openLeads()
-
-    await waitFor(() => expect(screen.getByText('Sipho')).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: /Qualified 1/ }))
-
-    await waitFor(() => expect(screen.getByText('Naledi')).toBeInTheDocument())
-    expect(screen.queryByText('Sipho')).not.toBeInTheDocument()
-  })
-})
-
 // ── Revenue trend chart (Phase 3) ──────────────────────────────────────
 describe('SuperAdminDashboard — revenue trend', () => {
   const withTrend = (trend) =>
@@ -872,7 +733,7 @@ describe('SuperAdminDashboard — revenue trend', () => {
     withTrend([])
     await openTrends()
 
-    await waitFor(() => expect(screen.getByText('Money')).toBeInTheDocument())
+    await waitFor(() => expect(api.get.mock.calls.some(([u]) => u.startsWith('/admin-ops/money'))).toBe(true))
     expect(screen.queryByText('Collected, 6 months')).not.toBeInTheDocument()
   })
 })
@@ -945,7 +806,7 @@ describe('SuperAdminDashboard — lead trend', () => {
     await openTrends()
 
     // openTrends already waited for the page to load before switching tabs,
-    // and 'Total Leads' belongs to the Overview tab we just left — so there is
+    // and the Today view we just left is what proved the load — so there is
     // nothing further to wait for. The chart is absent because its data is.
     expect(screen.queryByText('New leads, 14 days')).not.toBeInTheDocument()
   })
@@ -1025,7 +886,7 @@ describe('SuperAdminDashboard — ladder conversion', () => {
     await openTrends()
 
     // Same reasoning as the lead-trend case: the tab we switched away from
-    // owns 'Total Leads', and openTrends already waited for the load.
+    // is the Today view, and openTrends already waited for the load.
     expect(screen.queryByText('Ladder conversion')).not.toBeInTheDocument()
   })
 })
@@ -1062,12 +923,12 @@ describe('SuperAdminDashboard — what greets you on Operations', () => {
     expect(screen.queryByText('Collected, 6 months')).not.toBeInTheDocument()
   })
 
-  it('puts the charts one click away under Trends', async () => {
+  it('puts the charts one click away under Reports', async () => {
     loaded()
     renderWithProviders(<SuperAdminDashboard />)
-    await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('tab', { name: /Pipeline/ })).toBeInTheDocument())
 
-    fireEvent.click(screen.getByRole('button', { name: 'trends' }))
+    fireEvent.click(screen.getByRole('tab', { name: /Reports/ }))
 
     await waitFor(() => expect(screen.getByText('Collected, 6 months')).toBeInTheDocument())
   })
@@ -1135,7 +996,7 @@ describe('SuperAdminDashboard — sales funnel', () => {
     withFunnel({ ...FUNNEL, entered: 0, funnel: [] })
     await openTrends()
 
-    await waitFor(() => expect(screen.getByText('trends')).toBeInTheDocument())
+    await waitFor(() => expect(api.get.mock.calls.some(([u]) => u.startsWith('/admin-ops/sales-funnel'))).toBe(true))
     expect(screen.queryByText('Sales funnel')).not.toBeInTheDocument()
   })
 })
@@ -1155,7 +1016,7 @@ describe('Clients tab: suspend, reopen, close', () => {
       '/tenants': { data: { data: { tenants: CLIENTS } } },
     })
     renderWithProviders(<SuperAdminDashboard />)
-    await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('tab', { name: /Pipeline/ })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /clients/i }))
     await waitFor(() => expect(screen.getByText('Glow Salon')).toBeInTheDocument())
   }

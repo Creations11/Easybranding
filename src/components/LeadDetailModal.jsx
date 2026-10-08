@@ -8,8 +8,10 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../api';
 // Styling here is inline (1,678 style props across src against 75
 // classNames), and inline styles cannot carry a media query — so the
-// responsive switch has to be a JS one. Same hook LeadsBoard already uses.
+// responsive switch has to be a JS one, through useMediaQuery.
 import useMediaQuery, { MOBILE_QUERY } from '../hooks/useMediaQuery';
+import { useCrmActions, useLeadNotes, crmError } from '../hooks/useCrm';
+import { STAGE_LABEL, INTENT, nextStagesFor, canonical } from './crm/crmHelpers';
 
 const t = {
   lime:      '#B8F040',
@@ -26,38 +28,72 @@ const t = {
   borderDim: 'rgba(255,255,255,0.06)',
 };
 
-// ── Local-only case notes ─────────────────────────────────────
-// No backend endpoint exists for lead notes yet, so these are
-// stored in localStorage, keyed by leadId. Not synced across
-// devices or team members — replace with a real API call once
-// the backend adds one.
-const NOTES_KEY = 'eb_lead_notes';
-
-function getAllNotes() {
-  try { return JSON.parse(localStorage.getItem(NOTES_KEY) || '{}'); }
-  catch { return {}; }
-}
-
-function saveNote(leadId, text) {
-  const all = getAllNotes();
-  if (text.trim()) all[leadId] = { text: text.trim(), updatedAt: new Date().toISOString() };
-  else delete all[leadId];
-  localStorage.setItem(NOTES_KEY, JSON.stringify(all));
-}
-
-const STATUS_COLORS = {
-  qualified:                 t.lime,
-  not_qualified:             t.red,
-  taken_over:                t.orange,
-  capture_name:              t.cyan,
-  capture_property_interest: t.cyan,
-  capture_budget:            t.cyan,
-  capture_move_in_date:      t.cyan,
-  capture_employment_type:   t.cyan,
-  capture_monthly_income:    t.cyan,
-  awaiting_menu:             t.amber,
-  closed:                    t.muted,
+// ── Notes ─────────────────────────────────────────────────────
+// Shared since 2026-10-08 (POST /admin-ops/crm/leads/:id/notes): everyone who
+// can see the lead sees them, with who wrote each and when. Before that they
+// lived in one browser's localStorage and nobody else ever read them; any
+// such note still on this device is offered for saving once (see NotesTab).
+const OLD_NOTES_KEY = 'eb_lead_notes';
+const oldLocalNote = (leadId) => {
+  try { return JSON.parse(localStorage.getItem(OLD_NOTES_KEY) || '{}')[leadId]?.text || null; } catch { return null; }
 };
+const forgetLocalNote = (leadId) => {
+  try {
+    const all = JSON.parse(localStorage.getItem(OLD_NOTES_KEY) || '{}');
+    delete all[leadId];
+    localStorage.setItem(OLD_NOTES_KEY, JSON.stringify(all));
+  } catch { /* nothing to forget */ }
+};
+
+function NotesTab({ leadId }) {
+  const notesQ = useLeadNotes(leadId);
+  const { addNote } = useCrmActions();
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState('');
+  const [legacy, setLegacy] = useState(() => oldLocalNote(leadId));
+
+  const save = async (body, after) => {
+    setBusy(true); setProblem('');
+    try { await addNote(leadId, body); after?.(); } catch (err) { setProblem(crmError(err)); } finally { setBusy(false); }
+  };
+
+  return (
+    <div>
+      {legacy && (
+        <div style={{ background: `${t.amber}12`, border: `1px solid ${t.amber}33`, borderRadius: 10, padding: '10px 12px', marginBottom: 12, fontSize: 12, color: t.amber }}>
+          A note saved only in this browser: “{legacy.slice(0, 160)}{legacy.length > 160 ? '…' : ''}”
+          <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+            <button onClick={() => save(legacy, () => { forgetLocalNote(leadId); setLegacy(null); })} disabled={busy} style={{ padding: '6px 12px', background: t.amber, color: '#080A06', border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 12 }}>Save it for everyone</button>
+            <button onClick={() => { forgetLocalNote(leadId); setLegacy(null); }} style={{ padding: '6px 12px', background: 'transparent', color: t.muted, border: `1px solid ${t.borderDim}`, borderRadius: 8, cursor: 'pointer', fontSize: 12 }}>Discard</button>
+          </div>
+        </div>
+      )}
+      <textarea
+        aria-label="New note"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="What happened, what was agreed, what to do next…"
+        rows={4}
+        style={{ width: '100%', boxSizing: 'border-box', padding: '12px', background: t.surface, border: `1px solid ${t.borderDim}`, borderRadius: '10px', color: t.text, fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }}
+      />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '8px 0 14px', gap: 8 }}>
+        <span style={{ color: problem ? t.red : t.muted, fontSize: 11 }}>{problem || 'Everyone who can see this lead sees its notes.'}</span>
+        <button onClick={() => save(text, () => setText(''))} disabled={busy || !text.trim()} style={{ padding: '8px 18px', background: text.trim() ? t.lime : `${t.lime}44`, color: '#080A06', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: text.trim() ? 'pointer' : 'not-allowed', fontSize: '13px' }}>
+          {busy ? 'Saving…' : 'Add note'}
+        </button>
+      </div>
+      {notesQ.isPending ? <p style={{ color: t.muted, fontSize: 13 }}>Loading notes…</p>
+        : (notesQ.data || []).length === 0 ? <p style={{ color: t.muted, fontSize: 13 }}>No notes yet.</p>
+          : notesQ.data.map((n) => (
+            <div key={n.id} style={{ background: t.surface, borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
+              <div style={{ color: t.text, fontSize: 13, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{n.text}</div>
+              <div style={{ color: t.muted, fontSize: 11, marginTop: 4 }}>{n.by || 'staff'} · {new Date(n.at).toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+            </div>
+          ))}
+    </div>
+  );
+}
 
 function ViewingScheduler({ lead, onScheduled, onClose }) {
   const [date,    setDate]    = useState('');
@@ -145,8 +181,6 @@ async function loadLeadDetail(leadId) {
   };
 }
 
-const storedNote = (leadId) => getAllNotes()[leadId] || null;
-
 export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
   const detail = useQuery({ queryKey: ['lead-detail', leadId], queryFn: () => loadLeadDetail(leadId) });
   const lead            = detail.data?.lead ?? null;
@@ -164,25 +198,32 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
   const [showViewing,   setShowViewing]   = useState(false);
   const [actionLoading, setActionLoading] = useState('');
   const [actionMsg,     setActionMsg]     = useState('');
-  const [noteText,      setNoteText]      = useState(() => storedNote(leadId)?.text || '');
-  const [noteSavedAt,   setNoteSavedAt]   = useState(() => storedNote(leadId)?.updatedAt || null);
-  // Opening a different lead in the same modal loads that lead's note. Done
-  // during render, not in an effect: an effect would paint the previous
-  // lead's note for a frame first (React's "adjusting state when a prop
-  // changes" pattern).
-  const [notesFor, setNotesFor] = useState(leadId);
-  if (notesFor !== leadId) {
-    setNotesFor(leadId);
-    setNoteText(storedNote(leadId)?.text || '');
-    setNoteSavedAt(storedNote(leadId)?.updatedAt || null);
-  }
   const bottomRef = useRef(null);
-
-  const handleSaveNote = () => {
-    saveNote(leadId, noteText);
-    setNoteSavedAt(noteText.trim() ? new Date().toISOString() : null);
-  };
+  const crm = useCrmActions();
+  const notesCount = useLeadNotes(leadId).data?.length || 0;
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [timeline, events]);
+
+  // The CRM's own actions: move the sales stage forward, mark lost (a close
+  // with the reason), reopen. Each reports the API's own sentence on failure.
+  const crmAct = async (key, fn, ok) => {
+    setActionLoading(key); setActionMsg('');
+    try {
+      await fn();
+      setActionMsg(`✅ ${ok}`);
+      await load();
+      if (onUpdate) onUpdate();
+      setTimeout(() => setActionMsg(''), 3000);
+    } catch (err) {
+      setActionMsg(`❌ ${crmError(err)}`);
+    } finally { setActionLoading(''); }
+  };
+  const moveTo = (stage) => stage && crmAct('stage', () => crm.moveStage(leadId, stage), `Moved to ${STAGE_LABEL[stage] || stage}`);
+  const markLost = () => {
+    const reason = window.prompt('Why was this lead lost? (e.g. went with someone else, no budget, not interested)');
+    if (!reason || !reason.trim()) return;
+    crmAct('lost', () => crm.markLost(leadId, reason.trim()), 'Marked lost');
+  };
+  const reopen = () => crmAct('reopen', () => crm.reopen(leadId), 'Reopened');
 
   const doAction = async (action, payload = {}, successMsg) => {
     setActionLoading(action); setActionMsg('');
@@ -275,18 +316,24 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '700' }}>{lead?.name !== 'Unknown' ? lead?.name : lead?.phone}</h3>
-              <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '999px', background: `${STATUS_COLORS[lead?.workflowStatus] || t.muted}18`, color: STATUS_COLORS[lead?.workflowStatus] || t.muted, fontWeight: '600' }}>
-                {lead?.workflowStatus?.replace(/_/g, ' ')}
-              </span>
+              {/* The sales stage, as on the board. A lead the agent never
+                  staged is New; the bot's internal status (awaiting_menu…)
+                  means nothing to a person working sales. */}
+              {lead?.salesStage
+                ? <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '999px', background: `${t.cyan}18`, color: t.cyan, fontWeight: '600' }}>{STAGE_LABEL[canonical(lead.salesStage)] || lead.salesStage}</span>
+                : <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '999px', background: `${isClosed ? t.muted : t.amber}18`, color: isClosed ? t.muted : t.amber, fontWeight: '600' }}>{isClosed ? 'Closed' : 'New'}</span>}
+              {INTENT[lead?.salesIntent] && (
+                <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '999px', background: `${INTENT[lead.salesIntent].tint}18`, color: INTENT[lead.salesIntent].tint, fontWeight: '600' }}>
+                  {INTENT[lead.salesIntent].icon} {INTENT[lead.salesIntent].label}
+                </span>
+              )}
               {isTakenOver && <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '999px', background: `${t.orange}18`, color: t.orange }}>🟡 Bot Paused</span>}
               {!isTakenOver && !isClosed && <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '999px', background: `${t.lime}18`, color: t.lime }}>🟢 Bot Active</span>}
             </div>
             <p style={{ color: t.muted, fontSize: '13px' }}>
               {lead?.phone}
-              {lead?.propertyInterest ? ` · ${lead.propertyInterest}` : ''}
-              {lead?.monthlyBudget ? ` · R${lead.monthlyBudget}/mo` : ''}
-              {lead?.moveInDate ? ` · ${lead.moveInDate}` : ''}
-              {lead?.monthlyIncome ? ` · R${lead.monthlyIncome} income` : ''}
+              {lead?.nextFollowUpAt ? ` · follow up ${new Date(lead.nextFollowUpAt).toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}
+              {isClosed && lead?.closeReason ? ` · ${lead.closeReason}` : ''}
             </p>
           </div>
           <button onClick={onClose} aria-label="Close"
@@ -332,9 +379,23 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
               style={{ padding: '8px 16px', background: `${t.emerald}18`, color: t.emerald, border: `1px solid ${t.emerald}33`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px', opacity: actionLoading === 'allocate' ? 0.6 : 1 }}>
               {actionLoading === 'allocate' ? 'Allocating...' : '🤝 Allocate Rep'}
             </button>
-            <button onClick={() => doAction('close', { reason: 'Closed by admin' }, 'Lead closed')} disabled={actionLoading === 'close'}
-              style={{ padding: '8px 16px', background: `${t.red}18`, color: t.red, border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', opacity: actionLoading === 'close' ? 0.6 : 1 }}>
-              {actionLoading === 'close' ? 'Closing...' : '✕ Close Lead'}
+            {/* Forward only, conversation stages only: quoted, link sent and
+                paid are earned by a real quote, link or payment. */}
+            {nextStagesFor(lead?.salesStage).length > 0 && (
+              <select
+                aria-label="Move to stage"
+                value=""
+                onChange={(e) => moveTo(e.target.value)}
+                disabled={actionLoading === 'stage'}
+                style={{ padding: '8px 10px', background: `${t.cyan}18`, color: t.cyan, border: `1px solid ${t.cyan}33`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit' }}
+              >
+                <option value="">{actionLoading === 'stage' ? 'Moving…' : '➜ Move to…'}</option>
+                {nextStagesFor(lead?.salesStage).map((s) => <option key={s} value={s}>{STAGE_LABEL[s]}</option>)}
+              </select>
+            )}
+            <button onClick={markLost} disabled={actionLoading === 'lost'}
+              style={{ padding: '8px 16px', background: `${t.red}18`, color: t.red, border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', opacity: actionLoading === 'lost' ? 0.6 : 1 }}>
+              {actionLoading === 'lost' ? 'Saving...' : '✕ Mark lost'}
             </button>
 
             {/* Spam. Marking removes the lead from leads, conversations, the
@@ -364,6 +425,18 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
           </div>
         )}
 
+        {/* A closed lead: say why, and offer the way back. */}
+        {isClosed && (
+          <div style={{ padding: isMobile ? '10px 14px' : '12px 24px', borderBottom: `1px solid ${t.borderDim}`, display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ color: t.muted, fontSize: 12 }}>Closed{lead?.closeReason ? `: ${lead.closeReason}` : ''}.</span>
+            <button onClick={reopen} disabled={actionLoading === 'reopen'}
+              style={{ padding: '7px 14px', background: `${t.lime}18`, color: t.lime, border: `1px solid ${t.border}`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>
+              {actionLoading === 'reopen' ? 'Reopening…' : '↩ Reopen'}
+            </button>
+            {actionMsg && <span style={{ fontSize: '12px', color: actionMsg.startsWith('✅') ? t.lime : t.red }}>{actionMsg}</span>}
+          </div>
+        )}
+
         {/* Viewing scheduler */}
         {showViewing && (
           <div style={{ padding: '0 24px' }}>
@@ -381,7 +454,7 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
               cursor: 'pointer', fontSize: '13px', fontWeight: activeTab === tab ? '600' : '400',
               textTransform: 'capitalize', marginBottom: '-1px',
             }}>
-              {tab}{tab === 'notes' && noteSavedAt ? ' •' : ''}
+              {tab}{tab === 'notes' && notesCount ? ` (${notesCount})` : ''}
             </button>
           ))}
         </div>
@@ -472,6 +545,9 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
               {[
                 { label: 'Phone',        value: lead?.phone },
                 { label: 'Name',         value: lead?.name },
+                { label: 'Sales stage',  value: lead?.salesStage ? STAGE_LABEL[canonical(lead.salesStage)] || lead.salesStage : null },
+                { label: 'Intent',       value: lead?.salesIntent },
+                { label: 'Follow up',    value: lead?.nextFollowUpAt ? `${new Date(lead.nextFollowUpAt).toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}${lead.nextFollowUpReason ? ` · ${lead.nextFollowUpReason}` : ''}` : null },
                 { label: 'Property',     value: lead?.propertyInterest },
                 { label: 'Budget',       value: lead?.monthlyBudget ? `R${lead.monthlyBudget}/mo` : null },
                 { label: 'Move-in',      value: lead?.moveInDate },
@@ -491,27 +567,8 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
             </div>
           )}
 
-          {/* ── Notes tab ─── */}
-          {/* Local-only (see NOTES_KEY above) — not synced across devices/team members until a backend endpoint exists. */}
-          {activeTab === 'notes' && (
-            <div>
-              <textarea
-                value={noteText}
-                onChange={e => setNoteText(e.target.value)}
-                placeholder="Add internal notes about this case..."
-                rows={10}
-                style={{ width: '100%', padding: '14px', background: t.surface, border: `1px solid ${t.borderDim}`, borderRadius: '10px', color: t.text, fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
-                <p style={{ color: t.muted, fontSize: '11px' }}>
-                  {noteSavedAt ? `Saved ${new Date(noteSavedAt).toLocaleString('en-ZA')} · stored in this browser only` : 'Not saved yet · stored in this browser only'}
-                </p>
-                <button onClick={handleSaveNote} style={{ padding: '8px 20px', background: t.lime, color: '#080A06', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}>
-                  Save Note
-                </button>
-              </div>
-            </div>
-          )}
+          {/* ── Notes tab ─── shared with everyone who can see the lead */}
+          {activeTab === 'notes' && <NotesTab leadId={leadId} />}
 
           {/* ── History tab ─── */}
           {activeTab === 'history' && (

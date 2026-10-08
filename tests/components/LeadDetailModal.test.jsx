@@ -47,6 +47,9 @@ function mockLoad(leadOver = {}) {
     if (url.includes('/history')) {
       return Promise.resolve({ data: { data: { takeoverHistory: [] } } })
     }
+    if (url.includes('/notes')) {
+      return Promise.resolve({ data: { data: { notes: leadOver.__notes || [] } } })
+    }
     return Promise.reject(new Error(`Unmocked api.get in test: ${url}`))
   })
 }
@@ -148,17 +151,23 @@ describe('LeadDetailModal — the actions that destroy state', () => {
   })
 
   describe('close, takeover and resume', () => {
-    it('closes a lead through the close endpoint', async () => {
+    // "Mark lost" (2026-10-08) is a close that records WHY, so the pipeline's
+    // Lost column says what happened instead of "Closed by admin".
+    it('marks a lead lost through the close endpoint, only with a reason', async () => {
+      const prompt = vi.spyOn(window, 'prompt').mockReturnValueOnce('  ').mockReturnValueOnce('went with someone else')
       await renderModal()
 
-      fireEvent.click(button(/Close Lead/i))
+      fireEvent.click(button(/Mark lost/i))
+      expect(api.post).not.toHaveBeenCalled()
+      fireEvent.click(button(/Mark lost/i))
 
       await waitFor(() =>
         expect(api.post).toHaveBeenCalledWith(
           `/admin-ops/leads/${LEAD_ID}/close`,
-          expect.objectContaining({ reason: expect.any(String) })
+          { reason: 'Lost: went with someone else' }
         )
       )
+      prompt.mockRestore()
     })
 
     it('offers Take Over on a live lead and Resume Bot on a taken-over one', async () => {
@@ -205,5 +214,56 @@ describe('LeadDetailModal — the actions that destroy state', () => {
     expect(screen.queryByRole('button', { name: /Close Lead/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Mark as Spam/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Take Over/i })).not.toBeInTheDocument()
+  })
+})
+
+// The lead page as the CRM's record (2026-10-08): the sales stage leads, a
+// person can move it forward through the conversation stages only, and notes
+// are shared through the API instead of one browser's localStorage.
+describe('LeadDetailModal: the sales record', () => {
+  beforeEach(() => {
+    api.get.mockReset(); api.post.mockReset()
+    api.post.mockResolvedValue({ data: { data: {} } })
+    localStorage.clear()
+  })
+  afterEach(() => vi.restoreAllMocks())
+
+  it('shows the sales stage and intent, and offers only forward conversation stages', async () => {
+    await renderModal({ salesStage: 'discovery', salesIntent: 'hot', workflowStatus: 'new' })
+    expect(screen.getByText('Discovery')).toBeInTheDocument()
+    expect(screen.getByText(/🔥 hot/)).toBeInTheDocument()
+    const move = screen.getByLabelText('Move to stage')
+    const options = [...move.querySelectorAll('option')].map((o) => o.value).filter(Boolean)
+    expect(options).toEqual(['qualification', 'recommendation', 'objection_handling', 'trial_close', 'commitment'])
+    fireEvent.change(move, { target: { value: 'recommendation' } })
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith(`/admin-ops/crm/leads/${LEAD_ID}/stage`, { stage: 'recommendation' }))
+  })
+
+  it('offers no stage move once the system owns the stage', async () => {
+    await renderModal({ salesStage: 'payment_sent', workflowStatus: 'new' })
+    expect(screen.queryByLabelText('Move to stage')).toBeNull()
+  })
+
+  it('adds shared notes, and offers to save a note left in this browser', async () => {
+    localStorage.setItem('eb_lead_notes', JSON.stringify({ [LEAD_ID]: { text: 'Old local note' } }))
+    await renderModal({ __notes: [{ id: 'n1', text: 'Called, wants Friday', by: 'ayanda@example.com', at: new Date().toISOString() }] })
+    fireEvent.click(screen.getByRole('button', { name: /notes/i }))
+    expect(await screen.findByText('Called, wants Friday')).toBeInTheDocument()
+    expect(screen.getByText(/Old local note/)).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('New note'), { target: { value: 'Sent the R99 link' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add note' }))
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith(`/admin-ops/crm/leads/${LEAD_ID}/notes`, { text: 'Sent the R99 link' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save it for everyone' }))
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith(`/admin-ops/crm/leads/${LEAD_ID}/notes`, { text: 'Old local note' }))
+    await waitFor(() => expect(JSON.parse(localStorage.getItem('eb_lead_notes'))[LEAD_ID]).toBeUndefined())
+  })
+
+  it('offers Reopen on a closed lead, with the reason it was closed', async () => {
+    await renderModal({ workflowStatus: 'closed', closeReason: 'Lost: no budget' })
+    expect(screen.getAllByText(/Lost: no budget/).length).toBeGreaterThan(0)
+    fireEvent.click(button(/Reopen/))
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith(`/admin-ops/leads/${LEAD_ID}/reopen`, {}))
   })
 })

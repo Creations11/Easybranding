@@ -1,477 +1,190 @@
 // src/sections/OperationsSection.jsx
 //
-// The Operations view: the verdict, what needs you, the money, what's
-// misconfigured, and the tabs beneath them.
+// Operations: the sales CRM.
 //
-// Extracted from SuperAdminDashboard (2026-07-27), completing the Phase 3
-// file split. That page carried every section inline and had grown past a
-// thousand lines; Operations was the largest part of it and the part this
-// session changed most.
+// Rebuilt 2026-10-08. It still counted the rental bot's statuses ("qualified":
+// 9 leads in 575, ever, behind a headline qualification rate), a funnel of
+// property / budget / move-in steps no lead had reached in months, and an
+// empty viewings list, while the business runs on the AI agent's sales stages
+// and on whether somebody is waiting for a reply. It now works like a CRM:
 //
-// ── What lives here vs. on the page ─────────────────────────────────────
+//   Today     what needs a person: the verdict, the owed-work rail (which
+//             already lists the unanswered), money and health warnings.
+//   Pipeline  every lead in its sales column, most urgent first.
+//   Leads     the same leads as a sortable list, for finding someone.
+//   Inbox     recent conversations, one card per person.
+//   Reports   the funnel and the trends.
+//   Alerts    each one opens its lead.
 //
-// Everything only Operations uses is OWNED here — its queries, its tab state,
-// the message filters, the lead columns, the takeover/resume/reopen handlers.
-// The page keeps what several sections share: the tenant list, tenant stats,
-// the full lead list, and which lead detail modal is open.
+// Every lead opens the same lead page (LeadDetailModal): the conversation,
+// stage, notes, take over, follow-up, close. The board and the list share one
+// set of filters, so switching view keeps what you were looking at.
 //
-// `opsScope` stays on the page even though only this section reads it, because
-// it is persisted to localStorage and is really "which tenant am I looking
-// at" — a property of the session, not of this panel.
-//
-// Prop names deliberately match the locals they replaced, so the JSX moved
-// across unchanged. A rename during a move turns a mechanical change into a
-// reviewable one, and this file is 240 lines of markup.
-
+// One request draws the board (GET /admin-ops/crm/leads), where the old board
+// needed four lead lists plus every lead in full. The charts and messages load
+// only when their view is opened.
 import { useMemo, useState } from 'react';
-import api from '../api';
-import {
-  useOverview, useOwedWork, useMoneyView, useHealthWarnings, useLeadTrend,
-  useLadderConversion, useSalesFunnel, useActiveLeads, useQualifiedLeads, useRejectedLeads,
-  useClosedLeads, useStages, useViewings, useMessages, useAlerts,
-  useRefetchAll,
-} from '../hooks/useDashboardData';
+import { useOwedWork, useMoneyView, useHealthWarnings, useAlerts, useRefetchAll } from '../hooks/useDashboardData';
+import { useCrmLeads, crmError } from '../hooks/useCrm';
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
-import StatCard from '../components/StatCard';
 import DataFreshness from '../components/DataFreshness';
 import ActionRail from '../components/ActionRail';
 import MoneyPanel from '../components/MoneyPanel';
 import HealthWarnings from '../components/HealthWarnings';
 import TodayVerdict from '../components/TodayVerdict';
-import LeadsBoard from '../components/LeadsBoard';
-import RevenueTrend from '../components/RevenueTrend';
-import LeadTrend from '../components/LeadTrend';
-import LadderConversion from '../components/LadderConversion';
-import SalesFunnel from '../components/SalesFunnel';
+import KpiStrip from '../components/crm/KpiStrip';
+import CrmToolbar from '../components/crm/CrmToolbar';
+import PipelineBoard from '../components/crm/PipelineBoard';
+import LeadsList from '../components/crm/LeadsList';
+import { InboxView, AlertsView, ReportsView } from '../components/crm/CrmViews';
+import { EMPTY_FILTERS, applyFilters } from '../components/crm/crmHelpers';
 
 const NONE = [];
-
-const STATUS_COLOR_KEYS = {
-  qualified: 'lime', not_qualified: 'red', taken_over: 'orange',
-  capture_name: 'cyan', capture_property_interest: 'cyan', capture_budget: 'cyan',
-  capture_move_in_date: 'cyan', capture_employment_type: 'cyan',
-  capture_monthly_income: 'cyan', awaiting_menu: 'amber', closed: 'muted',
-};
+const VIEWS = [
+  ['today', 'Today'],
+  ['pipeline', 'Pipeline'],
+  ['leads', 'Leads'],
+  ['inbox', 'Inbox'],
+  ['reports', 'Reports'],
+  ['alerts', 'Alerts'],
+];
+const VIEW_KEY = 'wabos.opsView';
+const savedView = () => { try { return localStorage.getItem(VIEW_KEY) || 'today'; } catch { return 'today'; } };
 
 export default function OperationsSection({
   opsScope,
   changeScope,
   tenants,
-  tenantStats,
-  allLeads,
   isSuperAdmin,
   setLeadDetailId,
   colors: c,
 }) {
-  const STATUS_COLOR = useMemo(
-    () => Object.fromEntries(Object.entries(STATUS_COLOR_KEYS).map(([k, v]) => [k, c[v]])),
-    [c]
-  );
-
   const refetch = useRefetchAll();
+  const crmQ = useCrmLeads(opsScope);
+  const owedWorkQ = useOwedWork(opsScope);
+  const moneyQ = useMoneyView(opsScope);
+  const healthQ = useHealthWarnings(opsScope);
+  const alerts = useAlerts(opsScope).data || NONE;
 
-  const overviewQ    = useOverview(opsScope);
-  const owedWorkQ    = useOwedWork(opsScope);
-  const moneyQ       = useMoneyView(opsScope);
-  const healthQ      = useHealthWarnings(opsScope);
-  const leadTrendQ   = useLeadTrend(opsScope);
-  const ladderQ      = useLadderConversion(opsScope);
-  const funnelQ      = useSalesFunnel(opsScope);
-  const overview     = overviewQ.data;
+  const [view, setViewState] = useState(savedView);
+  const setView = (v) => { setViewState(v); try { localStorage.setItem(VIEW_KEY, v); } catch { /* per-viewer convenience only */ } };
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [kpi, setKpi] = useState('');
 
-  // Keep the whole query, not just the rows: a column must be able to tell
-  // "empty" from "still loading" from "the request failed" — they looked
-  // identical before, all rendering as "None".
-  const activeQ    = useActiveLeads(opsScope);
-  const qualifiedQ = useQualifiedLeads(opsScope);
-  const rejectedQ  = useRejectedLeads(opsScope);
-  const closedQ    = useClosedLeads(opsScope);
-  // NONE, not a fresh []: these feed useMemo below, and a new empty array on
-  // every render made those memos recompute on every render too.
-  const activeLeads    = activeQ.data?.leads || NONE;
-  const qualifiedLeads = qualifiedQ.data?.leads || NONE;
-  const rejectedLeads  = rejectedQ.data?.leads || NONE;
-  const closedLeads    = closedQ.data?.leads || NONE;
-  const stages   = useStages(opsScope).data || NONE;
-  const viewings = useViewings(opsScope).data || NONE;
-  const messages = useMessages(opsScope).data || NONE;
-  const alerts   = useAlerts(opsScope).data || NONE;
+  const crm = crmQ.data;
+  const leads = crm?.leads || NONE;
+  const buckets = crm?.buckets || NONE;
+  // "Now" is when the data was fetched: "waiting 3h" is then true of what is
+  // on screen, and render stays pure. It refreshes every minute (useCrmLeads).
+  const now = crmQ.dataUpdatedAt;
+  const showBusiness = isSuperAdmin && !opsScope;
+  const tenantNameById = useMemo(() => Object.fromEntries((tenants || []).map((t) => [t._id, t.businessName])), [tenants]);
 
-  const [opsTab, setOpsTab] = useState('overview');
-  const [msgSearch,   setMsgSearch]   = useState('');
-  const [msgDateFrom, setMsgDateFrom] = useState('');
-  const [msgDateTo,   setMsgDateTo]   = useState('');
-  const [leadsTenantFilter, setLeadsTenantFilter] = useState('all');
+  const filtered = useMemo(() => {
+    const base = applyFilters(leads, filters, now);
+    return filters.showClosed ? base : base.filter((l) => l.bucket !== 'lost' || view === 'pipeline');
+  }, [leads, filters, now, view]);
 
-  const opsTabs = ['overview', 'leads', 'trends', 'funnel', 'viewings', 'messages', 'alerts'];
-
-  const tenantNameById = useMemo(
-    () => Object.fromEntries(tenants.map(t => [t._id, t.businessName])),
-    [tenants]
-  );
-
-  const filteredMessages = useMemo(() => {
-    const term = msgSearch.trim().toLowerCase();
-    const from = msgDateFrom ? new Date(msgDateFrom + 'T00:00:00') : null;
-    const to   = msgDateTo   ? new Date(msgDateTo   + 'T23:59:59') : null;
-
-    return messages.filter(msg => {
-      if (term) {
-        const business = (msg.businessName || tenantNameById[msg.tenantId] || '').toLowerCase();
-        const name  = (msg.name  || '').toLowerCase();
-        const phone = (msg.phone || '').toLowerCase();
-        if (!business.includes(term) && !name.includes(term) && !phone.includes(term)) return false;
-      }
-      const ts = msg.timestamp ? new Date(msg.timestamp) : null;
-      if (from && (!ts || ts < from)) return false;
-      if (to   && (!ts || ts > to))   return false;
-      return true;
+  // A headline number is a shortcut: it sets the filter and shows the list.
+  const pickKpi = (k) => {
+    const next = k === kpi ? '' : k;
+    setKpi(next);
+    setFilters({
+      ...EMPTY_FILTERS,
+      q: filters.q,
+      waiting: next === 'waiting',
+      due: next === 'due',
+      intent: next === 'hot' ? 'hot' : '',
     });
-  }, [messages, msgSearch, msgDateFrom, msgDateTo, tenantNameById]);
-
-  // Group the FILTERED list by sender, so search and the date range keep
-  // working exactly as they did and only the display changes.
-  //
-  // filteredMessages is newest-first, and a Map keeps insertion order — so
-  // the first time a sender appears is their most recent message, and the
-  // groups come out ordered by who spoke last with no second sort. That is
-  // the "name moves up the ladder when they reply" behaviour.
-  const messageThreads = useMemo(() => {
-    const byLead = new Map();
-    for (const msg of filteredMessages) {
-      const key = String(msg.leadId ?? `${msg.phone}`);
-      if (!byLead.has(key)) {
-        byLead.set(key, {
-          key,
-          leadId: msg.leadId,
-          name: msg.name,
-          phone: msg.phone,
-          tenantId: msg.tenantId,
-          businessName: msg.businessName,
-          latestAt: msg.timestamp,
-          messages: [],
-        });
-      }
-      byLead.get(key).messages.push(msg);
-    }
-    // Within a thread, flip to oldest-first so it reads down the card like a
-    // conversation, while the cards themselves stay newest-first.
-    for (const thread of byLead.values()) thread.messages.reverse();
-    return [...byLead.values()];
-  }, [filteredMessages]);
-
-  // The four status endpoints are the board's columns, but they don't
-  // necessarily cover every lead. Anything in allLeads not present in one of
-  // them gets its own "Other" column instead of silently disappearing.
-  const categorizedIds = useMemo(() => {
-    const ids = new Set();
-    [...activeLeads, ...qualifiedLeads, ...rejectedLeads, ...closedLeads].forEach(l => ids.add(l._id));
-    return ids;
-  }, [activeLeads, qualifiedLeads, rejectedLeads, closedLeads]);
-
-  // allLeads (GET /leads) is NOT scoped by the Operations "Viewing" selector
-  // — that endpoint doesn't honor ?tenantId (it scopes only via the
-  // x-tenant-id header, which the dashboard doesn't send) — so when a
-  // super-admin narrows to one client, filter the "Other" column here to
-  // match the scoped status columns.
-  const otherLeads = useMemo(
-    () => allLeads.filter(l => !categorizedIds.has(l._id) && (!opsScope || l.tenantId === opsScope)),
-    [allLeads, categorizedIds, opsScope]
-  );
-
-  const leadColumns = useMemo(() => {
-    const byTenant = (list) => leadsTenantFilter === 'all'
-      ? list
-      : list.filter(l => l.tenantId === leadsTenantFilter);
-
-    const cols = [
-      { key: 'active',    label: 'Active',    icon: '💬', items: byTenant(activeLeads),    q: activeQ },
-      { key: 'qualified', label: 'Qualified', icon: '✅', items: byTenant(qualifiedLeads), q: qualifiedQ },
-      { key: 'rejected',  label: 'Rejected',  icon: '❌', items: byTenant(rejectedLeads),  q: rejectedQ },
-      { key: 'closed',    label: 'Closed',    icon: '🔒', items: byTenant(closedLeads),    q: closedQ },
-    ];
-    if (otherLeads.length > 0) {
-      cols.push({ key: 'other', label: 'Other', icon: '❔', items: byTenant(otherLeads) });
-    }
-    return cols;
-  }, [activeLeads, qualifiedLeads, rejectedLeads, closedLeads, otherLeads, leadsTenantFilter,
-      activeQ, qualifiedQ, rejectedQ, closedQ]);
-
-  const handleTakeover = async (e, lid) => {
-    e.stopPropagation();
-    try { await api.post('/admin-ops/leads/' + lid + '/takeover'); refetch(); }
-    catch (err) { alert(err.response?.data?.message || 'Takeover failed'); }
+    if (next === 'link_sent') { setFilters({ ...EMPTY_FILTERS, q: filters.q }); setView('pipeline'); return; }
+    if (next) setView('leads');
   };
-  const handleResume = async (e, lid) => {
-    e.stopPropagation();
-    try { await api.post('/admin-ops/leads/' + lid + '/resume'); refetch(); }
-    catch (err) { alert(err.response?.data?.message || 'Resume failed'); }
-  };
-  // Reopen a closed lead back into normal bot flow — see useDashboardData.js
-  // and adminOpsController.js for why this was needed.
-  const handleReopen = async (e, lid) => {
-    e.stopPropagation();
-    try { await api.post('/admin-ops/leads/' + lid + '/reopen'); refetch(); }
-    catch (err) { alert(err.response?.data?.message || 'Reopen failed'); }
-  };
+
+  const open = (id) => setLeadDetailId(id);
 
   return (
     <SectionErrorBoundary name="Operations" onRetry={refetch}>
       <div>
-      <div style={{ marginBottom: 28, display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end', justifyContent: 'space-between' }}>
-        <div>
-          <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4 }}>Operations</h1>
-          <p style={{ color: c.muted, fontSize: 15, marginBottom: 8 }}>
-            {opsScope
-              ? (tenants.find(t => t._id === opsScope)?.businessName || 'Selected client') + ' — pipeline'
-              : 'All clients — platform-wide pipeline'}
-          </p>
-          {/* React Query keeps serving the last good response after a
-              refetch fails, so this screen could sit for hours looking
-              healthy while every background refresh errored. Say how
-              old the numbers are, and say when they stopped updating. */}
-          <DataFreshness
-            colors={c}
-            onRefresh={refetch}
-            queries={[overviewQ, activeQ, qualifiedQ, rejectedQ, closedQ]}
-          />
-        </div>
-        {/* Super-admin sees every tenant by default, which mixes
-            platform oversight with working our own customers.
-            Narrow to one client to work their pipeline cleanly. */}
-        {isSuperAdmin && tenants.length > 0 && (
+        <div style={{ marginBottom: 18, display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <div>
-            <label style={{ color: c.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>Viewing</label>
-            <select
-              value={opsScope}
-              onChange={e => changeScope(e.target.value)}
-              style={{ padding: '9px 14px', background: opsScope ? c.lime + '18' : 'rgba(255,255,255,0.04)', border: '1px solid ' + (opsScope ? c.lime + '55' : c.borderDim), borderRadius: 10, color: opsScope ? c.lime : c.text, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', minWidth: 220 }}
-            >
-              <option value="">🌍 All clients (platform view)</option>
-              {tenants.map(t => (
-                <option key={t._id} value={t._id}>{t.businessName}</option>
-              ))}
-            </select>
+            <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4 }}>Operations</h1>
+            <p style={{ color: c.muted, fontSize: 15, marginBottom: 6 }}>
+              {opsScope ? (tenants.find((t) => t._id === opsScope)?.businessName || 'Selected client') + ': every lead, by sales stage' : 'Every client: every lead, by sales stage'}
+            </p>
+            <DataFreshness colors={c} onRefresh={refetch} queries={[crmQ, owedWorkQ]} />
+          </div>
+          {isSuperAdmin && tenants.length > 0 && (
+            <div>
+              <label htmlFor="ops-scope" style={{ color: c.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>Viewing</label>
+              <select
+                id="ops-scope"
+                value={opsScope}
+                onChange={(e) => changeScope(e.target.value)}
+                style={{ padding: '9px 14px', background: opsScope ? c.lime + '18' : 'rgba(255,255,255,0.04)', border: '1px solid ' + (opsScope ? c.lime + '55' : c.borderDim), borderRadius: 10, color: opsScope ? c.lime : c.text, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', minWidth: 220 }}
+              >
+                <option value="">🌍 All clients</option>
+                {tenants.map((t) => <option key={t._id} value={t._id}>{t.businessName}</option>)}
+              </select>
+            </div>
+          )}
+        </div>
+
+        {crmQ.isError && (
+          <div role="alert" style={{ background: c.red + '12', border: '1px solid ' + c.red + '33', color: c.red, borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 13 }}>
+            Couldn't load the pipeline. {crmError(crmQ.error)}
           </div>
         )}
-      </div>
-      {/* The two-second answer, before any of the detail. It is only
-          allowed to say "fine" when every check it summarises actually
-          succeeded — a green line derived from failed requests would
-          stop you reading the panels that would have told you. */}
-      <TodayVerdict owedWork={owedWorkQ} health={healthQ} colors={c} />
 
-      {/* Above the tabs on purpose: owed work is not one view among
-          several, it is the answer to "is today fine?" — so it must
-          not be something you have to navigate to in order to see. */}
-      {/* scope: the rail's actions must be filed under the SAME tenant the
-          items were read under, or they are recorded and never applied. */}
-      <ActionRail query={owedWorkQ} colors={c} onOpenLead={setLeadDetailId} scope={opsScope} />
+        <KpiStrip summary={crm?.summary} onPick={pickKpi} active={kpi} />
 
-      <MoneyPanel query={moneyQ} colors={c} />
+        <div role="tablist" style={{ display: 'flex', gap: 4, marginBottom: 18, borderBottom: '1px solid ' + c.borderDim, overflowX: 'auto' }}>
+          {VIEWS.map(([k, label]) => (
+            <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)} style={{
+              padding: '10px 16px', background: 'none', border: 'none', borderBottom: view === k ? '2px solid ' + c.lime : '2px solid transparent',
+              color: view === k ? c.lime : c.muted, cursor: 'pointer', fontSize: 13, fontWeight: view === k ? 700 : 500, whiteSpace: 'nowrap', fontFamily: 'inherit', marginBottom: -1,
+            }}>
+              {label}
+              {k === 'today' && crm?.summary?.waiting > 0 && <span style={{ marginLeft: 6, background: c.red, color: '#fff', fontSize: 10, padding: '1px 6px', borderRadius: 999 }}>{crm.summary.waiting}</span>}
+              {k === 'alerts' && alerts.length > 0 && <span style={{ marginLeft: 6, background: c.amber, color: '#060806', fontSize: 10, padding: '1px 6px', borderRadius: 999 }}>{alerts.length}</span>}
+            </button>
+          ))}
+        </div>
 
-      <HealthWarnings query={healthQ} colors={c} />
+        {view === 'today' && (
+          <SectionErrorBoundary name="Today" onRetry={refetch}>
+            <TodayVerdict owedWork={owedWorkQ} health={healthQ} colors={c} />
+            <ActionRail query={owedWorkQ} colors={c} onOpenLead={setLeadDetailId} scope={opsScope} />
+            <MoneyPanel query={moneyQ} colors={c} />
+            <HealthWarnings query={healthQ} colors={c} />
+          </SectionErrorBoundary>
+        )}
 
-      {/* The three charts used to sit here. Stacked, they pushed the
-          board most of a phone screen down and buried the two things
-          this header is FOR — what needs you, and whether the month is
-          paying. They answer "why?", which is a question you ask
-          second, so they moved behind the Trends tab. Summary first,
-          detail on demand. */}
+        {(view === 'pipeline' || view === 'leads') && (
+          <SectionErrorBoundary name={view === 'pipeline' ? 'Pipeline' : 'Leads'} onRetry={refetch}>
+            <CrmToolbar filters={filters} setFilters={(f) => { setFilters(f); setKpi(''); }} tenants={tenants} showBusiness={showBusiness} counts={crm?.summary} />
+            {crmQ.isPending
+              ? <div style={{ color: c.muted, padding: 30, textAlign: 'center' }}>Loading the pipeline…</div>
+              : view === 'pipeline'
+                ? <PipelineBoard buckets={buckets} leads={filtered} onOpen={open} showBusiness={showBusiness} showClosed={filters.showClosed} now={now} />
+                : <LeadsList leads={filtered} buckets={buckets} onOpen={open} showBusiness={showBusiness} now={now} />}
+          </SectionErrorBoundary>
+        )}
 
-      <div style={{ display: 'flex', gap: 4, marginBottom: 28, borderBottom: '1px solid ' + c.borderDim, overflowX: 'auto' }}>
-        {opsTabs.map(t => (
-          <button key={t} onClick={() => setOpsTab(t)} style={{ padding: '10px 16px', background: 'none', border: 'none', borderBottom: opsTab === t ? '2px solid ' + c.lime : '2px solid transparent', color: opsTab === t ? c.lime : c.muted, cursor: 'pointer', fontSize: 13, fontWeight: opsTab === t ? 600 : 400, textTransform: 'capitalize', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
-            {t}{t === 'alerts' && alerts.length > 0 && <span style={{ marginLeft: 6, background: c.red, color: '#fff', fontSize: 10, padding: '1px 5px', borderRadius: 999 }}>{alerts.length}</span>}
-          </button>
-        ))}
-      </div>
-
-      {opsTab === 'overview' && (
-        <SectionErrorBoundary name="Overview" onRetry={refetch}>
-          {overview ? (
-            <div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 32 }}>
-                <StatCard label="Total Leads" value={overview.totalLeads} color={c.text} icon="📊" />
-                <StatCard label="Active" value={overview.activeConversations} color={c.cyan} icon="💬" />
-                <StatCard label="Qualified" value={overview.qualifiedLeads} color={c.lime} icon="✅" />
-                <StatCard label="Rejected" value={overview.rejectedLeads} color={c.red} icon="❌" />
-                <StatCard label="Today" value={overview.todayLeads} color={c.amber} icon="📅" />
-                <StatCard label="Qual. Rate" value={overview.qualificationRate + '%'} color={c.emerald} icon="📈" />
-                {isSuperAdmin && <StatCard label="Clients" value={tenants.length} color={c.cyan} icon="👥" />}
-                {isSuperAdmin && <StatCard label="MRR" value={'R' + (tenantStats?.mrr || 0).toLocaleString()} color={c.lime} icon="💰" sub="monthly recurring" />}
-              </div>
-              <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: c.muted }}>Recent Activity</h3>
-              {activeLeads.slice(0, 5).map(lead => (
-                <div key={lead._id} onClick={() => setLeadDetailId(lead._id)} className="card-hover" style={{ background: c.card, border: '1px solid ' + (lead.isProspect ? c.lime + '33' : c.borderDim), borderRadius: 12, padding: '14px 18px', marginBottom: 8, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <strong>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
-                      {lead.isProspect && <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 999, background: c.lime + '22', color: c.lime, fontWeight: 700 }}>🎯 Prospect</span>}
-                    </div>
-                    <p style={{ color: c.muted, fontSize: 12, marginTop: 2 }}>{lead.phone}</p>
-                  </div>
-                  <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 999, background: (STATUS_COLOR[lead.workflowStatus] || c.muted) + '18', color: STATUS_COLOR[lead.workflowStatus] || c.muted }}>{lead.workflowStatus?.replace(/_/g, ' ')}</span>
-                </div>
-              ))}
-            </div>
-          ) : <p style={{ color: c.muted, textAlign: 'center', padding: '40px 0' }}>No overview data available.</p>}
-        </SectionErrorBoundary>
-      )}
-
-      {/* ════════ LEADS CRM BOARD ════════ */}
-      {/* Grouped by status (columns) and filterable by
-          tenant — replaces the old separate active /
-          qualified / rejected / closed tabs, which forced
-          admins to hop between tabs to see one business's
-          full pipeline. */}
-      {opsTab === 'leads' && (
-        <SectionErrorBoundary name="Leads" onRetry={refetch}>
-          <LeadsBoard
-            columns={leadColumns}
-            allLeadsCount={allLeads.length}
-            tenants={tenants}
-            tenantNameById={tenantNameById}
-            tenantFilter={leadsTenantFilter}
-            onTenantFilterChange={setLeadsTenantFilter}
-            onOpenLead={setLeadDetailId}
-            onTakeover={handleTakeover}
-            onResume={handleResume}
-            onReopen={handleReopen}
-            colors={c}
-          />
-        </SectionErrorBoundary>
-      )}
-
-      {/* Trends: the three charts. Detail on demand — see the note
-          where they used to live, above the tab strip. */}
-      {opsTab === 'trends' && (
-        <SectionErrorBoundary name="Trends" onRetry={refetch}>
-          <div>
-            <RevenueTrend query={moneyQ} colors={c} />
-            <LeadTrend query={leadTrendQ} colors={c} />
-            <SalesFunnel query={funnelQ} colors={c} />
-            <LadderConversion query={ladderQ} colors={c} />
-          </div>
-        </SectionErrorBoundary>
-      )}
-
-      {opsTab === 'funnel' && (
-        <SectionErrorBoundary name="Pipeline Funnel" onRetry={refetch}>
-          <div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>Pipeline Funnel</h2>
-            {stages.map((stage, i) => (
-              <div key={i} style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 12, padding: '16px 18px', marginBottom: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600 }}>{stage.label}</span>
-                  <span style={{ color: c.muted, fontSize: 13 }}>{stage.count} leads · {stage.percentage}%</span>
-                </div>
-                <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 999, height: 6, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: stage.percentage + '%', background: stage.stage === 'qualified' ? c.lime : stage.stage === 'not_qualified' ? c.red : c.cyan, borderRadius: 999 }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </SectionErrorBoundary>
-      )}
-
-      {opsTab === 'viewings' && (
-        <SectionErrorBoundary name="Viewings" onRetry={refetch}>
-          <div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>Viewing Requests ({viewings.length})</h2>
-            {viewings.length === 0 ? <div style={{ textAlign: 'center', padding: '60px 0', color: c.muted }}><p style={{ fontSize: 40, marginBottom: 16 }}>📅</p><p>No viewing requests.</p></div>
-              : viewings.map(v => (
-                <div key={v._id} onClick={() => setLeadDetailId(v._id)} className="card-hover" style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 12, padding: '14px 18px', marginBottom: 8, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div><strong>{v.name !== 'Unknown' ? v.name : v.phone}</strong><p style={{ color: c.muted, fontSize: 12, marginTop: 2 }}>{v.phone}</p></div>
-                  {v.viewingScheduledAt && <p style={{ color: c.emerald, fontSize: 13, fontWeight: 600 }}>{new Date(v.viewingScheduledAt).toLocaleDateString('en-ZA')}</p>}
-                </div>
-              ))}
-          </div>
-        </SectionErrorBoundary>
-      )}
-
-      {opsTab === 'messages' && (
-        <SectionErrorBoundary name="Messages" onRetry={refetch}>
-          <div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>Recent Messages ({messageThreads.length} {messageThreads.length === 1 ? 'sender' : 'senders'} · {filteredMessages.length}{filteredMessages.length !== messages.length ? ` of ${messages.length}` : ''} messages)</h2>
-
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
-              <input
-                value={msgSearch}
-                onChange={e => setMsgSearch(e.target.value)}
-                placeholder="Search business, name, or phone..."
-                style={{ flex: '1 1 220px', padding: '10px 14px', borderRadius: 10, background: c.card, border: '1px solid ' + c.borderDim, color: c.text, fontSize: 13, outline: 'none', fontFamily: 'inherit' }}
-              />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: c.muted }}>
-                From
-                <input type="date" value={msgDateFrom} onChange={e => setMsgDateFrom(e.target.value)}
-                  style={{ padding: '9px 10px', borderRadius: 10, background: c.card, border: '1px solid ' + c.borderDim, color: c.text, fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: c.muted }}>
-                To
-                <input type="date" value={msgDateTo} onChange={e => setMsgDateTo(e.target.value)}
-                  style={{ padding: '9px 10px', borderRadius: 10, background: c.card, border: '1px solid ' + c.borderDim, color: c.text, fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
-              </label>
-              {(msgSearch || msgDateFrom || msgDateTo) && (
-                <button onClick={() => { setMsgSearch(''); setMsgDateFrom(''); setMsgDateTo(''); }}
-                  style={{ padding: '9px 14px', borderRadius: 10, background: 'transparent', border: '1px solid ' + c.borderDim, color: c.muted, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Clear
-                </button>
-              )}
-            </div>
-
-            {filteredMessages.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px 0', color: c.muted }}><p style={{ fontSize: 40, marginBottom: 16 }}>💬</p><p>No messages match these filters.</p></div>
-            ) : messageThreads.map((thread) => {
-              const business = thread.businessName || tenantNameById[thread.tenantId];
-              const latest = thread.messages[thread.messages.length - 1];
-              return (
-                <div key={thread.key} onClick={() => setLeadDetailId(thread.leadId)} className="card-hover" style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 12, padding: '12px 16px', marginBottom: 8, cursor: 'pointer' }}>
-
-                  {/* The sender, once */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, gap: 8, alignItems: 'baseline' }}>
-                    <div style={{ minWidth: 0 }}>
-                      <strong style={{ fontSize: 13 }}>{thread.name && thread.name !== 'Unknown' ? thread.name : thread.phone}</strong>
-                      {thread.messages.length > 1 && (
-                        <span style={{ fontSize: 11, color: c.muted, marginLeft: 8 }}>{thread.messages.length} messages</span>
-                      )}
-                      {business && <p style={{ color: c.cyan, fontSize: 11, marginTop: 2 }}>{business}</p>}
-                    </div>
-                    <span style={{ fontSize: 11, color: c.muted, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                      {new Date(latest.timestamp).toLocaleDateString('en-ZA')} · {new Date(latest.timestamp).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-
-                  {/* …then their messages, oldest first */}
-                  {thread.messages.map((msg, j) => (
-                    <div key={j} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '2px 0' }}>
-                      <span style={{ fontSize: 12, flexShrink: 0, opacity: 0.85 }}>{msg.direction === 'inbound' ? '📱' : '🤖'}</span>
-                      <p style={{ color: msg.direction === 'inbound' ? c.text : c.muted, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>{msg.body}</p>
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        </SectionErrorBoundary>
-      )}
-
-      {opsTab === 'alerts' && (
-        <SectionErrorBoundary name="Alerts" onRetry={refetch}>
-          <div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>Alerts {alerts.length > 0 && <span style={{ marginLeft: 10, background: c.red, color: '#fff', fontSize: 12, padding: '3px 10px', borderRadius: 999 }}>{alerts.length}</span>}</h2>
-            {alerts.length === 0 ? <div style={{ textAlign: 'center', padding: '60px 0', color: c.muted }}><p style={{ fontSize: 40, marginBottom: 16 }}>✅</p><p>No alerts.</p></div>
-              : alerts.map((alert, i) => (
-                <div key={i} className="card-hover" style={{ background: c.card, border: '1px solid ' + (alert.severity === 'high' ? c.red + '44' : c.amber + '44'), borderRadius: 14, padding: '16px 20px', marginBottom: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div><strong>{alert.lead?.name !== 'Unknown' ? alert.lead?.name : alert.lead?.phone}</strong><p style={{ color: c.muted, fontSize: 13, marginTop: 4 }}>{alert.message}</p></div>
-                    <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 999, background: alert.severity === 'high' ? c.red + '22' : c.amber + '22', color: alert.severity === 'high' ? c.red : c.amber, fontWeight: 700, textTransform: 'uppercase' }}>{alert.severity}</span>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </SectionErrorBoundary>
-      )}
+        {view === 'inbox' && (
+          <SectionErrorBoundary name="Inbox" onRetry={refetch}>
+            <InboxView scope={opsScope} tenantNameById={tenantNameById} onOpen={open} />
+          </SectionErrorBoundary>
+        )}
+        {view === 'reports' && (
+          <SectionErrorBoundary name="Reports" onRetry={refetch}>
+            <ReportsView scope={opsScope} colors={c} />
+          </SectionErrorBoundary>
+        )}
+        {view === 'alerts' && (
+          <SectionErrorBoundary name="Alerts" onRetry={refetch}>
+            <AlertsView scope={opsScope} onOpen={open} />
+          </SectionErrorBoundary>
+        )}
       </div>
     </SectionErrorBoundary>
   );
