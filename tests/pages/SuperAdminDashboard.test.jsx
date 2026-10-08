@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { screen, waitFor, fireEvent, within } from '@testing-library/react'
 import { renderWithProviders } from '../test-utils'
 import api from '../../src/api'
@@ -1137,5 +1137,89 @@ describe('SuperAdminDashboard — sales funnel', () => {
 
     await waitFor(() => expect(screen.getByText('trends')).toBeInTheDocument())
     expect(screen.queryByText('Sales funnel')).not.toBeInTheDocument()
+  })
+})
+
+// Suspend, activate and close on the Clients tab (2026-10-08). Suspend used to
+// be one click with no question, though it silences that client's customers;
+// Delete erased a client behind one OK, and bulk delete did it to many while
+// ignoring every failure.
+describe('Clients tab: suspend, reopen, close', () => {
+  const CLIENTS = [
+    { _id: 'ten1', businessName: 'Glow Salon', contactEmail: 'glow@example.com', status: 'active', plan: 'starter', monthlyFee: 99, whatsappNumber: '+27650001111' },
+    { _id: 'ten2', businessName: 'Old Shop', contactEmail: 'old@example.com', status: 'cancelled', plan: 'r99', monthlyFee: 99, whatsappNumber: '+27650002222' },
+  ]
+  const openClients = async () => {
+    mockApiGet({
+      '/admin-ops/overview': { data: { data: { overview: { totalLeads: 1, activeConversations: 0, qualifiedLeads: 0, rejectedLeads: 0, todayLeads: 0, qualificationRate: 0 } } } },
+      '/tenants': { data: { data: { tenants: CLIENTS } } },
+    })
+    renderWithProviders(<SuperAdminDashboard />)
+    await waitFor(() => expect(screen.getByText('Total Leads')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /clients/i }))
+    await waitFor(() => expect(screen.getByText('Glow Salon')).toBeInTheDocument())
+  }
+  afterEach(() => vi.restoreAllMocks())
+  const card = (name) => screen.getByText(name).closest('.card-hover')
+
+  it('suspends only with a reason, through the Billing endpoint, and says what it means', async () => {
+    const prompt = vi.spyOn(window, 'prompt').mockReturnValueOnce('  ').mockReturnValueOnce('September unpaid')
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => {})
+    api.post.mockResolvedValue({ data: { data: { status: 'suspended', consequence: 'nobody replies' } } })
+    await openClients()
+
+    fireEvent.click(within(card('Glow Salon')).getByText('⏸ Suspend'))
+    expect(prompt.mock.calls[0][0]).toMatch(/no reply/)
+    expect(api.post).not.toHaveBeenCalled()
+
+    fireEvent.click(within(card('Glow Salon')).getByText('⏸ Suspend'))
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/admin-ops/billing/clients/ten1/suspend', { reason: 'September unpaid' }))
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('nobody replies'))
+    expect(api.put).not.toHaveBeenCalled()
+  })
+
+  it('closes instead of deleting, with the business name typed back', async () => {
+    const prompt = vi.spyOn(window, 'prompt').mockReturnValueOnce(null).mockReturnValueOnce('Glow Salon')
+    vi.spyOn(window, 'alert').mockImplementation(() => {})
+    api.post.mockResolvedValue({ data: { data: { status: 'cancelled', consequence: 'Closed.' } } })
+    await openClients()
+
+    expect(screen.queryByText('Delete')).toBeNull()
+    fireEvent.click(within(card('Glow Salon')).getByText('Close account'))
+    expect(api.post).not.toHaveBeenCalled()
+    fireEvent.click(within(card('Glow Salon')).getByText('Close account'))
+    expect(prompt.mock.calls[1][0]).toMatch(/leads, messages and invoices are kept/)
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/admin-ops/billing/clients/ten1/close', { confirmName: 'Glow Salon', reason: undefined }))
+    expect(api.delete).not.toHaveBeenCalled()
+  })
+
+  it('offers Reopen on a closed client, after a confirmation', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    vi.spyOn(window, 'alert').mockImplementation(() => {})
+    api.post.mockResolvedValue({ data: { data: { status: 'active', consequence: 'Active again' } } })
+    await openClients()
+    expect(within(card('Old Shop')).queryByText('Close account')).toBeNull()
+    fireEvent.click(within(card('Old Shop')).getByText('▶ Reopen'))
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/admin-ops/billing/clients/ten2/reactivate', {}))
+  })
+
+  it('bulk: no delete, a reason to suspend, and failures stay on screen', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    api.post.mockImplementation((url) => (url.includes('ten2')
+      ? Promise.reject(Object.assign(new Error('x'), { response: { data: { message: 'No such client.' } } }))
+      : Promise.resolve({ data: { data: { consequence: 'ok' } } })))
+    await openClients()
+
+    for (const name of ['Glow Salon', 'Old Shop']) fireEvent.click(within(card(name)).getByRole('checkbox'))
+    fireEvent.click(screen.getByText('📦 Bulk (2)'))
+    const action = screen.getByLabelText('Action')
+    expect(within(action).queryByText(/Delete/)).toBeNull()
+    expect(screen.getByText('Apply to 2 clients')).toBeDisabled()
+
+    fireEvent.change(screen.getByLabelText('Reason'), { target: { value: 'Unpaid' } })
+    fireEvent.click(screen.getByText('Apply to 2 clients'))
+    expect(await screen.findByRole('alert')).toHaveTextContent('1 of 2 did not change')
+    expect(screen.getByRole('alert')).toHaveTextContent('Old Shop: No such client.')
+    expect(api.post).toHaveBeenCalledWith('/admin-ops/billing/clients/ten1/suspend', { reason: 'Unpaid' })
   })
 })

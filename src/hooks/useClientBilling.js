@@ -35,6 +35,9 @@ export function useBillingActions() {
     recordEft: (tenantId, body) => run(api.post(`${base(tenantId)}/eft-payment`, body)),
     suspend: (tenantId, reason) => run(api.post(`${base(tenantId)}/suspend`, { reason })),
     reactivate: (tenantId) => run(api.post(`${base(tenantId)}/reactivate`, {})),
+    // What "Delete" became (2026-10-08): nothing is erased, and the server
+    // checks the business name typed back.
+    close: (tenantId, confirmName, reason) => run(api.post(`${base(tenantId)}/close`, { confirmName, reason })),
     sendPayLink: (tenantId, invoiceId) => run(api.post(`${base(tenantId)}/payment-link`, { invoiceId })),
   };
 }

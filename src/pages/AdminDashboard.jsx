@@ -290,10 +290,20 @@ export default function AdminDashboard() {
     setClientModal(null);
   };
 
+  // Closes, never erases (2026-10-08): the API keeps the account and needs
+  // the business name typed back. See SuperAdminDashboard's handleCloseClient.
   const handleDeleteClient = async (client) => {
-    if (!window.confirm(`Delete ${client.businessName}?`)) return;
-    await api.delete(`/tenants/${client._id}`);
-    patch('clients', prev => prev.filter(c => c._id !== client._id));
+    const typed = window.prompt(
+      `Close ${client.businessName}'s account? Their customers get no reply and they are not billed; everything is kept.\n\nType the business name to confirm:`
+    );
+    if (typed == null) return;
+    try {
+      const res = await api.delete(`/tenants/${client._id}`, { data: { confirmName: typed } });
+      patch('clients', prev => prev.map(c => c._id === client._id ? { ...c, status: 'cancelled' } : c));
+      window.alert(res.data?.message || 'Closed.');
+    } catch (err) {
+      window.alert(err.response?.data?.message || 'Could not close the account. Nothing was changed.');
+    }
   };
 
   const handleRejectUser = async (user) => {
@@ -761,7 +771,7 @@ export default function AdminDashboard() {
                           loadData();
                         } catch (err) { alert(err.response?.data?.message || 'Failed to generate invite link'); }
                       }} style={{ padding: '8px 14px', background: `${colors.cyan}22`, color: colors.cyan, border: `1px solid ${colors.cyan}33`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>🔗 Invite</button>
-                      <button onClick={() => handleDeleteClient(client)} style={{ padding: '8px 14px', background: `${colors.red}22`, color: colors.red, border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>Delete</button>
+                      <button onClick={() => handleDeleteClient(client)} style={{ padding: '8px 14px', background: `${colors.red}22`, color: colors.red, border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>Close account</button>
                     </div>
                   </div>
                 </div>

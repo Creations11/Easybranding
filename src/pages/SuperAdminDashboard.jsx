@@ -48,6 +48,7 @@ import BillingPanel from '../components/BillingPanel';
 import SystemHealthPanel from '../components/SystemHealthPanel';
 import RentalsPanel from '../components/RentalsPanel';
 import { useRentalListings } from '../hooks/useRentalsModeration';
+import { useBillingActions, billingErrorMessage } from '../hooks/useClientBilling';
 
 // ── Design tokens ─────────────────────────────────────────────
 const c = {
@@ -138,15 +139,31 @@ export default function SuperAdminDashboard() {
 
 
   // ── Mutations ──────────────────────────────────────────────
-  const handleSuspendToggle = async (tenant) => {
-    const ns = tenant.status === 'suspended' ? 'active' : 'suspended';
-    try { await api.put('/tenants/' + tenant._id, { status: ns }); refetch(); }
-    catch { alert('Failed to update status'); }
+  // Suspend, activate and close go through the Billing endpoints
+  // (2026-10-08), the same ones the Billing tab uses. Until then Suspend here
+  // was one click with no question, though it silences that client's
+  // customers, and Delete erased the client behind one OK.
+  const billing = useBillingActions();
+  const showResult = (r) => { refetch(); alert(r.consequence); };
+  const failed = (err) => alert(billingErrorMessage(err));
+  const handleSuspend = async (tenant) => {
+    const reason = window.prompt(`Why is ${tenant.businessName} being suspended? Their customers will get no reply while suspended.`);
+    if (!reason || !reason.trim()) return;
+    try { showResult(await billing.suspend(tenant._id, reason.trim())); } catch (err) { failed(err); }
   };
-  const handleDeleteClient = async (tenant) => {
-    if (!confirm('Delete ' + tenant.businessName + '?')) return;
-    try { await api.delete('/tenants/' + tenant._id); refetch(); }
-    catch (err) { alert(err.response?.data?.message || 'Delete failed'); }
+  const handleActivate = async (tenant) => {
+    const what = tenant.status === 'cancelled' ? 'Reopen' : 'Switch back on';
+    if (!window.confirm(`${what} ${tenant.businessName}? Their assistant answers their customers from the next message.`)) return;
+    try { showResult(await billing.reactivate(tenant._id)); } catch (err) { failed(err); }
+  };
+  const handleCloseClient = async (tenant) => {
+    const typed = window.prompt(
+      `Close ${tenant.businessName}'s account?\n\n` +
+      `Their customers get no reply and they are not billed. Their leads, messages and invoices are kept, and Activate reopens it.\n\n` +
+      `Type the business name to confirm:`
+    );
+    if (typed == null) return;
+    try { showResult(await billing.close(tenant._id, typed)); } catch (err) { failed(err); }
   };
   // Allocate an industry flow template as the client's LIVE bot (inbound_any
   // on their number). The picker's value is tracked per-tenant in flowChoice.
@@ -441,10 +458,12 @@ export default function SuperAdminDashboard() {
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                             <div style={{ textAlign: 'center', padding: '6px 12px', background: c.lime + '08', borderRadius: 8 }}><p style={{ color: c.lime, fontWeight: 700, fontSize: 16 }}>{tenant.totalLeads || 0}</p><p style={{ color: c.muted, fontSize: 10 }}>Leads</p></div>
                             <div style={{ textAlign: 'center', padding: '6px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}><p style={{ color: c.text, fontWeight: 700, fontSize: 16 }}>R{tenant.monthlyFee}</p><p style={{ color: c.muted, fontSize: 10 }}>/mo</p></div>
-                            <button onClick={() => handleSuspendToggle(tenant)} style={{ padding: '7px 14px', background: tenant.status === 'suspended' ? c.lime + '22' : c.amber + '22', color: tenant.status === 'suspended' ? c.lime : c.amber, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' }}>{tenant.status === 'suspended' ? '▶ Activate' : '⏸ Suspend'}</button>
+                            {['suspended', 'cancelled'].includes(tenant.status)
+                              ? <button onClick={() => handleActivate(tenant)} style={{ padding: '7px 14px', background: c.lime + '22', color: c.lime, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' }}>{tenant.status === 'cancelled' ? '▶ Reopen' : '▶ Activate'}</button>
+                              : <button onClick={() => handleSuspend(tenant)} style={{ padding: '7px 14px', background: c.amber + '22', color: c.amber, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' }}>⏸ Suspend</button>}
                             <button onClick={() => setClientModal(tenant)} style={{ padding: '7px 14px', background: c.lime + '22', color: c.lime, border: '1px solid ' + c.border, borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>Edit</button>
                             <button onClick={() => generateInvite(tenant)} style={{ padding: '7px 14px', background: c.cyan + '22', color: c.cyan, border: '1px solid ' + c.cyan + '33', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>🔗 Invite</button>
-                            {isSuperAdmin && <button onClick={() => handleDeleteClient(tenant)} style={{ padding: '7px 14px', background: c.red + '22', color: c.red, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>Delete</button>}
+                            {isSuperAdmin && tenant.status !== 'cancelled' && <button onClick={() => handleCloseClient(tenant)} style={{ padding: '7px 14px', background: c.red + '22', color: c.red, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>Close account</button>}
                             {isSuperAdmin && flowTemplates.length > 0 && (
                               <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                                 <select value={flowChoice[tenant._id] || flowTemplates[0].id} onChange={e => setFlowChoice(prev => ({ ...prev, [tenant._id]: e.target.value }))} title="Industry flow template" style={{ padding: '7px 8px', background: c.moss + '22', color: c.sage, border: '1px solid ' + c.moss + '55', borderRadius: 8, fontSize: 12, cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}>

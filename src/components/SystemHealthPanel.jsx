@@ -23,8 +23,13 @@ const ORDER = { alert: 0, unknown: 1, warn: 2, ok: 3 };
 
 const TITLE = {
   ads: 'Ads', quietStreams: 'Quiet streams', fallbacks: 'Quiet fallbacks', delivery: 'Delivery',
-  ci: 'CI & deploy', agent: 'Sales agent', clients: 'Clients', takeovers: 'Takeovers',
+  ci: 'CI & deploy', agent: 'Sales agent', ai: 'AI & posting', clients: 'Clients', takeovers: 'Takeovers',
 };
+
+// Day and time in SAST, for "since when" lines.
+const stamp = (t) => (t
+  ? new Date(t).toLocaleString('en-ZA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Johannesburg' })
+  : '—');
 
 const HEADLINE = { ok: 'All clear', alert: 'Needs attention', warn: 'Worth a look', unknown: 'Cannot tell' };
 
@@ -75,6 +80,26 @@ function Detail({ section: s }) {
         <span> · {s.turnsToday ?? '—'} of {s.turnCap} turns today</span>
         {s.consecutiveFailures > 0 && <span style={{ color: c.amber }}> · {s.consecutiveFailures} consecutive failures</span>}
       </div>
+    );
+  }
+  // Added 2026-10-08, after three weeks out of AI credit showed nowhere here.
+  if (s.name === 'ai') {
+    return (
+      <>
+        <div style={line}>
+          Last AI call that worked: {stamp(s.lastOkAt)}
+          {s.failingSince && <span style={{ color: c.red }}> · failing since {stamp(s.failingSince)}</span>}
+        </div>
+        <div style={line}>
+          Last Facebook post: {stamp(s.lastPostAt)}
+          {s.lastPostSlot && <span> · latest slot {s.lastPostSlot.slot} {s.lastPostSlot.status}</span>}
+        </div>
+        {s.noCredit && (
+          <div style={{ ...line, color: c.amber }}>
+            Top up at console.anthropic.com (Billing). Facebook resumes at the next slot; send RESUME AGENT on WhatsApp, or use Resume on the Automation tab, to switch the sales agent back on.
+          </div>
+        )}
+      </>
     );
   }
   if (s.name === 'clients') {

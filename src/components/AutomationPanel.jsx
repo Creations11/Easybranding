@@ -169,6 +169,15 @@ export default function AutomationPanel() {
     catch (e) { alert((e.response?.data?.errors || [e.response?.data?.message || 'Action failed']).join('\n')); }
   };
 
+  // Lifts a pause; live or shadow stays as it was. If the AI account is still
+  // out of credit, the agent pauses itself again on its first failure, so the
+  // confirmation says to top up first.
+  const resumeAgent = async (agent) => {
+    if (!window.confirm(`Resume ${agent.businessName}'s sales agent now?\n\nIf it paused for lack of AI credit, top up first, or it pauses again on the next message.`)) return;
+    try { await api.post(`/admin-ops/automation/agents/${agent.tenantId}/resume`); fetchAll(); }
+    catch (e) { alert(e.response?.data?.message || 'Resume failed. Nothing was changed.'); }
+  };
+
   const fetchAll = async () => {
     try {
       const [a, f] = await Promise.all([
@@ -203,8 +212,20 @@ export default function AutomationPanel() {
         <div key={a.tenantId} style={card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
             <strong style={{ color: c.text }}>{a.businessName}</strong>
-            <ModePill mode={a.mode} pausedUntil={a.pausedUntil} />
+            <span style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <ModePill mode={a.mode} pausedUntil={a.pausedUntil} />
+              {/* The agent pauses itself (a day when out of AI credit). Until
+                  2026-10-08 nothing here could lift it. */}
+              {a.pausedUntil && new Date(a.pausedUntil) > new Date() && (
+                <button onClick={() => resumeAgent(a)} style={btn('transparent', c.emerald)}>Resume</button>
+              )}
+            </span>
           </div>
+          {a.pausedUntil && new Date(a.pausedUntil) > new Date() && (
+            <div style={{ color: c.muted, fontSize: '12px', marginTop: '6px' }}>
+              Paused until {new Date(a.pausedUntil).toLocaleString('en-ZA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Johannesburg' })}. Customers get the rule-based flow meanwhile.
+            </div>
+          )}
           <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', margin: '10px 0', color: c.muted, fontSize: '13px' }}>
             <span>🔥 <b style={{ color: c.text }}>{a.pipeline.hot}</b> hot</span>
             <span>☀️ <b style={{ color: c.text }}>{a.pipeline.warm}</b> warm</span>

@@ -112,3 +112,26 @@ describe('SystemHealthPanel', () => {
     expect(await screen.findByText('All clear')).toBeInTheDocument()
   })
 })
+
+// Three weeks out of AI credit (2026-09-18 → 10-08) showed nowhere on this
+// screen. The AI section names it, says since when, and says what to do.
+describe('SystemHealthPanel: AI & posting', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('shows an out-of-credit AI account with when it began and how to recover', async () => {
+    api.get.mockReset()
+    api.get.mockResolvedValue({ data: { data: { status: 'alert', checkedAt: '2026-10-08T06:00:00.000Z', sections: [
+      section('ai', 'alert', 'The AI account is OUT OF CREDIT — every AI call has failed since 18 Sept (20 days ago).', {
+        noCredit: true, lastOkAt: '2026-09-18T11:03:08.224Z', failingSince: '2026-09-18T11:49:39.276Z',
+        lastPostAt: '2026-09-18T10:32:10.186Z', lastPostSlot: { slot: '07:30', status: 'failed', at: '2026-10-08T05:31:18.054Z' },
+      }),
+    ] } } })
+    renderWithProviders(<SystemHealthPanel />)
+    const s = await screen.findByTestId('section-ai')
+    expect(within(s).getByText('AI & posting')).toBeInTheDocument()
+    expect(within(s).getByText(/OUT OF CREDIT/)).toBeInTheDocument()
+    expect(within(s).getByText(/failing since 18 Sept/)).toBeInTheDocument()
+    expect(within(s).getByText(/latest slot 07:30 failed/)).toBeInTheDocument()
+    expect(within(s).getByText(/RESUME AGENT/)).toBeInTheDocument()
+  })
+})
