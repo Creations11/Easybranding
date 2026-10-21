@@ -13,173 +13,18 @@ import useMediaQuery, { MOBILE_QUERY } from '../hooks/useMediaQuery';
 import { useCrmActions, useLeadNotes, crmError } from '../hooks/useCrm';
 import { STAGE_LABEL, INTENT, nextStagesFor, canonical } from './crm/crmHelpers';
 
-const t = {
-  lime:      '#B8F040',
-  emerald:   '#34d399',
-  amber:     '#fbbf24',
-  red:       '#f87171',
-  orange:    '#f97316',
-  cyan:      '#22d3ee',
-  text:      '#EEF0E8',
-  muted:     '#8A9080',
-  card:      '#121210',
-  surface:   '#0A0A08',
-  border:    'rgba(184,240,64,0.15)',
-  borderDim: 'rgba(255,255,255,0.06)',
-};
+import { t } from './leadDetail/tokens';
+import NotesTab from './leadDetail/NotesTab';
+import ViewingScheduler from './leadDetail/ViewingScheduler';
+import { loadLeadDetail } from './leadDetail/loadLeadDetail';
+import Conversation from './leadDetail/Conversation';
+import DetailsTab from './leadDetail/DetailsTab';
+import HistoryTab from './leadDetail/HistoryTab';
 
-// ── Notes ─────────────────────────────────────────────────────
-// Shared since 2026-10-08 (POST /admin-ops/crm/leads/:id/notes): everyone who
-// can see the lead sees them, with who wrote each and when. Before that they
-// lived in one browser's localStorage and nobody else ever read them; any
-// such note still on this device is offered for saving once (see NotesTab).
-const OLD_NOTES_KEY = 'eb_lead_notes';
-const oldLocalNote = (leadId) => {
-  try { return JSON.parse(localStorage.getItem(OLD_NOTES_KEY) || '{}')[leadId]?.text || null; } catch { return null; }
-};
-const forgetLocalNote = (leadId) => {
-  try {
-    const all = JSON.parse(localStorage.getItem(OLD_NOTES_KEY) || '{}');
-    delete all[leadId];
-    localStorage.setItem(OLD_NOTES_KEY, JSON.stringify(all));
-  } catch { /* nothing to forget */ }
-};
-
-function NotesTab({ leadId }) {
-  const notesQ = useLeadNotes(leadId);
-  const { addNote } = useCrmActions();
-  const [text, setText] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [problem, setProblem] = useState('');
-  const [legacy, setLegacy] = useState(() => oldLocalNote(leadId));
-
-  const save = async (body, after) => {
-    setBusy(true); setProblem('');
-    try { await addNote(leadId, body); after?.(); } catch (err) { setProblem(crmError(err)); } finally { setBusy(false); }
-  };
-
-  return (
-    <div>
-      {legacy && (
-        <div style={{ background: `${t.amber}12`, border: `1px solid ${t.amber}33`, borderRadius: 10, padding: '10px 12px', marginBottom: 12, fontSize: 12, color: t.amber }}>
-          A note saved only in this browser: “{legacy.slice(0, 160)}{legacy.length > 160 ? '…' : ''}”
-          <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-            <button onClick={() => save(legacy, () => { forgetLocalNote(leadId); setLegacy(null); })} disabled={busy} style={{ padding: '6px 12px', background: t.amber, color: '#080A06', border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 12 }}>Save it for everyone</button>
-            <button onClick={() => { forgetLocalNote(leadId); setLegacy(null); }} style={{ padding: '6px 12px', background: 'transparent', color: t.muted, border: `1px solid ${t.borderDim}`, borderRadius: 8, cursor: 'pointer', fontSize: 12 }}>Discard</button>
-          </div>
-        </div>
-      )}
-      <textarea
-        aria-label="New note"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="What happened, what was agreed, what to do next…"
-        rows={4}
-        style={{ width: '100%', boxSizing: 'border-box', padding: '12px', background: t.surface, border: `1px solid ${t.borderDim}`, borderRadius: '10px', color: t.text, fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }}
-      />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '8px 0 14px', gap: 8 }}>
-        <span style={{ color: problem ? t.red : t.muted, fontSize: 11 }}>{problem || 'Everyone who can see this lead sees its notes.'}</span>
-        <button onClick={() => save(text, () => setText(''))} disabled={busy || !text.trim()} style={{ padding: '8px 18px', background: text.trim() ? t.lime : `${t.lime}44`, color: '#080A06', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: text.trim() ? 'pointer' : 'not-allowed', fontSize: '13px' }}>
-          {busy ? 'Saving…' : 'Add note'}
-        </button>
-      </div>
-      {notesQ.isPending ? <p style={{ color: t.muted, fontSize: 13 }}>Loading notes…</p>
-        : (notesQ.data || []).length === 0 ? <p style={{ color: t.muted, fontSize: 13 }}>No notes yet.</p>
-          : notesQ.data.map((n) => (
-            <div key={n.id} style={{ background: t.surface, borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
-              <div style={{ color: t.text, fontSize: 13, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{n.text}</div>
-              <div style={{ color: t.muted, fontSize: 11, marginTop: 4 }}>{n.by || 'staff'} · {new Date(n.at).toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
-            </div>
-          ))}
-    </div>
-  );
-}
-
-function ViewingScheduler({ lead, onScheduled, onClose }) {
-  const [date,    setDate]    = useState('');
-  const [time,    setTime]    = useState('');
-  const [address, setAddress] = useState('');
-  const [agent,   setAgent]   = useState('');
-  const [saving,  setSaving]  = useState(false);
-  const [error,   setError]   = useState('');
-
-  const handleSave = async () => {
-    if (!date || !time) { setError('Date and time are required'); return; }
-    setSaving(true);
-    try {
-      const scheduledAt = new Date(`${date}T${time}`).toISOString();
-      await api.post(`/admin-ops/leads/${lead._id}/viewing`, {
-        scheduledAt, agentName: agent, propertyAddress: address,
-      });
-      onScheduled();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to schedule');
-    } finally { setSaving(false); }
-  };
-
-  const iStyle = { width: '100%', padding: '12px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${t.borderDim}`, borderRadius: '10px', color: t.text, fontSize: '14px', outline: 'none', fontFamily: 'inherit', marginBottom: '10px' };
-
-  return (
-    <div style={{ marginTop: '16px', background: t.surface, borderRadius: '14px', padding: '20px', border: `1px solid ${t.border}` }}>
-      <h4 style={{ color: t.lime, marginBottom: '14px', fontSize: '14px', fontWeight: '700' }}>📅 Schedule Viewing</h4>
-      {error && <p style={{ color: t.red, fontSize: '13px', marginBottom: '10px' }}>{error}</p>}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-        <input type="date" value={date} onChange={e => setDate(e.target.value)} style={iStyle} />
-        <input type="time" value={time} onChange={e => setTime(e.target.value)} style={iStyle} />
-      </div>
-      <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="Property address (optional)" style={iStyle} />
-      <input type="text" value={agent}   onChange={e => setAgent(e.target.value)}   placeholder="Assign to agent (optional)"  style={{ ...iStyle, marginBottom: '14px' }} />
-      <div style={{ display: 'flex', gap: '8px' }}>
-        <button onClick={onClose} style={{ flex: 1, padding: '10px', background: 'transparent', border: `1px solid ${t.borderDim}`, color: t.muted, borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
-        <button onClick={handleSave} disabled={saving} style={{ flex: 2, padding: '10px', background: t.lime, color: '#080A06', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '13px', opacity: saving ? 0.7 : 1 }}>
-          {saving ? 'Scheduling...' : 'Confirm Viewing'}
-        </button>
-      </div>
-    </div>
-  );
-}
+// The tabs, the viewing scheduler and the data loader live in ./leadDetail/.
 
 const NO_TIMELINE = [];
 const NO_HISTORY = [];
-
-// FIX: these used to be fetched with Promise.all — if the takeover
-// history call 403'd (e.g. a closed lead left with a dangling
-// ActiveTakeover record from the WhatsApp CLOSE command), the whole
-// load() rejected and setLead() never ran, so the modal opened
-// completely blank with no indication of what went wrong. Fetching
-// independently means a failed history call just leaves that section
-// empty instead of hiding the entire lead.
-//
-// A failed TIMELINE call throws, though: as a query (2026-10-05) that keeps
-// whatever lead was already on screen after an action's reload fails, which
-// is what the old code did by simply not setting anything.
-async function loadLeadDetail(leadId) {
-  const [timelineResult, historyResult] = await Promise.allSettled([
-    api.get(`/admin-ops/leads/${leadId}/timeline`),
-    api.get(`/takeover/${leadId}/history`),
-  ]);
-
-  if (historyResult.status === 'rejected') {
-    console.error('Takeover history load error', historyResult.reason);
-  }
-  if (timelineResult.status === 'rejected') {
-    console.error('Lead timeline load error', timelineResult.reason);
-    throw timelineResult.reason;
-  }
-
-  const d = timelineResult.value.data.data;
-  return {
-    lead: d?.lead ?? null,
-    timeline: d?.timeline || [],
-    // The merged view: conversation PLUS payments, invoices, takeovers and
-    // admin actions, in one chronological list. Falls back to the
-    // messages-only `timeline` when the API hasn't got `events` (older deploy).
-    events: d?.events || null,
-    takeoverHistory: historyResult.status === 'fulfilled'
-      ? historyResult.value.data.data?.takeoverHistory || []
-      : [],
-  };
-}
 
 export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
   const detail = useQuery({ queryKey: ['lead-detail', leadId], queryFn: () => loadLeadDetail(leadId) });
@@ -462,128 +307,17 @@ export default function LeadDetailModal({ leadId, onClose, onUpdate }) {
         {/* Content */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '200px' }}>
 
-          {/* ── Conversation tab ─── */}
-          {/* When the API sends `events`, the thread shows what HAPPENED to
-              this lead, not only what was said: the payment they started, the
-              invoice they were sent, the moment their bot was paused. Reading
-              a thread without those is misleading — a customer who "went
-              quiet" reads as lost interest when the record may show they paid
-              and the webhook never landed. */}
-          {activeTab === 'conversation' && events && (
-            events.length === 0 ? (
-              <p style={{ color: t.muted, textAlign: 'center', marginTop: '40px' }}>Nothing recorded yet.</p>
-            ) : events.map((e, i) => {
-              const isMessage = e.type === 'message_in' || e.type === 'message_out';
-              const outbound = e.type === 'message_out';
-
-              // Non-message events, and system notices, read as centred markers
-              // in the flow — they are things that happened, not things said.
-              if (!isMessage || e.system) {
-                const tone = { good: t.lime, warn: t.orange, bad: t.red }[e.tone] || t.muted;
-                const label = isMessage ? (e.detail || '').replace('[SYSTEM] ', '') : e.title;
-                return (
-                  <div key={i} style={{ textAlign: 'center', width: '100%', alignSelf: 'center', margin: '2px 0' }}>
-                    <span style={{
-                      fontSize: '11px', color: tone, background: t.borderDim,
-                      padding: '3px 12px', borderRadius: '999px', display: 'inline-block',
-                    }}>
-                      {label}
-                      {!isMessage && e.detail && <span style={{ color: t.muted }}> · {e.detail}</span>}
-                    </span>
-                  </div>
-                );
-              }
-
-              return (
-                <div key={i} style={{ alignSelf: outbound ? 'flex-end' : 'flex-start', maxWidth: '75%' }}>
-                  <div style={{
-                    padding: '10px 14px',
-                    borderRadius: outbound ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                    background: outbound ? '#005c4b' : '#1C1C19', color: t.text,
-                    fontSize: '13px', lineHeight: '1.5', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
-                  }}>
-                    {e.detail}
-                  </div>
-                  <div style={{ fontSize: '10px', color: t.muted, marginTop: '3px', textAlign: outbound ? 'right' : 'left' }}>
-                    {new Date(e.at).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
-                    {e.manual && <span style={{ marginLeft: '6px', color: t.orange }}>· manual</span>}
-                  </div>
-                </div>
-              );
-            })
-          )}
-
-          {/* Fallback for a backend that predates `events`. */}
-          {activeTab === 'conversation' && !events && (
-            timeline.length === 0 ? (
-              <p style={{ color: t.muted, textAlign: 'center', marginTop: '40px' }}>No messages yet.</p>
-            ) : timeline.map((msg, i) => (
-              <div key={i} style={{ alignSelf: msg.direction === 'outbound' ? 'flex-end' : 'flex-start', maxWidth: '75%' }}>
-                {msg.system ? (
-                  <div style={{ textAlign: 'center', width: '100%', alignSelf: 'center' }}>
-                    <span style={{ fontSize: '11px', color: t.muted, background: t.borderDim, padding: '3px 12px', borderRadius: '999px' }}>{msg.body.replace('[SYSTEM] ', '')}</span>
-                  </div>
-                ) : (
-                  <>
-                    <div style={{ padding: '10px 14px', borderRadius: msg.direction === 'outbound' ? '14px 14px 4px 14px' : '14px 14px 14px 4px', background: msg.direction === 'outbound' ? '#005c4b' : '#1C1C19', color: t.text, fontSize: '13px', lineHeight: '1.5', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-                      {msg.body}
-                    </div>
-                    <div style={{ fontSize: '10px', color: t.muted, marginTop: '3px', textAlign: msg.direction === 'outbound' ? 'right' : 'left' }}>
-                      {new Date(msg.timestamp).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
-                      {msg.manual && <span style={{ marginLeft: '6px', color: t.orange }}>· manual</span>}
-                    </div>
-                  </>
-                )}
-              </div>
-            ))
-          )}
+          {activeTab === 'conversation' && <Conversation events={events} timeline={timeline} />}
           <div ref={bottomRef} />
 
           {/* ── Details tab ─── */}
-          {activeTab === 'details' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              {[
-                { label: 'Phone',        value: lead?.phone },
-                { label: 'Name',         value: lead?.name },
-                { label: 'Sales stage',  value: lead?.salesStage ? STAGE_LABEL[canonical(lead.salesStage)] || lead.salesStage : null },
-                { label: 'Intent',       value: lead?.salesIntent },
-                { label: 'Follow up',    value: lead?.nextFollowUpAt ? `${new Date(lead.nextFollowUpAt).toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}${lead.nextFollowUpReason ? ` · ${lead.nextFollowUpReason}` : ''}` : null },
-                { label: 'Property',     value: lead?.propertyInterest },
-                { label: 'Budget',       value: lead?.monthlyBudget ? `R${lead.monthlyBudget}/mo` : null },
-                { label: 'Move-in',      value: lead?.moveInDate },
-                { label: 'Employment',   value: lead?.employmentType },
-                { label: 'Income',       value: lead?.monthlyIncome ? `R${lead.monthlyIncome}/mo` : null },
-                { label: 'Status',       value: lead?.workflowStatus?.replace(/_/g, ' ') },
-                { label: 'Tenant',       value: lead?.tenantId || 'default' },
-                { label: 'Created',      value: lead?.createdAt ? new Date(lead.createdAt).toLocaleDateString('en-ZA') : null },
-                { label: 'Last Message', value: lead?.lastMessageAt ? new Date(lead.lastMessageAt).toLocaleDateString('en-ZA') : null },
-                { label: 'Assigned To',  value: lead?.assignedAgent },
-              ].filter(item => item.value).map((item, i) => (
-                <div key={i} style={{ background: t.surface, borderRadius: '10px', padding: '12px 14px' }}>
-                  <p style={{ color: t.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>{item.label}</p>
-                  <p style={{ color: t.text, fontSize: '14px', fontWeight: '500' }}>{item.value}</p>
-                </div>
-              ))}
-            </div>
-          )}
+          {activeTab === 'details' && <DetailsTab lead={lead} />}
 
           {/* ── Notes tab ─── shared with everyone who can see the lead */}
           {activeTab === 'notes' && <NotesTab leadId={leadId} />}
 
           {/* ── History tab ─── */}
-          {activeTab === 'history' && (
-            takeoverHistory.length === 0 ? (
-              <p style={{ color: t.muted, textAlign: 'center', marginTop: '40px' }}>No takeover history.</p>
-            ) : takeoverHistory.map((event, i) => (
-              <div key={i} style={{ background: t.surface, borderRadius: '10px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <span style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '999px', background: event.action === 'takeover' ? `${t.orange}18` : `${t.lime}18`, color: event.action === 'takeover' ? t.orange : t.lime, fontWeight: '600', marginRight: '10px', textTransform: 'capitalize' }}>{event.action}</span>
-                  {event.reason && <span style={{ color: t.muted, fontSize: '13px' }}>{event.reason}</span>}
-                </div>
-                <p style={{ color: t.muted, fontSize: '12px' }}>{new Date(event.timestamp).toLocaleString('en-ZA')}</p>
-              </div>
-            ))
-          )}
+          {activeTab === 'history' && <HistoryTab takeoverHistory={takeoverHistory} />}
         </div>
 
         {/* Message input — only when taken over */}
