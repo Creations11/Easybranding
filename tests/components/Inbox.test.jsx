@@ -3,7 +3,8 @@
 // messages to real customers, so these cover the rules that are not
 // cosmetic:
 //   - you cannot type into a conversation the assistant still owns;
-//   - "waiting on us" comes first, longest wait first;
+//   - "waiting on us" comes first, the most recent first (who a reply
+//     still reaches freely);
 //   - an open conversation keeps itself fresh, which the Chat tab never did;
 //   - a platform login cannot "message everyone" until a client is chosen,
 //     and when it can, the send names that client to the API.
@@ -77,14 +78,14 @@ beforeEach(() => {
 afterEach(() => { localStorage.clear(); vi.useRealTimers() })
 
 describe('the conversation list', () => {
-  it('opens on "Waiting on us", the longest wait first', async () => {
+  it('opens on "Waiting on us", the most recent first', async () => {
     render()
     await screen.findByText('Long Waiter')
     expect(screen.getByRole('tab', { name: /Waiting on us/ })).toHaveAttribute('aria-selected', 'true')
     const shown = names()
     expect(shown).toHaveLength(2)
-    expect(shown[0]).toMatch(/Long Waiter/)
-    expect(shown[1]).toMatch(/Recent Waiter/)
+    expect(shown[0]).toMatch(/Recent Waiter/)
+    expect(shown[1]).toMatch(/Long Waiter/)
   })
 
   it('lists conversations the old Chat tab could not reach', async () => {

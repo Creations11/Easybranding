@@ -21,12 +21,13 @@ export default function ConversationList({ leads, filter, setFilter, query, setQ
     const needle = query.trim().toLowerCase();
     const hit = (l) => !needle || [l.name, l.phone, l.business, l.lastText].some((v) => v && String(v).toLowerCase().includes(needle));
     const rows = leads.filter((l) => test(l, now) && hit(l));
-    // Waiting: whoever has waited longest first, because they are the most
-    // likely to have given up. Everything else: most recent first, as a
-    // phone's chat list is.
-    return filter === 'waiting'
-      ? rows.sort((a, b) => new Date(a.waitingSince) - new Date(b.waitingSince))
-      : rows.sort((a, b) => new Date(b.lastActivityAt) - new Date(a.lastActivityAt));
+    // Most recent first, waiting included. "Longest wait first" was tried
+    // and, on live data (2026-10-21), opened on people from 77 to 89 days
+    // ago, long out of the 24-hour window, with today's customers at the
+    // bottom. The ones who wrote today are the ones a reply still reaches
+    // freely, so they lead. How long each has waited is on its row.
+    const at = (l) => new Date(filter === 'waiting' ? l.waitingSince : l.lastActivityAt);
+    return rows.sort((a, b) => at(b) - at(a));
   }, [leads, filter, query, now]);
 
   return (

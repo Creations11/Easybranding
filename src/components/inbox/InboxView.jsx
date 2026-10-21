@@ -12,7 +12,8 @@
 //
 //   list     every conversation, from the CRM's own query, so "waiting on
 //            us" is the same number as the page's headline; filtered by
-//            waiting / open / taken over / follow-ups due / closed.
+//            waiting / open / taken over / follow-ups due / closed, the
+//            most recent first.
 //   thread   the conversation, refreshed every few seconds while open, and
 //            the take-over rule and the out-of-window hold, unchanged.
 //   details  stage, notes and follow-up beside it on a wide screen.
