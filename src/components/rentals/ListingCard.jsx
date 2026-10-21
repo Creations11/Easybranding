@@ -1,14 +1,15 @@
-import { colors as c } from '../../utils/theme';
+import Badge from '../ui/Badge';
+import Button from '../ui/Button';
 import { useRentalsActions, photoSrc } from '../../hooks/useRentalsModeration';
 import { useAct } from './useAct';
-import { STATUS, TYPE, AMENITY, rand, when, btn, card, askReason } from './helpers';
-import { Result } from './ui';
+import { STATUS, TYPE, AMENITY, rand, when, askReason } from './helpers';
+import { Result, Sheet } from './ui';
 import OwnerBox from './OwnerBox';
 
 export default function ListingCard({ listing }) {
   const { approve, reject, takeDown } = useRentalsActions();
   const { busy, result, act } = useAct();
-  const status = STATUS[listing.status] || { label: listing.status, tone: c.muted };
+  const status = STATUS[listing.status] || { label: listing.status, tone: 'neutral' };
   const details = [
     TYPE[listing.propertyType] || listing.propertyType,
     `${listing.extension}, ${listing.area}`,
@@ -33,42 +34,44 @@ export default function ListingCard({ listing }) {
   };
 
   return (
-    <div data-testid={`listing-${listing.id}`} style={card}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10, alignItems: 'baseline' }}>
-        <div>
-          <span style={{ fontSize: 16, fontWeight: 700, color: c.text }}>{listing.title}</span>
-          <span style={{ marginLeft: 10, fontSize: 11, padding: '2px 8px', borderRadius: 999, background: status.tone + '22', color: status.tone, textTransform: 'uppercase', letterSpacing: 0.5 }}>{status.label}</span>
+    <Sheet data-testid={`listing-${listing.id}`}>
+      <div className="flex flex-wrap items-baseline justify-between gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className="text-base font-bold text-ink">{listing.title}</span>
+          <Badge tone={status.tone}>{status.label}</Badge>
         </div>
-        <div style={{ fontSize: 20, fontWeight: 700, color: c.text }}>{rand(listing.rent)} <span style={{ fontSize: 12, color: c.muted, fontWeight: 400 }}>a month</span></div>
+        <div className="font-mono text-xl font-bold tabular-nums text-ink">
+          {rand(listing.rent)} <span className="font-sans text-xs font-normal text-muted">a month</span>
+        </div>
       </div>
 
-      <div style={{ fontSize: 12, color: c.muted, marginTop: 6 }}>{details.join(' · ')}</div>
-      <div style={{ fontSize: 13, color: c.text, marginTop: 6 }}><span style={{ color: c.muted }}>Address:</span> {listing.addressLine || 'none given'}</div>
+      <div className="mt-1.5 text-xs text-muted">{details.join(' · ')}</div>
+      <div className="mt-1.5 text-[13px] text-ink"><span className="text-muted">Address:</span> {listing.addressLine || 'none given'}</div>
 
       {listing.photos?.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginTop: 10 }}>
+        <div className="mt-2.5 flex gap-2 overflow-x-auto">
           {listing.photos.map((p, i) => (
-            <a key={p.id} href={photoSrc(p.url)} target="_blank" rel="noopener noreferrer">
+            <a key={p.id} href={photoSrc(p.url)} target="_blank" rel="noopener noreferrer" className="shrink-0">
               <img src={photoSrc(p.url)} alt={`Photo ${i + 1} of ${listing.title}`} loading="lazy"
-                style={{ width: 132, height: 96, objectFit: 'cover', borderRadius: 8, border: '1px solid ' + c.borderDim }} />
+                className="h-24 w-[132px] rounded-lg border border-edge object-cover" />
             </a>
           ))}
         </div>
       )}
 
       {listing.amenities?.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
           {listing.amenities.map((a) => (
-            <span key={a} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: c.surface, color: c.sage }}>{AMENITY[a] || a}</span>
+            <span key={a} className="rounded-full bg-surface px-2 py-0.5 text-[11px] text-sage">{AMENITY[a] || a}</span>
           ))}
         </div>
       )}
 
       {listing.description && (
-        <p style={{ fontSize: 13, color: c.text, marginTop: 10, whiteSpace: 'pre-line', lineHeight: 1.5 }}>{listing.description}</p>
+        <p className="mt-2.5 whitespace-pre-line text-[13px] leading-normal text-ink">{listing.description}</p>
       )}
 
-      <div style={{ fontSize: 12, color: c.muted, marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+      <div className="mt-2 flex flex-wrap gap-3.5 text-xs text-muted">
         {listing.review?.submittedAt && <span>Sent for review {when(listing.review.submittedAt)}</span>}
         {listing.review?.outcome && listing.review?.reviewedAt && (
           <span>Last review: {listing.review.outcome} {when(listing.review.reviewedAt)}{listing.review.note ? `, "${listing.review.note}"` : ''}</span>
@@ -76,27 +79,27 @@ export default function ListingCard({ listing }) {
       </div>
 
       {listing.status === 'pending_review' && (
-        <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, fontSize: 12, color: c.muted, border: '1px dashed ' + c.borderDim }}>
+        <div className="mt-2.5 rounded-lg border border-dashed border-edge px-3 py-2 text-xs text-muted">
           Before approving, check: the photos show a real place and match the description; the rent and deposit are
           believable for Fleurhof; the text does not ask for money before a viewing or give bank details; the
           landlord's details look genuine.
         </div>
       )}
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+      <div className="mt-3 flex flex-wrap gap-2">
         {listing.status === 'pending_review' && (
           <>
-            <button onClick={onApprove} disabled={busy} style={btn(c.lime, busy)}>Approve</button>
-            <button onClick={onReject} disabled={busy} style={btn(c.amber, busy)}>Send back with a reason</button>
+            <Button variant="primary" onClick={onApprove} disabled={busy}>Approve</Button>
+            <Button variant="warn" onClick={onReject} disabled={busy}>Send back with a reason</Button>
           </>
         )}
         {listing.status === 'published' && (
-          <button onClick={onTakeDown} disabled={busy} style={btn(c.red, busy)}>Take down</button>
+          <Button variant="danger" onClick={onTakeDown} disabled={busy}>Take down</Button>
         )}
       </div>
       <Result result={result} />
 
       <OwnerBox owner={listing.owner} ownerSuspended={listing.ownerSuspended} />
-    </div>
+    </Sheet>
   );
 }

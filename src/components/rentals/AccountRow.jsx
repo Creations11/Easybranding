@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { colors as c } from '../../utils/theme';
+import Button from '../ui/Button';
 import { useRentalsActions } from '../../hooks/useRentalsModeration';
 import { useAct } from './useAct';
-import { when, btn, card, askReason, changes } from './helpers';
-import { Result, TemporaryPassword } from './ui';
+import { when, askReason, changes } from './helpers';
+import { Result, Sheet, TemporaryPassword } from './ui';
 import AccountForm from './AccountForm';
 
 export default function AccountRow({ account }) {
@@ -34,35 +34,35 @@ export default function AccountRow({ account }) {
     act(() => reinstate(account.id), `${account.fullName} is reinstated.`);
   };
   return (
-    <div data-testid={`account-${account.id}`} style={card}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 }}>
+    <Sheet data-testid={`account-${account.id}`}>
+      <div className="flex flex-wrap justify-between gap-2.5">
         <div>
-          <span style={{ fontWeight: 700, color: c.text }}>{account.fullName}</span>
-          <span style={{ marginLeft: 8, fontSize: 12, color: c.muted }}>{account.roles.join(' and ')}</span>
-          {!account.isActive && <span style={{ marginLeft: 8, fontSize: 11, color: c.red }}>suspended{account.suspendedReason ? `: ${account.suspendedReason}` : ''}</span>}
+          <span className="font-bold text-ink">{account.fullName}</span>
+          <span className="ml-2 text-xs text-muted">{account.roles.join(' and ')}</span>
+          {!account.isActive && <span className="ml-2 text-[11px] text-red">suspended{account.suspendedReason ? `: ${account.suspendedReason}` : ''}</span>}
         </div>
-        <span style={{ fontSize: 12, color: c.muted }}>{account.listings === 1 ? '1 listing' : `${account.listings} listings`}</span>
+        <span className="font-mono text-xs tabular-nums text-muted">{account.listings === 1 ? '1 listing' : `${account.listings} listings`}</span>
       </div>
-      <div style={{ fontSize: 12, color: c.muted, marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+      <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted">
         <span>{account.email}</span>
-        <span>{account.phone}</span>
+        <span className="font-mono">{account.phone}</span>
         <span>joined {when(account.createdAt)}</span>
         <span>{account.lastLoginAt ? `last signed in ${when(account.lastLoginAt)}` : 'never signed in again'}</span>
       </div>
       {editing
         ? <AccountForm initial={account} submitLabel="Save" onSubmit={onSave} onCancel={() => setEditing(false)} busy={busy} />
         : (
-          <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            <button onClick={() => setEditing(true)} disabled={busy} style={btn(c.cyan, busy)}>Edit</button>
-            <button onClick={onReset} disabled={busy} style={btn(c.amber, busy)}>Reset password</button>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => setEditing(true)} disabled={busy}>Edit</Button>
+            <Button variant="warn" onClick={onReset} disabled={busy}>Reset password</Button>
             {account.isActive
-              ? <button onClick={onSuspend} disabled={busy} style={btn(c.red, busy)}>Suspend</button>
-              : <button onClick={onReinstate} disabled={busy} style={btn(c.emerald, busy)}>Reinstate</button>}
-            <button onClick={onDelete} disabled={busy} style={btn(c.red, busy)}>Delete</button>
+              ? <Button variant="danger" onClick={onSuspend} disabled={busy}>Suspend</Button>
+              : <Button variant="good" onClick={onReinstate} disabled={busy}>Reinstate</Button>}
+            <Button variant="danger" onClick={onDelete} disabled={busy}>Delete</Button>
           </div>
         )}
       {password && <TemporaryPassword who={account.fullName} password={password} onDone={() => setPassword(null)} />}
       <Result result={result} />
-    </div>
+    </Sheet>
   );
 }

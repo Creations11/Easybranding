@@ -12,9 +12,7 @@
 //   - turn a listing down without a reason: the landlord is emailed exactly
 //     what is typed, so a reason is required and shown before it goes.
 import { useState } from 'react';
-import { colors as c } from '../utils/theme';
 import { useRentalListings } from '../hooks/useRentalsModeration';
-import { btn } from './rentals/helpers';
 import ListingsView from './rentals/ListingsView';
 import AccountsView from './rentals/AccountsView';
 
@@ -36,17 +34,19 @@ export default function RentalsPanel() {
 
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4, color: c.text }}>Rentals</h1>
-        <p style={{ color: c.muted, fontSize: 15 }}>
+      <div className="mb-5">
+        <h1 className="mb-1 font-['Fraunces',serif] text-[clamp(24px,4vw,40px)] font-black text-ink">Rentals</h1>
+        <p className="text-[15px] text-muted">
           EasyRentals. Every listing waits here until a person has checked it, and so does every change to a live one.
         </p>
       </div>
 
-      <div role="tablist" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+      <div role="tablist" className="mb-4 flex flex-wrap gap-1.5">
         {VIEWS.map((v) => (
-          <button key={v.id} role="tab" aria-selected={view === v.id} onClick={() => setView(v.id)}
-            style={{ ...btn(view === v.id ? c.lime : c.muted, false), fontWeight: view === v.id ? 700 : 400 }}>
+          <button key={v.id} type="button" role="tab" aria-selected={view === v.id} onClick={() => setView(v.id)}
+            className={`inline-flex min-h-[44px] cursor-pointer items-center rounded-lg border px-3 text-xs ${
+              view === v.id ? 'border-lime/30 bg-lime/10 font-bold text-lime' : 'border-white/10 bg-transparent text-muted hover:bg-raise'
+            }`}>
             {v.label}{v.id === 'pending_review' && waiting ? ` (${waiting})` : ''}
           </button>
         ))}
