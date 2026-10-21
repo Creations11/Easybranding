@@ -40,24 +40,31 @@
 
     <title>WABOS by Easy Branding AI</title>
     <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-      body { 
-        background: #080A06; 
-        color: #EEF0E8; 
-        font-family: 'Outfit', system-ui, sans-serif;
-        overflow-x: hidden;
-        -webkit-font-smoothing: antialiased;
+      /* In a layer on purpose. Tailwind's classes live in @layer utilities,
+         and ANY rule outside a layer beats every layered one, whatever its
+         specificity: unlayered, "* { padding: 0 }" zeroed every p-/m- class
+         and "a { color: inherit }" every link colour on the console
+         (2026-10-21). Inside "base" these still reset what has no class. */
+      @layer base {
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+        body { 
+          background: #080A06; 
+          color: #EEF0E8; 
+          font-family: 'Outfit', system-ui, sans-serif;
+          overflow-x: hidden;
+          -webkit-font-smoothing: antialiased;
+        }
+        input, button, select, textarea { 
+          font-family: inherit; 
+          font-size: inherit;
+        }
+        img { max-width: 100%; height: auto; }
+        a { color: inherit; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #080A06; }
+        ::-webkit-scrollbar-thumb { background: #4A6741; border-radius: 2px; }
       }
-      input, button, select, textarea { 
-        font-family: inherit; 
-        font-size: inherit;
-      }
-      img { max-width: 100%; height: auto; }
-      a { color: inherit; }
-      ::-webkit-scrollbar { width: 4px; height: 4px; }
-      ::-webkit-scrollbar-track { background: #080A06; }
-      ::-webkit-scrollbar-thumb { background: #4A6741; border-radius: 2px; }
     </style>
   </head>
   <body>
