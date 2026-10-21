@@ -1,31 +1,37 @@
-import { c } from './tokens';
+// The navigation on a desktop. "sidebar" is the class the page's own CSS
+// hides on a phone (SuperAdminDashboard.jsx), so it stays.
+const navItem = (on) => `nav-item-hover mb-0.5 flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 rounded-[10px] px-2 text-left text-sm ${
+  on ? 'bg-lime/12 font-semibold text-lime' : 'bg-transparent text-muted'
+}`;
 
 /** The navigation on a desktop. */
 export default function Sidebar({ navSections, section, setSection, user, signOut, sidebarOpen, setSidebarOpen }) {
   return (
-    <div className="sidebar" style={{ width: sidebarOpen ? 220 : 64, minHeight: '100vh', background: c.sidebar, borderRight: '1px solid ' + c.borderDim, display: 'flex', flexDirection: 'column', position: 'fixed', top: 64, left: 0, bottom: 0, zIndex: 50, transition: 'width 0.2s ease', overflowY: 'auto', overflowX: 'hidden' }}>
-      <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid ' + c.borderDim, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 32, height: 32, background: 'linear-gradient(135deg,' + c.lime + ',' + c.moss + ')', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>🌿</div>
-        {sidebarOpen && <div><p style={{ fontSize: 13, fontWeight: 700, color: c.text }}>Easy Branding</p><p style={{ fontSize: 11, color: c.lime, fontWeight: 600 }}>AI</p></div>}
-        <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: c.muted, cursor: 'pointer', fontSize: 16, padding: 4, flexShrink: 0 }}>{sidebarOpen ? '←' : '→'}</button>
+    <div className={`sidebar fixed top-16 bottom-0 left-0 z-50 flex min-h-screen flex-col overflow-x-hidden overflow-y-auto border-r border-edge bg-[#080B08] transition-[width] duration-200 ${sidebarOpen ? 'w-[220px]' : 'w-16'}`}>
+      <div className="flex items-center gap-2.5 border-b border-edge px-4 pt-5 pb-4">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-lime to-moss text-base">🌿</div>
+        {sidebarOpen && <div><p className="text-[13px] font-bold text-ink">Easy Branding</p><p className="text-[11px] font-semibold text-lime">AI</p></div>}
+        <button type="button" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? 'Narrow the menu' : 'Widen the menu'}
+          className="ml-auto min-h-[44px] min-w-8 shrink-0 cursor-pointer text-base text-muted">{sidebarOpen ? '←' : '→'}</button>
       </div>
-      <div style={{ padding: '12px 8px', flex: 1 }}>
+      <div className="flex-1 px-2 py-3">
         {navSections.map(nav => (
-          <button key={nav.id} onClick={() => setSection(nav.id)} className="nav-item-hover" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px', borderRadius: 10, border: 'none', cursor: 'pointer', background: section === nav.id ? 'rgba(184,240,64,0.12)' : 'transparent', color: section === nav.id ? c.lime : c.muted, fontSize: 14, fontWeight: section === nav.id ? 600 : 400, fontFamily: 'inherit', marginBottom: 2, textAlign: 'left' }}>
-            <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>{nav.icon}</span>
-            {sidebarOpen && <span style={{ flex: 1, whiteSpace: 'nowrap' }}>{nav.label}</span>}
-            {sidebarOpen && nav.badge > 0 && <span style={{ background: c.amber, color: '#080A06', fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 999 }}>{nav.badge}</span>}
+          <button key={nav.id} type="button" onClick={() => setSection(nav.id)} className={navItem(section === nav.id)} title={sidebarOpen ? undefined : nav.label}>
+            <span className="w-6 shrink-0 text-center text-lg">{nav.icon}</span>
+            {sidebarOpen && <span className="flex-1 whitespace-nowrap">{nav.label}</span>}
+            {sidebarOpen && nav.badge > 0 && <span className="rounded-full bg-amber px-1.5 py-0.5 font-mono text-[10px] font-extrabold text-[#080A06]">{nav.badge}</span>}
           </button>
         ))}
       </div>
-      <div style={{ padding: '12px 16px', borderTop: '1px solid ' + c.borderDim }}>
+      <div className="border-t border-edge px-4 py-3">
         {sidebarOpen ? (
           <>
-            <p style={{ fontSize: 13, fontWeight: 600, color: c.text, marginBottom: 2 }}>{user?.fullName || 'Ayanda'}</p>
-            <p style={{ fontSize: 11, color: c.lime, marginBottom: 10 }}>{user?.role}</p>
-            <button onClick={signOut} style={{ width: '100%', padding: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid ' + c.borderDim, color: c.muted, borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>Sign Out</button>
+            <p className="mb-0.5 text-[13px] font-semibold text-ink">{user?.fullName || 'Ayanda'}</p>
+            <p className="mb-2.5 text-[11px] text-lime">{user?.role}</p>
+            <button type="button" onClick={signOut}
+              className="min-h-[44px] w-full cursor-pointer rounded-lg border border-edge bg-white/5 text-xs text-muted hover:bg-raise">Sign Out</button>
           </>
-        ) : <button onClick={signOut} style={{ width: '100%', padding: 8, background: 'none', border: 'none', color: c.muted, cursor: 'pointer', fontSize: 18 }}>↩</button>}
+        ) : <button type="button" onClick={signOut} aria-label="Sign out" className="min-h-[44px] w-full cursor-pointer text-lg text-muted">↩</button>}
       </div>
     </div>
   );

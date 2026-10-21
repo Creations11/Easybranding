@@ -1,135 +1,154 @@
-import StatCard from '../StatCard';
 import Pagination from '../Pagination';
 import exportCSV from '../../utils/exportCSV';
-import { c, STATUS_COLOR, PLAN_COLOR } from './tokens';
+import Badge from '../ui/Badge';
+import Button from '../ui/Button';
+import StatTile from '../ui/StatTile';
+import PageHeader from '../ui/PageHeader';
+import { Input, Select } from '../ui/Field';
+
+// Badge tones (ui/Badge.jsx) for a client's status and plan.
+const STATUS_TONE = { active: 'live', trial: 'warn', suspended: 'bad', cancelled: 'neutral' };
+const PLAN_TONE = { starter: 'moving', growth: 'live', enterprise: 'system' };
 
 export default function ClientsSection({ selectedClientIds, setSelectedClientIds, setBulkModal, clientsFilter, clientsPage, setClientsPage, ITEMS_PER_PAGE, setClientModal, tenantStats, handleActivate, handleSuspend, generateInvite, handleCloseClient, isSuperAdmin, flowTemplates, flowChoice, setFlowChoice, handleAllocateFlow }) {
+  const filtered = clientsFilter.searchTerm || clientsFilter.filters.status || clientsFilter.filters.plan;
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
-        <div><h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4 }}>Clients</h1><p style={{ color: c.muted, fontSize: 15 }}>Manage rental agency accounts</p></div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button onClick={() => {
+      <PageHeader title="Clients" sub="Manage rental agency accounts">
+        <Button
+          variant={selectedClientIds.length > 0 ? 'warn' : 'secondary'}
+          onClick={() => {
             if (selectedClientIds.length === 0) {
               alert('Select clients first by checking the boxes');
               return;
             }
             setBulkModal(true);
-          }} style={{ padding: '12px 18px', background: selectedClientIds.length > 0 ? c.amber + '22' : 'rgba(255,255,255,0.04)', color: selectedClientIds.length > 0 ? c.amber : c.muted, border: '1px solid ' + (selectedClientIds.length > 0 ? c.amber + '33' : c.borderDim), borderRadius: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px' }}>
-            📦 Bulk ({selectedClientIds.length})
-          </button>
-          <button onClick={() => {
-            const exportData = clientsFilter.filtered.map(t => ({
-              businessName: t.businessName || '',
-              status: t.status || '',
-              plan: t.plan || '',
-              email: t.contactEmail || '',
-              whatsapp: t.whatsappNumber || '',
-              leads: t.totalLeads || 0,
-              monthlyFee: 'R' + (t.monthlyFee || 0),
-            }));
-            exportCSV(exportData, 'clients-export');
-          }} style={{ padding: '12px 18px', background: c.cyan + '22', color: c.cyan, border: '1px solid ' + c.cyan + '33', borderRadius: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px' }}>📥 Export CSV</button>
-          <button onClick={() => setClientModal({})} style={{ padding: '12px 24px', background: c.lime, color: '#080A06', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>+ Add Client</button>
-        </div>
-      </div>
+          }}
+        >
+          📦 Bulk ({selectedClientIds.length})
+        </Button>
+        <Button variant="system" onClick={() => {
+          const exportData = clientsFilter.filtered.map(t => ({
+            businessName: t.businessName || '',
+            status: t.status || '',
+            plan: t.plan || '',
+            email: t.contactEmail || '',
+            whatsapp: t.whatsappNumber || '',
+            leads: t.totalLeads || 0,
+            monthlyFee: 'R' + (t.monthlyFee || 0),
+          }));
+          exportCSV(exportData, 'clients-export');
+        }}>📥 Export CSV</Button>
+        <Button variant="primary" onClick={() => setClientModal({})}>+ Add Client</Button>
+      </PageHeader>
+
       {tenantStats && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 28 }}>
-          <StatCard label="Total" value={tenantStats.total || 0} icon="👥" />
-          <StatCard label="Active" value={tenantStats.active || 0} color={c.lime} icon="✅" />
-          <StatCard label="Trial" value={tenantStats.trial || 0} color={c.amber} icon="🧪" />
-          <StatCard label="MRR" value={'R' + ((tenantStats.mrr || 0).toLocaleString())} color={c.lime} icon="💰" sub="monthly recurring" />
+        <div className="mb-7 flex flex-wrap gap-3">
+          <StatTile label="Total" value={tenantStats.total || 0} highlight tone="ink" />
+          <StatTile label="Active" value={tenantStats.active || 0} highlight tone="lime" />
+          <StatTile label="Trial" value={tenantStats.trial || 0} highlight tone="amber" />
+          <StatTile label="MRR" value={'R' + ((tenantStats.mrr || 0).toLocaleString())} highlight tone="lime" note="monthly recurring" />
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input
+      <div className="mb-5 flex flex-wrap items-center gap-2.5">
+        <Input
+          mono={false}
           value={clientsFilter.searchTerm}
           onChange={e => { clientsFilter.setSearchTerm(e.target.value); setClientsPage(1); }}
           placeholder="Search clients..."
-          style={{ padding: '10px 14px', background: c.card, border: '1px solid ' + c.borderDim, borderRadius: '10px', color: c.text, fontSize: '14px', outline: 'none', fontFamily: 'inherit', flex: 1, minWidth: '200px' }}
+          aria-label="Search clients"
+          className="min-w-[200px] flex-1 bg-card"
         />
-        <select
+        <Select
           value={clientsFilter.filters.status || 'all'}
           onChange={e => { clientsFilter.setFilter('status', e.target.value === 'all' ? null : e.target.value); setClientsPage(1); }}
-          style={{ padding: '10px 14px', background: c.card, border: '1px solid ' + c.borderDim, borderRadius: '10px', color: c.text, fontSize: '14px', outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}
+          aria-label="Status"
+          className="w-auto cursor-pointer bg-card"
         >
           <option value="all">All Status</option>
           <option value="active">Active</option>
           <option value="trial">Trial</option>
           <option value="suspended">Suspended</option>
           <option value="cancelled">Cancelled</option>
-        </select>
-        <select
+        </Select>
+        <Select
           value={clientsFilter.filters.plan || 'all'}
           onChange={e => { clientsFilter.setFilter('plan', e.target.value === 'all' ? null : e.target.value); setClientsPage(1); }}
-          style={{ padding: '10px 14px', background: c.card, border: '1px solid ' + c.borderDim, borderRadius: '10px', color: c.text, fontSize: '14px', outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}
+          aria-label="Plan"
+          className="w-auto cursor-pointer bg-card"
         >
           <option value="all">All Plans</option>
           <option value="starter">Starter</option>
           <option value="growth">Growth</option>
           <option value="enterprise">Enterprise</option>
-        </select>
-        {(clientsFilter.searchTerm || clientsFilter.filters.status || clientsFilter.filters.plan) && (
-          <button onClick={() => { clientsFilter.clearAll(); setClientsPage(1); }} style={{ padding: '10px 14px', background: 'transparent', border: '1px solid ' + c.borderDim, borderRadius: '10px', color: c.muted, cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>
+        </Select>
+        {filtered && (
+          <Button variant="ghost" onClick={() => { clientsFilter.clearAll(); setClientsPage(1); }}>
             Clear
-          </button>
+          </Button>
         )}
       </div>
 
       {clientsFilter.filteredCount !== clientsFilter.totalCount && (
-        <p style={{ color: c.muted, fontSize: 13, marginBottom: 12 }}>
+        <p className="mb-3 text-[13px] text-muted">
           Showing {clientsFilter.filteredCount} of {clientsFilter.totalCount} clients
         </p>
       )}
 
       {clientsFilter.filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: c.muted }}>
-          <p style={{ fontSize: 40, marginBottom: 16 }}>{clientsFilter.searchTerm ? '🔍' : '🌿'}</p>
+        <div className="py-[60px] text-center text-muted">
+          <p className="mb-4 text-[40px]">{clientsFilter.searchTerm ? '🔍' : '🌿'}</p>
           <p>{clientsFilter.searchTerm ? 'No clients match your search.' : 'No clients yet — add your first one.'}</p>
         </div>
       ) : (
         <>
           {clientsFilter.filtered
             .slice((clientsPage - 1) * ITEMS_PER_PAGE, clientsPage * ITEMS_PER_PAGE)
-            .map(tenant => (
-            <div key={tenant._id} className="card-hover" style={{ background: c.card, border: '1px solid ' + (!tenant.whatsappNumber ? c.amber + '44' : selectedClientIds.includes(tenant._id) ? c.lime + '66' : c.borderDim), borderRadius: 14, padding: '18px 24px', marginBottom: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <input type="checkbox" checked={selectedClientIds.includes(tenant._id)} onChange={() => {
-                  setSelectedClientIds(prev => prev.includes(tenant._id) ? prev.filter(id => id !== tenant._id) : [...prev, tenant._id]);
-                }} style={{ cursor: 'pointer', accentColor: c.lime, width: 16, height: 16 }} />
-                <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-                      <strong style={{ fontSize: 16 }}>{tenant.businessName}</strong>
-                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: (STATUS_COLOR[tenant.status] || c.muted) + '22', color: STATUS_COLOR[tenant.status] || c.muted, fontWeight: 600 }}>{tenant.status}</span>
-                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: (PLAN_COLOR[tenant.plan] || c.muted) + '22', color: PLAN_COLOR[tenant.plan] || c.muted }}>{tenant.plan}</span>
-                      {!tenant.whatsappNumber && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: c.amber + '22', color: c.amber, fontWeight: 600 }}>⚠️ No WhatsApp</span>}
-                    </div>
-                    <p style={{ color: c.muted, fontSize: 13 }}>{tenant.contactEmail}{tenant.whatsappNumber ? ' · ' + tenant.whatsappNumber : ''}</p>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <div style={{ textAlign: 'center', padding: '6px 12px', background: c.lime + '08', borderRadius: 8 }}><p style={{ color: c.lime, fontWeight: 700, fontSize: 16 }}>{tenant.totalLeads || 0}</p><p style={{ color: c.muted, fontSize: 10 }}>Leads</p></div>
-                    <div style={{ textAlign: 'center', padding: '6px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}><p style={{ color: c.text, fontWeight: 700, fontSize: 16 }}>R{tenant.monthlyFee}</p><p style={{ color: c.muted, fontSize: 10 }}>/mo</p></div>
-                    {['suspended', 'cancelled'].includes(tenant.status)
-                      ? <button onClick={() => handleActivate(tenant)} style={{ padding: '7px 14px', background: c.lime + '22', color: c.lime, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' }}>{tenant.status === 'cancelled' ? '▶ Reopen' : '▶ Activate'}</button>
-                      : <button onClick={() => handleSuspend(tenant)} style={{ padding: '7px 14px', background: c.amber + '22', color: c.amber, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' }}>⏸ Suspend</button>}
-                    <button onClick={() => setClientModal(tenant)} style={{ padding: '7px 14px', background: c.lime + '22', color: c.lime, border: '1px solid ' + c.border, borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>Edit</button>
-                    <button onClick={() => generateInvite(tenant)} style={{ padding: '7px 14px', background: c.cyan + '22', color: c.cyan, border: '1px solid ' + c.cyan + '33', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>🔗 Invite</button>
-                    {isSuperAdmin && tenant.status !== 'cancelled' && <button onClick={() => handleCloseClient(tenant)} style={{ padding: '7px 14px', background: c.red + '22', color: c.red, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>Close account</button>}
-                    {isSuperAdmin && flowTemplates.length > 0 && (
-                      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                        <select value={flowChoice[tenant._id] || flowTemplates[0].id} onChange={e => setFlowChoice(prev => ({ ...prev, [tenant._id]: e.target.value }))} title="Industry flow template" style={{ padding: '7px 8px', background: c.moss + '22', color: c.sage, border: '1px solid ' + c.moss + '55', borderRadius: 8, fontSize: 12, cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}>
-                          {flowTemplates.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-                        </select>
-                        <button onClick={() => handleAllocateFlow(tenant)} title="Allocate this flow as the client's live bot" style={{ padding: '7px 12px', background: c.lime + '22', color: c.lime, border: '1px solid ' + c.border, borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' }}>⚡ Allocate</button>
+            .map(tenant => {
+              const selected = selectedClientIds.includes(tenant._id);
+              return (
+                <div key={tenant._id}
+                  className={`card-hover mb-2.5 rounded-[14px] border bg-card px-6 py-[18px] ${!tenant.whatsappNumber ? 'border-amber/25' : selected ? 'border-lime/40' : 'border-edge'}`}>
+                  <div className="mb-3 flex items-center gap-2.5">
+                    <input type="checkbox" checked={selected} aria-label={`Select ${tenant.businessName}`} onChange={() => {
+                      setSelectedClientIds(prev => prev.includes(tenant._id) ? prev.filter(id => id !== tenant._id) : [...prev, tenant._id]);
+                    }} className="h-4 w-4 cursor-pointer accent-lime" />
+                    <div className="flex flex-1 flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
+                          <strong className="text-base">{tenant.businessName}</strong>
+                          <Badge tone={STATUS_TONE[tenant.status] || 'neutral'}>{tenant.status}</Badge>
+                          <Badge tone={PLAN_TONE[tenant.plan] || 'neutral'}>{tenant.plan}</Badge>
+                          {!tenant.whatsappNumber && <Badge tone="warn">⚠️ No WhatsApp</Badge>}
+                        </div>
+                        <p className="text-[13px] text-muted">{tenant.contactEmail}{tenant.whatsappNumber ? <> · <span className="font-mono">{tenant.whatsappNumber}</span></> : ''}</p>
                       </div>
-                    )}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="rounded-lg bg-lime/5 px-3 py-1.5 text-center"><p className="font-mono text-base font-bold tabular-nums text-lime">{tenant.totalLeads || 0}</p><p className="text-[10px] text-muted">Leads</p></div>
+                        <div className="rounded-lg bg-white/3 px-3 py-1.5 text-center"><p className="font-mono text-base font-bold tabular-nums text-ink">R{tenant.monthlyFee}</p><p className="text-[10px] text-muted">/mo</p></div>
+                        {['suspended', 'cancelled'].includes(tenant.status)
+                          ? <Button variant="live" onClick={() => handleActivate(tenant)}>{tenant.status === 'cancelled' ? '▶ Reopen' : '▶ Activate'}</Button>
+                          : <Button variant="warn" onClick={() => handleSuspend(tenant)}>⏸ Suspend</Button>}
+                        <Button variant="live" onClick={() => setClientModal(tenant)}>Edit</Button>
+                        <Button variant="system" onClick={() => generateInvite(tenant)}>🔗 Invite</Button>
+                        {isSuperAdmin && tenant.status !== 'cancelled' && <Button variant="danger" onClick={() => handleCloseClient(tenant)}>Close account</Button>}
+                        {isSuperAdmin && flowTemplates.length > 0 && (
+                          <div className="flex items-center gap-1">
+                            <select value={flowChoice[tenant._id] || flowTemplates[0].id} onChange={e => setFlowChoice(prev => ({ ...prev, [tenant._id]: e.target.value }))}
+                              title="Industry flow template" aria-label={`Flow template for ${tenant.businessName}`}
+                              className="min-h-[44px] max-w-[180px] cursor-pointer rounded-lg border border-moss/35 bg-moss/15 px-2 text-xs text-sage focus:outline-none">
+                              {flowTemplates.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                            </select>
+                            <Button variant="live" onClick={() => handleAllocateFlow(tenant)} title="Allocate this flow as the client's live bot">⚡ Allocate</Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          ))}
+              );
+            })}
           <Pagination
             currentPage={clientsPage}
             totalPages={Math.ceil(clientsFilter.filtered.length / ITEMS_PER_PAGE)}

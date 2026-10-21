@@ -49,6 +49,7 @@ import ClientsSection from '../components/superadmin/ClientsSection';
 import UsersSection from '../components/superadmin/UsersSection';
 import PlatformSection from '../components/superadmin/PlatformSection';
 import InviteModal from '../components/superadmin/InviteModal';
+import PageHeader from '../components/ui/PageHeader';
 
 // The colours, the navigation and the larger sections live in
 // ../components/superadmin/.
@@ -222,9 +223,9 @@ export default function SuperAdminDashboard() {
   // ── Loading ────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: c.bg, color: c.muted, fontFamily: "'Outfit', sans-serif" }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '40px', marginBottom: '16px' }}>🌿</div>
+      <div className="flex h-screen items-center justify-center bg-ground font-['Outfit',sans-serif] text-muted">
+        <div className="text-center">
+          <div className="mb-4 text-[40px]">🌿</div>
           <p>Loading platform data...</p>
         </div>
       </div>
@@ -233,7 +234,7 @@ export default function SuperAdminDashboard() {
 
   // ── Render ─────────────────────────────────────────────────
   return (
-    <div style={{ fontFamily: "'Outfit', sans-serif", minHeight: '100vh', background: c.bg, color: c.text, display: 'flex' }}>
+    <div className="flex min-h-screen bg-ground font-['Outfit',sans-serif] text-ink">
       <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Fraunces:ital,wght@0,700;0,900;1,700;1,900&display=swap" rel="stylesheet" />
       <style>{`
         *{box-sizing:border-box}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:${c.bg}}::-webkit-scrollbar-thumb{background:${c.moss};border-radius:2px}.nav-item-hover:hover{background:rgba(184,240,64,0.06)!important;color:${c.text}!important}.card-hover:hover{border-color:rgba(184,240,64,0.2)!important;transform:translateY(-2px)}.card-hover{transition:all 0.2s ease}
@@ -253,7 +254,9 @@ export default function SuperAdminDashboard() {
       />
 
       {/* Main content */}
-      <div className="main-content" style={{ marginLeft: sidebarOpen ? 220 : 64, flex: 1, minWidth: 0, padding: '32px', paddingTop: 96, transition: 'margin-left 0.2s ease', minHeight: '100vh' }}>
+      {/* "main-content" is the class the page's CSS above resets on a phone
+          (no sidebar margin, 12px padding, room for the menu button). */}
+      <div className={`main-content min-h-screen min-w-0 flex-1 px-8 pt-24 pb-8 transition-[margin-left] duration-200 ${sidebarOpen ? 'ml-[220px]' : 'ml-16'}`}>
 
         {/* ════════ DELIVERY ════════ */}
         {section === 'delivery' && <DeliveryTab />}
@@ -352,10 +355,7 @@ export default function SuperAdminDashboard() {
         {section === 'automation' && isSuperAdmin && (
           <SectionErrorBoundary name="Automation" onRetry={refetch}>
             <div>
-              <div style={{ marginBottom: 28 }}>
-                <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4 }}>Automation</h1>
-                <p style={{ color: c.muted, fontSize: 15 }}>AI sales agents, shadow drafts, and workflow-engine flows</p>
-              </div>
+              <PageHeader title="Automation" sub="AI sales agents, shadow drafts, and workflow-engine flows" />
               <AutomationPanel />
             </div>
           </SectionErrorBoundary>
@@ -373,7 +373,7 @@ export default function SuperAdminDashboard() {
       {leadDetailId && <LeadDetailModal leadId={leadDetailId} onClose={() => setLeadDetailId(null)} onUpdate={refetch} />}
       {clientModal !== null && <ClientModal tenant={clientModal} onClose={() => setClientModal(null)} onSaved={() => { setClientModal(null); refetch(); }} />}
       {approveModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/85 p-5">
           <ApproveModal user={approveModal} tenants={tenants} onClose={() => setApproveModal(null)} onApproved={() => { setApproveModal(null); refetch(); }} />
         </div>
       )}
