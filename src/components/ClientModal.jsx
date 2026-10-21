@@ -9,81 +9,20 @@
 // Added a new "Questions" section using QuestionEditor.jsx, wired to
 // customWorkflow.questions (already in the backend's allowed-fields
 // whitelist from an earlier fix, so this persists correctly).
-import { useState } from 'react';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { loadProducts } from '../config/plans';
 import api from '../api';
 import QuestionEditor from './QuestionEditor';
-
-const c = {
-  surface: '#0D110C', lime: '#B8F040', cyan: '#22d3ee',
-  amber: '#fbbf24', red: '#f87171', text: '#EEF0E8',
-  muted: '#8A9080', border: 'rgba(184,240,64,0.12)',
-  borderDim: 'rgba(255,255,255,0.06)',
-};
+import { c, iStyle, labelStyle } from './clientModal/styles';
+import EftDetails from './clientModal/EftDetails';
+import PaymentSplit from './clientModal/PaymentSplit';
+import Addons from './clientModal/Addons';
+import BotMessages from './clientModal/BotMessages';
 
 export default function ClientModal({ tenant, onClose, onSaved }) {
   const isNew = !tenant?._id;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  // "Set up payment split" — creates the tenant's Paystack subaccount
-  // from bank details, via the existing super-admin endpoints
-  // (/payments/banks, /payments/verify-account, /payments/subaccount/create).
-  const [splitOpen, setSplitOpen] = useState(false);
-  const [banks, setBanks] = useState([]);
-  const [split, setSplit] = useState({ bankCode: '', accountNumber: '' });
-  const [verifiedName, setVerifiedName] = useState('');
-  const [splitBusy, setSplitBusy] = useState(false);
-  const [splitMsg, setSplitMsg] = useState({ kind: '', text: '' });
-
-  const openSplit = async () => {
-    setSplitOpen(true);
-    if (banks.length) return;
-    try {
-      const res = await api.get('/payments/banks');
-      setBanks(res.data?.data?.banks || []);
-    } catch {
-      setSplitMsg({ kind: 'err', text: 'Could not load the bank list — try again.' });
-    }
-  };
-
-  const verifyAccount = async () => {
-    setSplitBusy(true); setSplitMsg({ kind: '', text: '' }); setVerifiedName('');
-    try {
-      const res = await api.post('/payments/verify-account', { accountNumber: split.accountNumber.trim(), bankCode: split.bankCode });
-      const name = res.data?.data?.account_name;
-      setVerifiedName(name || '');
-      setSplitMsg(name
-        ? { kind: 'ok', text: `Account holder: ${name}` }
-        : { kind: 'err', text: 'Account found but no name returned — double-check the details.' });
-    } catch (e) {
-      setSplitMsg({ kind: 'err', text: e.response?.data?.message || 'Could not verify account. Check the details.' });
-    } finally {
-      setSplitBusy(false);
-    }
-  };
-
-  const createSplit = async () => {
-    setSplitBusy(true); setSplitMsg({ kind: '', text: '' });
-    try {
-      const res = await api.post('/payments/subaccount/create', {
-        tenantId: tenant._id,
-        businessName: form.businessName,
-        bankCode: split.bankCode,
-        accountNumber: split.accountNumber.trim(),
-      });
-      const code = res.data?.data?.subaccount_code;
-      // Backend already wrote the tenant fields (incl. subaccountActive);
-      // mirror the code into the form so what's on screen matches.
-      if (code) set('paystackSubaccount', code);
-      setSplitMsg({ kind: 'ok', text: `Split created — ${code}. Payments now settle to this bank automatically.` });
-      setVerifiedName('');
-    } catch (e) {
-      setSplitMsg({ kind: 'err', text: e.response?.data?.message || 'Could not create the split.' });
-    } finally {
-      setSplitBusy(false);
-    }
-  };
   const [form, setForm] = useState({
     businessName:   tenant?.businessName   || '',
     brandName:      tenant?.brandName      || '',
@@ -162,8 +101,6 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
     (form.eft?.bankName?.trim() || form.eft?.branchCode?.trim())
   );
 
-  const iStyle = { width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid ' + c.borderDim, borderRadius: '10px', color: c.text, fontSize: '14px', outline: 'none', fontFamily: 'inherit', marginBottom: '14px' };
-  const labelStyle = { color: c.muted, fontSize: '12px', marginBottom: '6px', display: 'block' };
 
   const handleSave = async () => {
     if (!form.businessName) { setError('Business name is required'); return; }
@@ -274,138 +211,9 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
         <p style={{ color: c.muted, fontSize: '12px', marginBottom: '8px' }}>The client's Paystack subaccount code (ACCT_...). Payments split to their bank automatically. Leave blank to keep the current value.</p>
         <input value={form.paystackSubaccount || ''} onChange={e => set('paystackSubaccount', e.target.value)} placeholder="ACCT_xxxxxxxxxxxx" style={iStyle} />
 
-        {/* ── Customer-facing EFT details ────────────────────────────
-            NOT the subaccount above. That is where Paystack pays the client
-            OUT; this is where their customers pay IN. Separate on purpose:
-            they are often the same account and are not always, and
-            publishing the wrong one is not noticed until the money is gone.
+        <EftDetails form={form} setEft={setEft} eftComplete={eftComplete} />
 
-            Here rather than in a terminal script because this is a setting an
-            owner should be able to see, check and change — and because the
-            live preview below is the read-back that makes a wrong digit
-            catchable before it reaches a customer. */}
-        <div style={{ border: '1px solid ' + c.borderDim, borderRadius: '12px', padding: '14px', marginBottom: '16px' }}>
-          <label style={{ ...labelStyle, marginBottom: '2px', color: c.text, fontSize: '13px', fontWeight: 600 }}>
-            Banking details (EFT)
-          </label>
-          <p style={{ color: c.muted, fontSize: '12px', marginBottom: '12px' }}>
-            Sent alongside every payment link, so customers who won't tap a link can pay by EFT instead.
-            These are the details customers pay INTO — not the Paystack payout account above.
-          </p>
-
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={Boolean(form.eft?.enabled)}
-              onChange={e => setEft('enabled', e.target.checked)}
-              style={{ width: '16px', height: '16px', accentColor: c.lime, cursor: 'pointer' }}
-            />
-            <span style={{ color: c.text, fontSize: '13px' }}>Offer EFT as a payment option</span>
-          </label>
-
-          <label style={labelStyle}>Bank</label>
-          <input value={form.eft?.bankName || ''} onChange={e => setEft('bankName', e.target.value)} placeholder="Nedbank" style={iStyle} />
-
-          <label style={labelStyle}>Account name</label>
-          <input value={form.eft?.accountName || ''} onChange={e => setEft('accountName', e.target.value)} placeholder="YOUR COMPANY (PTY) LTD" style={iStyle} />
-
-          <label style={labelStyle}>Account number</label>
-          <input
-            value={form.eft?.accountNumber || ''}
-            onChange={e => setEft('accountNumber', e.target.value)}
-            placeholder="1234567890"
-            inputMode="numeric"
-            style={{
-              ...iStyle,
-              marginBottom: '4px',
-              // Tabular figures so a repeated or missing digit is visible.
-              fontVariantNumeric: 'tabular-nums',
-              letterSpacing: '0.06em',
-              borderColor: form.eft?.accountNumber && !/^\d{6,}$/.test(form.eft.accountNumber.replace(/\s/g, ''))
-                ? c.red : c.borderDim,
-            }}
-          />
-          {form.eft?.accountNumber && !/^\d{6,}$/.test(form.eft.accountNumber.replace(/\s/g, '')) && (
-            <p style={{ color: c.red, fontSize: '12px', marginBottom: '10px' }}>
-              Digits only, and at least 6 — check this against your bank statement.
-            </p>
-          )}
-
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Branch code</label>
-              <input value={form.eft?.branchCode || ''} onChange={e => setEft('branchCode', e.target.value)} placeholder="198765" inputMode="numeric" style={iStyle} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Account type</label>
-              <input value={form.eft?.accountType || ''} onChange={e => setEft('accountType', e.target.value)} placeholder="CA / Savings" style={iStyle} />
-            </div>
-          </div>
-
-          {/* The read-back. A wrong digit is only catchable if you see it in
-              the shape the customer will. */}
-          {form.eft?.enabled && (
-            eftComplete ? (
-              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid ' + c.borderDim, borderRadius: '10px', padding: '12px' }}>
-                <p style={{ color: c.muted, fontSize: '11px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  What the customer receives
-                </p>
-                <pre style={{ color: c.text, fontSize: '12.5px', lineHeight: 1.55, whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'inherit' }}>
-{`🏦 Prefer an EFT? Pay straight into our account:
-
-Bank: ${form.eft.bankName || '—'}
-Account name: ${form.eft.accountName}
-Account no: ${form.eft.accountNumber}${form.eft.branchCode ? `
-Branch code: ${form.eft.branchCode}` : ''}${form.eft.accountType ? `
-Account type: ${form.eft.accountType}` : ''}
-Amount: R149
-Reference: INV-2026-00028
-
-Send the proof of payment here and we'll get you going. 👍`}
-                </pre>
-              </div>
-            ) : (
-              <p style={{ color: c.amber, fontSize: '12px', margin: 0 }}>
-                Account name, account number and a bank or branch code are all needed before this can be sent —
-                incomplete details are never shown to a customer.
-              </p>
-            )
-          )}
-        </div>
-
-        {!isNew && !splitOpen && (
-          <button type="button" onClick={openSplit} style={{ background: 'none', border: '1px dashed ' + c.border, borderRadius: '10px', color: c.lime, fontSize: '13px', padding: '9px 14px', cursor: 'pointer', marginBottom: '14px', fontFamily: 'inherit' }}>
-            + Set up new payment split (create subaccount from bank details)
-          </button>
-        )}
-        {isNew && (
-          <p style={{ color: c.muted, fontSize: '12px', marginBottom: '14px' }}>Save the client first to set up a new payment split.</p>
-        )}
-        {splitOpen && (
-          <div style={{ border: '1px solid ' + c.borderDim, borderRadius: '12px', padding: '14px', marginBottom: '14px' }}>
-            <label style={labelStyle}>Bank</label>
-            <select value={split.bankCode} onChange={e => { setSplit(s => ({ ...s, bankCode: e.target.value })); setVerifiedName(''); }} style={{ ...iStyle, cursor: 'pointer' }}>
-              <option value="">Select a bank…</option>
-              {banks.map(b => <option key={b.code + b.name} value={b.code}>{b.name}</option>)}
-            </select>
-            <label style={labelStyle}>Account Number</label>
-            <input value={split.accountNumber} onChange={e => { setSplit(s => ({ ...s, accountNumber: e.target.value })); setVerifiedName(''); }} placeholder="1234567890" style={iStyle} />
-            {splitMsg.text && (
-              <p style={{ color: splitMsg.kind === 'ok' ? c.lime : c.red, fontSize: '13px', marginBottom: '10px' }}>{splitMsg.text}</p>
-            )}
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button type="button" onClick={verifyAccount} disabled={splitBusy || !split.bankCode || !split.accountNumber.trim()}
-                style={{ flex: 1, padding: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid ' + c.borderDim, borderRadius: '10px', color: c.text, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', opacity: splitBusy || !split.bankCode || !split.accountNumber.trim() ? 0.5 : 1 }}>
-                {splitBusy ? 'Working…' : '1. Verify account'}
-              </button>
-              {/* Create only unlocks after a successful verify — the name check is the typo guard before money starts settling to this account. */}
-              <button type="button" onClick={createSplit} disabled={splitBusy || !verifiedName}
-                style={{ flex: 1, padding: '10px', background: verifiedName ? c.lime : 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '10px', color: verifiedName ? '#0D110C' : c.muted, fontSize: '13px', fontWeight: 600, cursor: verifiedName ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
-                2. Create split
-              </button>
-            </div>
-          </div>
-        )}
+        <PaymentSplit tenant={tenant} isNew={isNew} businessName={form.businessName} onSubaccount={(code) => set('paystackSubaccount', code)} />
 
         <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginBottom: '12px', marginTop: '8px' }}>Plan & Status</p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -462,26 +270,7 @@ Send the proof of payment here and we'll get you going. 👍`}
           </div>
         </div>
 
-        {/* NEW: Add-ons — per-tenant paid top-ups, independent of plan.
-            This is what lets an R99 tenant unlock, say, invoicing without
-            moving to a whole new plan. See hasFeature() in the backend's
-            config/planLimits.js for how these combine with the plan's
-            own included features. */}
-        <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '4px' }}>Add-ons</p>
-        <p style={{ color: c.muted, fontSize: '12px', marginBottom: '10px' }}>Paid top-ups this client has bought, on top of whatever their plan already includes.</p>
-        <div style={{ background: c.surface, borderRadius: '12px', padding: '14px 16px', border: '1px solid ' + c.borderDim, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
-          {[
-            { key: 'payments',  label: 'Payments' },
-            { key: 'invoicing', label: 'Invoicing' },
-            { key: 'ownNumber', label: 'Own WhatsApp Number' },
-            { key: 'extraFlow', label: 'Extra Flow' },
-          ].map(({ key, label }) => (
-            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input type="checkbox" id={'addon-' + key} checked={form.addons[key]} onChange={() => toggleAddon(key)} style={{ cursor: 'pointer', accentColor: c.lime, width: '16px', height: '16px' }} />
-              <label htmlFor={'addon-' + key} style={{ color: c.text, fontSize: '14px', cursor: 'pointer' }}>{label}</label>
-            </div>
-          ))}
-        </div>
+        <Addons addons={form.addons} toggleAddon={toggleAddon} />
 
         <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '12px' }}>Workflow</p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -498,21 +287,7 @@ Send the proof of payment here and we'll get you going. 👍`}
           </div>
         </div>
 
-        {/* Bot Messages — the greeting/qualified/rejected copy the bot
-            actually sends (tenant.customMessages). Leave blank to use
-            the industry template defaults. */}
-        <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '12px' }}>
-          Bot Messages
-        </p>
-        <p style={{ color: c.muted, fontSize: '12px', marginBottom: '10px' }}>
-          What the bot says at each stage. Blank = the built-in template for this industry. You can use <code style={{ color: c.text }}>{'{{name}}'}</code> and <code style={{ color: c.text }}>{'{{brand}}'}</code>.
-        </p>
-        <label style={labelStyle}>Welcome / Greeting (first message a customer gets)</label>
-        <textarea value={botMsgs.welcome} onChange={e => setMsg('welcome', e.target.value)} rows={5} placeholder="👋 Welcome to {{brand}}! …" style={{ ...iStyle, resize: 'vertical', minHeight: '90px' }} />
-        <label style={labelStyle}>Qualified (after all questions answered)</label>
-        <textarea value={botMsgs.qualified} onChange={e => setMsg('qualified', e.target.value)} rows={3} placeholder="Perfect, thanks {{name}}! ✅ …" style={{ ...iStyle, resize: 'vertical', minHeight: '60px' }} />
-        <label style={labelStyle}>Rejected / Not a fit (optional)</label>
-        <textarea value={botMsgs.rejected} onChange={e => setMsg('rejected', e.target.value)} rows={2} placeholder="No problem at all! …" style={{ ...iStyle, resize: 'vertical', minHeight: '48px' }} />
+        <BotMessages botMsgs={botMsgs} setMsg={setMsg} />
 
         {/* NEW: Custom Questions section — the actual fix. Every
             question's answer type is now a deliberate choice made
