@@ -1,1 +1,50 @@
+/* JetBrains Mono carries every figure in the console. This must stay the
+   first line: CSS drops an @import that follows any other rule. */
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap");
 @import "tailwindcss";
+
+/*
+ * The console's tokens (FRONTEND-UPGRADE.md step 1). Every value here is the
+ * same as src/utils/theme.js, so a screen moved to classes looks exactly like
+ * one still on inline styles, and screens can move one at a time. theme.js
+ * goes when the last inline style does (step 5), not before.
+ *
+ * Deliberately NOT here yet: --font-sans and any body rule. Either would
+ * change every screen at once, the public Home.jsx included, which is the
+ * opposite of migrating one screen per commit.
+ */
+@theme {
+  /* ground: darkest to lightest */
+  --color-ground:    #06080A;
+  --color-surface:   #0D110C;
+  --color-card:      #121710;
+  --color-raise:     #171D14;   /* new: hover / active rows */
+
+  /* ink */
+  --color-ink:       #EEF0E8;
+  --color-dim:       #C9D2C0;   /* new: body copy, table cells */
+  --color-muted:     #8A9080;
+
+  /* the one signal colour */
+  --color-lime:      #B8F040;
+
+  /* status: one meaning each, never decorative */
+  --color-emerald:   #34d399;   /* paid, succeeded */
+  --color-cyan:      #22d3ee;   /* system-owned fact */
+  --color-amber:     #fbbf24;   /* needs a human */
+  --color-red:       #f87171;   /* failed, refused */
+
+  /* secondary data */
+  --color-earth:     #C4873A;
+  --color-moss:      #4A6741;
+  --color-sage:      #7A9E6E;
+  --color-orange:    #f97316;
+
+  /* lines: theme.js borderDim and border, exactly */
+  --color-edge:      rgba(255,255,255,0.06);
+  --color-edge-live: rgba(184,240,64,0.12);
+
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+
+  --radius-card: 10px;
+}
