@@ -7,7 +7,7 @@ import LeadDetailModal from '../components/LeadDetailModal';
 import AssignModal from '../components/AssignModal';
 import AdminApproveModal from '../components/AdminApproveModal';
 import useMediaQuery, { MOBILE_QUERY } from '../hooks/useMediaQuery';
-import ChatTab from '../components/ChatTab';
+import InboxView from '../components/inbox/InboxView';
 import DeliveryTab from '../components/DeliveryTab';
 import Button from '../components/ui/Button';
 import { getStoredUser, ADMIN_DASHBOARD_KEY, NO_DATA, loadAdminData } from '../components/admin/adminData';
@@ -177,8 +177,12 @@ export default function AdminDashboard() {
             from here. */}
         {tab === 'delivery' && <DeliveryTab />}
 
+        {/* The owner's chat is the same inbox as the platform's WhatsApp API
+            page (2026-10-21, Ayanda: "give them the new inbox"): every
+            conversation, kept fresh while one is open, with its stage and
+            notes beside it. Scoped to their own business by the API. */}
         {tab === 'chat' && (
-          <ChatTab conversations={activeConversations} onRefresh={loadData} onExit={() => setTab('overview')} />
+          <InboxView scope="" showBusiness={false} onOpenRecord={(id) => setLeadDetailId(id)} />
         )}
 
         {tab === 'leads' && (

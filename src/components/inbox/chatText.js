@@ -1,5 +1,5 @@
-// Words and times for a chat: shared by the WhatsApp API inbox and ChatTab
-// (moved from ChatTab.jsx). Plain values only, so the component files keep
+// Words and times for a chat (moved from ChatTab.jsx, which the inbox
+// replaced everywhere on 2026-10-21). Plain values only, so the component files keep
 // React's fast refresh.
 
 export const initials = (name, phone) => {
