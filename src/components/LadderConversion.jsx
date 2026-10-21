@@ -18,11 +18,13 @@
 // findings, and the second is usually the actionable one. The server sends
 // null for an unquoted rung and this renders "—", so the two never look alike.
 
+import Panel from './ui/Panel';
+import BarRow from './ui/BarRow';
+
 const rand = (n) =>
   'R' + (n || 0).toLocaleString('en-ZA', { maximumFractionDigits: 0 });
 
-export default function LadderConversion({ query, colors }) {
-  const c = colors;
+export default function LadderConversion({ query }) {
   const data = query?.data;
   const rungs = data?.rungs;
 
@@ -32,30 +34,15 @@ export default function LadderConversion({ query, colors }) {
   if (!anyActivity) return null; // nothing quoted in the window — no chart to draw
 
   return (
-    <div style={{ marginBottom: 18 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: c.text }}>Ladder conversion</h3>
-        <span style={{ fontSize: 12, color: c.muted }}>quoted vs won, {data.windowDays} days</span>
-      </div>
-
-      <div style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 12, padding: '10px 14px' }}>
+    <Panel title="Ladder conversion" meta={`quoted vs won, ${data.windowDays} days`}>
+      <div className="rounded-xl border border-edge bg-card px-3.5 py-2.5">
         {rungs.map((r) => (
-          <div key={r.tier} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0' }}>
-            <span style={{ flex: '0 0 78px', fontSize: 13, color: r.quoted ? c.text : c.muted }}>{r.label}</span>
-
-            <div style={{ flex: 1, minWidth: 40, height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 999, overflow: 'hidden' }}>
-              {r.winRate !== null && r.winRate !== undefined && (
-                <div style={{ width: r.winRate + '%', height: '100%', background: c.lime, borderRadius: 999 }} />
-              )}
-            </div>
-
-            <span style={{ flex: '0 0 42px', textAlign: 'right', fontSize: 12, fontWeight: 700, color: r.winRate === null || r.winRate === undefined ? c.muted : c.lime }}>
-              {r.winRate === null || r.winRate === undefined ? '—' : r.winRate + '%'}
-            </span>
-            <span style={{ flex: '0 0 96px', textAlign: 'right', fontSize: 11, color: c.muted }}>
-              {r.quoted ? `${r.won}/${r.quoted} · ${rand(r.wonValue)}` : 'not offered'}
-            </span>
-          </div>
+          <BarRow
+            key={r.tier}
+            label={r.label}
+            pct={r.winRate}
+            meta={r.quoted ? `${r.won}/${r.quoted} · ${rand(r.wonValue)}` : 'not offered'}
+          />
         ))}
       </div>
 
@@ -63,11 +50,11 @@ export default function LadderConversion({ query, colors }) {
           rounding error. Shown only when non-zero, and worded as something to
           go and fix rather than a chart footnote. */}
       {data.unmatched?.quoted > 0 && (
-        <div style={{ marginTop: 8, fontSize: 11, color: c.amber }}>
+        <div className="mt-2 text-[11px] text-amber">
           {data.unmatched.quoted} invoice{data.unmatched.quoted === 1 ? '' : 's'} couldn't be matched to a
           catalog product — likely renamed since. Not counted in any rung above.
         </div>
       )}
-    </div>
+    </Panel>
   );
 }

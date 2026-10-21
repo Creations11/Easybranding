@@ -82,10 +82,10 @@ export function ReportsView({ scope, colors }) {
   const ladder = useLadderConversion(scope);
   return (
     <div>
-      <SalesFunnel query={funnel} colors={colors} />
+      <SalesFunnel query={funnel} />
       <RevenueTrend query={money} colors={colors} />
       <LeadTrend query={trend} colors={colors} />
-      <LadderConversion query={ladder} colors={colors} />
+      <LadderConversion query={ladder} />
     </div>
   );
 }
