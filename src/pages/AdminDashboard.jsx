@@ -3,18 +3,15 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 import { useAuth } from '../context/auth';
-import SuperAdminPanel from '../components/SuperAdminPanel';
 import LeadDetailModal from '../components/LeadDetailModal';
 import AssignModal from '../components/AssignModal';
 import AdminApproveModal from '../components/AdminApproveModal';
-import AdminClientModal from '../components/AdminClientModal';
 import useMediaQuery, { MOBILE_QUERY } from '../hooks/useMediaQuery';
 import ChatTab from '../components/ChatTab';
 import DeliveryTab from '../components/DeliveryTab';
 import Button from '../components/ui/Button';
 import { getStoredUser, ADMIN_DASHBOARD_KEY, NO_DATA, loadAdminData } from '../components/admin/adminData';
 import ChangePasswordModal from '../components/admin/ChangePasswordModal';
-import InviteLinkModal from '../components/admin/InviteLinkModal';
 import StatsStrip from '../components/admin/StatsStrip';
 import OverviewTab from '../components/admin/OverviewTab';
 import LeadsTab from '../components/admin/LeadsTab';
@@ -22,7 +19,6 @@ import FunnelTab from '../components/admin/FunnelTab';
 import ViewingsTab from '../components/admin/ViewingsTab';
 import MessagesTab from '../components/admin/MessagesTab';
 import AlertsTab from '../components/admin/AlertsTab';
-import ClientsTab from '../components/admin/ClientsTab';
 import UsersTab from '../components/admin/UsersTab';
 
 // The pieces live in ../components/admin/: the data loader (adminData.js),
@@ -31,11 +27,8 @@ import UsersTab from '../components/admin/UsersTab';
 // ── Main Admin Dashboard ──────────────────────────────────────
 export default function AdminDashboard() {
   const [assignModal,         setAssignModal]         = useState(null);
-  const [clientModal,         setClientModal]         = useState(null);
   const [approveModal,        setApproveModal]        = useState(null);
   const [leadDetailId,        setLeadDetailId]        = useState(null);
-  const [inviteModal,         setInviteModal]         = useState(null);
-  const [inviteUrl,           setInviteUrl]           = useState('');
   const [showPasswordModal,   setShowPasswordModal]   = useState(false);
   const [tab, setTab] = useState('overview');
   const isMobile = useMediaQuery(MOBILE_QUERY);
@@ -44,18 +37,15 @@ export default function AdminDashboard() {
 
   const { signOut } = useAuth();
   const currentUser = getStoredUser();
-  const isSuperAdmin = currentUser.role === 'super_admin';
   const isAdmin      = currentUser.role === 'admin';
   const userTenantId = currentUser.tenantId || null;
 
-  const [clientSearch,        setClientSearch]        = useState('');
-  const [clientFilter,        setClientFilter]        = useState('all');
 
   const qc = useQueryClient();
   const dash = useQuery({ queryKey: ADMIN_DASHBOARD_KEY, queryFn: loadAdminData });
   const {
     overview, activeConversations, qualifiedLeads, rejectedLeads, closedLeads,
-    alerts, agents, clients, clientStats, pendingUsers, allUsers, tenants,
+    alerts, agents, pendingUsers, allUsers, tenants,
     stages, recentMessages, viewingRequests, panelError,
   } = dash.data ?? NO_DATA;
   const loading = dash.isPending;
@@ -82,30 +72,6 @@ export default function AdminDashboard() {
   const patch = (field, update) =>
     qc.setQueryData(ADMIN_DASHBOARD_KEY, (prev) => (prev ? { ...prev, [field]: update(prev[field]) } : prev));
 
-  const handleClientSave = (tenant) => {
-    patch('clients', prev => {
-      const exists = prev.find(c => c._id === tenant._id);
-      return exists ? prev.map(c => c._id === tenant._id ? tenant : c) : [tenant, ...prev];
-    });
-    setClientModal(null);
-  };
-
-  // Closes, never erases (2026-10-08): the API keeps the account and needs
-  // the business name typed back. See SuperAdminDashboard's handleCloseClient.
-  const handleDeleteClient = async (client) => {
-    const typed = window.prompt(
-      `Close ${client.businessName}'s account? Their customers get no reply and they are not billed; everything is kept.\n\nType the business name to confirm:`
-    );
-    if (typed == null) return;
-    try {
-      const res = await api.delete(`/tenants/${client._id}`, { data: { confirmName: typed } });
-      patch('clients', prev => prev.map(c => c._id === client._id ? { ...c, status: 'cancelled' } : c));
-      window.alert(res.data?.message || 'Closed.');
-    } catch (err) {
-      window.alert(err.response?.data?.message || 'Could not close the account. Nothing was changed.');
-    }
-  };
-
   const handleRejectUser = async (user) => {
     if (!window.confirm(`Reject ${user.fullName}? Their account will be deactivated.`)) return;
     await api.post(`/users/${user._id}/reject`, { reason: 'Application rejected by admin' });
@@ -122,12 +88,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const filteredClients = clients.filter(c => {
-    const ms = !clientSearch || c.businessName?.toLowerCase().includes(clientSearch.toLowerCase()) || c.contactEmail?.toLowerCase().includes(clientSearch.toLowerCase());
-    const mf = clientFilter === 'all' || c.status === clientFilter;
-    return ms && mf;
-  });
-
   if (loading) return <div className="p-[140px] text-center text-muted">Loading Admin Operations Center...</div>;
   if (error)   return <div className="p-[140px] text-red">{error}</div>;
 
@@ -135,7 +95,6 @@ export default function AdminDashboard() {
     'chat', 'overview', 'leads',
     'funnel', 'viewings', 'messages', 'alerts',
     ...(hasDelivery ? ['delivery'] : []),
-    ...(isSuperAdmin ? ['clients', 'users', 'platform'] : []),
     ...(isAdmin ? ['users'] : []),
   ];
 
@@ -164,10 +123,10 @@ export default function AdminDashboard() {
         <div className="mb-10 flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <h1 className="mb-2 text-[clamp(24px,5vw,48px)] font-black">
-              {isSuperAdmin ? 'Admin Control Center' : 'Operations Dashboard'}
+              Operations Dashboard
             </h1>
             <p className="text-[clamp(14px,2.5vw,20px)] text-muted">
-              {isSuperAdmin ? 'Real-time Platform Operations & Oversight' : 'Your agency\'s live WhatsApp pipeline'}
+              Your agency's live WhatsApp pipeline
             </p>
             {currentUser.email && (
               <p className="mt-1.5 text-[13px] text-muted">
@@ -190,7 +149,7 @@ export default function AdminDashboard() {
 
         {/* Stats */}
         {overview && (
-          <StatsStrip overview={overview} clients={clients} clientStats={clientStats} pendingUsers={pendingUsers} isSuperAdmin={isSuperAdmin} />
+          <StatsStrip overview={overview} pendingUsers={pendingUsers} />
         )}
 
         {/* Tabs */}
@@ -241,36 +200,23 @@ export default function AdminDashboard() {
         {/* ── Alerts ─────────────────────────────────────────── */}
         {tab === 'alerts' && <AlertsTab alerts={alerts} />}
 
-        {/* ── Clients ────────────────────────────────────────── */}
-        {tab === 'clients' && isSuperAdmin && (
-          <ClientsTab
-            clients={clients} clientStats={clientStats} filteredClients={filteredClients}
-            clientSearch={clientSearch} setClientSearch={setClientSearch} clientFilter={clientFilter} setClientFilter={setClientFilter}
-            setClientModal={setClientModal} setInviteUrl={setInviteUrl} setInviteModal={setInviteModal}
-            loadData={loadData} handleDeleteClient={handleDeleteClient}
-          />
-        )}
 
         {/* ── Users ──────────────────────────────────────────── */}
         {tab === 'users' && (
           <UsersTab
-            pendingUsers={pendingUsers} allUsers={allUsers} isSuperAdmin={isSuperAdmin} userTenantId={userTenantId}
+            pendingUsers={pendingUsers} allUsers={allUsers} userTenantId={userTenantId}
             currentUser={currentUser} setApproveModal={setApproveModal} handleRejectUser={handleRejectUser} loadData={loadData}
           />
         )}
 
-        {/* ── Platform — super_admin only ─────────────────────── */}
-        {tab === 'platform' && isSuperAdmin && <SuperAdminPanel />}
 
       </div>
 
       {assignModal  && <AssignModal  lead={assignModal}   agents={agents}   onClose={() => setAssignModal(null)}  onAssigned={() => { setAssignModal(null);  loadData(); }} />}
-      {clientModal  && <AdminClientModal  client={clientModal._id ? clientModal : null} onClose={() => setClientModal(null)}  onSave={handleClientSave} />}
       {approveModal && <AdminApproveModal user={approveModal}  tenants={tenants} onClose={() => setApproveModal(null)} onApproved={() => { setApproveModal(null); loadData(); }} />}
       {leadDetailId && <LeadDetailModal leadId={leadDetailId} onClose={() => setLeadDetailId(null)} onUpdate={loadData} />}
 
       {/* Invite Link Modal */}
-      {inviteModal && <InviteLinkModal client={inviteModal} inviteUrl={inviteUrl} onClose={() => setInviteModal(null)} />}
     </div>
   );
 }

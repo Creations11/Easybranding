@@ -22,7 +22,7 @@ export const ADMIN_DASHBOARD_KEY = ['admin-dashboard'];
 // What the page shows before anything has loaded, and after a total failure.
 export const NO_DATA = {
   overview: null, activeConversations: [], qualifiedLeads: [], rejectedLeads: [],
-  closedLeads: [], alerts: [], agents: [], clients: [], clientStats: null,
+  closedLeads: [], alerts: [], agents: [],
   pendingUsers: [], allUsers: [], tenants: [], stages: [], recentMessages: [],
   viewingRequests: [], panelError: '',
 };
@@ -38,17 +38,10 @@ export async function loadAdminData() {
   // That is exactly what happened to every client (2026-08-07):
   // /tenants/stats is platform-wide (all tenants, MRR) and super_admin-only
   // by design, so it correctly 403s a tenant admin — and that one deliberate
-  // 403 took down the whole dashboard for every paying client. It is now
-  // only requested by users who can actually see platform data, and any
-  // other failure degrades a single panel instead of the page.
-  const wantsPlatformStats = ['super_admin', 'eb_manager'].includes(getStoredUser().role);
-
-  // Kicked off first so it still runs in parallel, but kept OUT of the
-  // results tally below: a client skips it entirely, and a skipped call must
-  // not count as a success when deciding whether everything failed.
-  const statsPromise = wantsPlatformStats
-    ? api.get('/tenants/stats').catch(() => null)
-    : null;
+  // 403 took down the whole dashboard for every paying client. It was then
+  // only requested for the platform roles, and since 2026-10-21 not at all:
+  // this page is role=admin only (App.jsx), so no platform role ever loads
+  // it. Any other failure degrades a single panel instead of the page.
 
   const results = await Promise.allSettled([
     api.get('/admin-ops/overview'),
@@ -69,7 +62,6 @@ export async function loadAdminData() {
   const [ovRes, activeRes, qualRes, rejRes, closedRes, alertRes, agentRes,
          clientRes, pendingRes, usersRes, stagesRes, messagesRes,
          viewingsRes] = results.map(r => (r.status === 'fulfilled' ? r.value : null));
-  const statsRes = statsPromise ? await statsPromise : null;
 
   // Only a wholesale failure is worth blanking the page for — a dead API or
   // an expired token fails every call, and a dashboard of empty panels with
@@ -89,8 +81,6 @@ export async function loadAdminData() {
     closedLeads: closedRes?.data.data?.leads || [],
     alerts: alertRes?.data.data?.alerts || [],
     agents: agentRes?.data.data?.agents || [],
-    clients: clientRes?.data.data?.tenants || [],
-    clientStats: statsRes?.data.data?.stats ?? null,
     pendingUsers: pendingRes?.data.data?.users || [],
     allUsers: usersRes?.data.data?.users || [],
     tenants: clientRes?.data.data?.tenants || [],

@@ -93,8 +93,9 @@ describe('AdminDashboard', () => {
   })
 
   // A tenant admin must never request platform-wide stats: /tenants/stats is
-  // super_admin-only and its 403 was the original outage.
-  it('does not request /tenants/stats for a plain admin, but does for super_admin', async () => {
+  // super_admin-only and its 403 was the original outage. Since 2026-10-21
+  // this page asks for it for nobody: /admin is role=admin only (App.jsx).
+  it('never requests /tenants/stats, whatever the stored role', async () => {
     seedUser({ role: 'admin' })
     mockApiGet()
     render(<AdminDashboard />)
@@ -106,7 +107,8 @@ describe('AdminDashboard', () => {
     seedUser({ role: 'super_admin' })
     mockApiGet()
     render(<AdminDashboard />)
-    await waitFor(() => expect(api.get).toHaveBeenCalledWith('/tenants/stats'))
+    await waitFor(() => expect(screen.queryByText('Loading Admin Operations Center...')).not.toBeInTheDocument())
+    expect(api.get).not.toHaveBeenCalledWith('/tenants/stats')
   })
 
   it('renders Overview stats once all 14 calls resolve', async () => {
@@ -124,15 +126,18 @@ describe('AdminDashboard', () => {
     expect(screen.getByText('7')).toBeInTheDocument()
   })
 
-  it('shows the super_admin-only tabs (Clients/Users/Platform) only for that role', async () => {
+  // The Clients and Platform tabs were deleted on 2026-10-21: they showed only
+  // for super_admin, and /admin admits role=admin only, so nobody could open
+  // them. Platform staff manage clients from /superadmin.
+  it('has no Clients or Platform tab, even for a stored super_admin', async () => {
     seedUser({ role: 'super_admin' })
     mockApiGet()
 
     render(<AdminDashboard />)
 
     await waitFor(() => expect(screen.queryByText('Loading Admin Operations Center...')).not.toBeInTheDocument())
-    expect(screen.getByRole('button', { name: 'Clients' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Platform' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Clients' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Platform' })).not.toBeInTheDocument()
   })
 
   it('a plain admin sees Users but not Clients/Platform', async () => {

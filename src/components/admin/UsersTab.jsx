@@ -2,7 +2,7 @@ import api from '../../api';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 
-export default function UsersTab({ pendingUsers, allUsers, isSuperAdmin, userTenantId, currentUser, setApproveModal, handleRejectUser, loadData }) {
+export default function UsersTab({ pendingUsers, allUsers, userTenantId, currentUser, setApproveModal, handleRejectUser, loadData }) {
   return (
     <div>
       {/* Pending approvals — filter by tenant for admin */}
@@ -37,13 +37,11 @@ export default function UsersTab({ pendingUsers, allUsers, isSuperAdmin, userTen
 
       {/* All users — admin sees only their tenant's users */}
       {(() => {
-        const visibleUsers = isSuperAdmin
-          ? allUsers
-          : allUsers.filter(u => u.tenantId === userTenantId);
+        const visibleUsers = allUsers.filter(u => u.tenantId === userTenantId);
         return (
           <div>
             <h2 className="mb-4 text-xl">
-              {isSuperAdmin ? `All Users (${allUsers.length})` : `Your Team (${visibleUsers.length})`}
+              {`Your Team (${visibleUsers.length})`}
             </h2>
             {visibleUsers.map(user => (
               <div key={user._id} className="mb-2 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-edge bg-card px-6 py-4">
@@ -77,7 +75,6 @@ export default function UsersTab({ pendingUsers, allUsers, isSuperAdmin, userTen
                       <option value="borrower">borrower</option>
                       <option value="agent">agent</option>
                       <option value="admin">admin</option>
-                      {isSuperAdmin && <option value="super_admin">super_admin</option>}
                     </select>
                   )}
                 </div>
