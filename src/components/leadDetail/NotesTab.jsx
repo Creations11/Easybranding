@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useCrmActions, useLeadNotes, crmError } from '../../hooks/useCrm';
-import { t } from './tokens';
+import Button from '../ui/Button';
+import { Textarea } from '../ui/Field';
 
 // ── Notes ─────────────────────────────────────────────────────
 // Shared since 2026-10-08 (POST /admin-ops/crm/leads/:id/notes): everyone who
@@ -35,34 +36,34 @@ export default function NotesTab({ leadId }) {
   return (
     <div>
       {legacy && (
-        <div style={{ background: `${t.amber}12`, border: `1px solid ${t.amber}33`, borderRadius: 10, padding: '10px 12px', marginBottom: 12, fontSize: 12, color: t.amber }}>
+        <div className="mb-3 rounded-[10px] border border-amber/20 bg-amber/7 px-3 py-2.5 text-xs text-amber">
           A note saved only in this browser: “{legacy.slice(0, 160)}{legacy.length > 160 ? '…' : ''}”
-          <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-            <button onClick={() => save(legacy, () => { forgetLocalNote(leadId); setLegacy(null); })} disabled={busy} style={{ padding: '6px 12px', background: t.amber, color: '#080A06', border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 12 }}>Save it for everyone</button>
-            <button onClick={() => { forgetLocalNote(leadId); setLegacy(null); }} style={{ padding: '6px 12px', background: 'transparent', color: t.muted, border: `1px solid ${t.borderDim}`, borderRadius: 8, cursor: 'pointer', fontSize: 12 }}>Discard</button>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button variant="warn" onClick={() => save(legacy, () => { forgetLocalNote(leadId); setLegacy(null); })} disabled={busy}>Save it for everyone</Button>
+            <Button variant="ghost" onClick={() => { forgetLocalNote(leadId); setLegacy(null); }}>Discard</Button>
           </div>
         </div>
       )}
-      <textarea
+      <Textarea
         aria-label="New note"
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="What happened, what was agreed, what to do next…"
         rows={4}
-        style={{ width: '100%', boxSizing: 'border-box', padding: '12px', background: t.surface, border: `1px solid ${t.borderDim}`, borderRadius: '10px', color: t.text, fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }}
+        className="bg-ground"
       />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '8px 0 14px', gap: 8 }}>
-        <span style={{ color: problem ? t.red : t.muted, fontSize: 11 }}>{problem || 'Everyone who can see this lead sees its notes.'}</span>
-        <button onClick={() => save(text, () => setText(''))} disabled={busy || !text.trim()} style={{ padding: '8px 18px', background: text.trim() ? t.lime : `${t.lime}44`, color: '#080A06', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: text.trim() ? 'pointer' : 'not-allowed', fontSize: '13px' }}>
+      <div className="mt-2 mb-3.5 flex items-center justify-between gap-2">
+        <span className={`text-[11px] ${problem ? 'text-red' : 'text-muted'}`}>{problem || 'Everyone who can see this lead sees its notes.'}</span>
+        <Button variant="primary" onClick={() => save(text, () => setText(''))} disabled={busy || !text.trim()}>
           {busy ? 'Saving…' : 'Add note'}
-        </button>
+        </Button>
       </div>
-      {notesQ.isPending ? <p style={{ color: t.muted, fontSize: 13 }}>Loading notes…</p>
-        : (notesQ.data || []).length === 0 ? <p style={{ color: t.muted, fontSize: 13 }}>No notes yet.</p>
+      {notesQ.isPending ? <p className="text-[13px] text-muted">Loading notes…</p>
+        : (notesQ.data || []).length === 0 ? <p className="text-[13px] text-muted">No notes yet.</p>
           : notesQ.data.map((n) => (
-            <div key={n.id} style={{ background: t.surface, borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
-              <div style={{ color: t.text, fontSize: 13, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{n.text}</div>
-              <div style={{ color: t.muted, fontSize: 11, marginTop: 4 }}>{n.by || 'staff'} · {new Date(n.at).toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+            <div key={n.id} className="mb-2 rounded-[10px] bg-ground px-3 py-2.5">
+              <div className="whitespace-pre-wrap text-[13px] text-ink [overflow-wrap:anywhere]">{n.text}</div>
+              <div className="mt-1 text-[11px] text-muted">{n.by || 'staff'} · {new Date(n.at).toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
             </div>
           ))}
     </div>

@@ -1,4 +1,19 @@
-import { t } from './tokens';
+// The tone of a marker in the thread (a payment, an invoice, a pause), as
+// whole class names so Tailwind can see them.
+const MARKER_TONE = { good: 'text-lime', warn: 'text-orange', bad: 'text-red' };
+
+// Our side right on a lime-tinted bubble, theirs left on grey: the same as
+// the WhatsApp API inbox, so a conversation reads the same in both places.
+const bubble = (outbound) => `whitespace-pre-wrap px-3.5 py-2.5 text-[13px] leading-normal text-ink [overflow-wrap:anywhere] ${
+  outbound ? 'rounded-[14px_14px_4px_14px] border border-lime/20 bg-lime/10' : 'rounded-[14px_14px_14px_4px] bg-raise'
+}`;
+
+const Stamp = ({ at, outbound, manual }) => (
+  <div className={`mt-[3px] font-mono text-[10px] text-muted ${outbound ? 'text-right' : 'text-left'}`}>
+    {new Date(at).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
+    {manual && <span className="ml-1.5 text-orange">· manual</span>}
+  </div>
+);
 
 /** The thread: what was said and what happened, oldest first. A fragment, so
  *  each bubble stays a direct child of the modal's scrolling column. */
@@ -14,7 +29,7 @@ export default function Conversation({ events, timeline }) {
           and the webhook never landed. */}
       {events && (
         events.length === 0 ? (
-          <p style={{ color: t.muted, textAlign: 'center', marginTop: '40px' }}>Nothing recorded yet.</p>
+          <p className="mt-10 text-center text-muted">Nothing recorded yet.</p>
         ) : events.map((e, i) => {
           const isMessage = e.type === 'message_in' || e.type === 'message_out';
           const outbound = e.type === 'message_out';
@@ -22,35 +37,21 @@ export default function Conversation({ events, timeline }) {
           // Non-message events, and system notices, read as centred markers
           // in the flow — they are things that happened, not things said.
           if (!isMessage || e.system) {
-            const tone = { good: t.lime, warn: t.orange, bad: t.red }[e.tone] || t.muted;
             const label = isMessage ? (e.detail || '').replace('[SYSTEM] ', '') : e.title;
             return (
-              <div key={i} style={{ textAlign: 'center', width: '100%', alignSelf: 'center', margin: '2px 0' }}>
-                <span style={{
-                  fontSize: '11px', color: tone, background: t.borderDim,
-                  padding: '3px 12px', borderRadius: '999px', display: 'inline-block',
-                }}>
+              <div key={i} className="my-0.5 w-full self-center text-center">
+                <span className={`inline-block rounded-full bg-edge px-3 py-[3px] text-[11px] ${MARKER_TONE[e.tone] || 'text-muted'}`}>
                   {label}
-                  {!isMessage && e.detail && <span style={{ color: t.muted }}> · {e.detail}</span>}
+                  {!isMessage && e.detail && <span className="text-muted"> · {e.detail}</span>}
                 </span>
               </div>
             );
           }
 
           return (
-            <div key={i} style={{ alignSelf: outbound ? 'flex-end' : 'flex-start', maxWidth: '75%' }}>
-              <div style={{
-                padding: '10px 14px',
-                borderRadius: outbound ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                background: outbound ? '#005c4b' : '#1C1C19', color: t.text,
-                fontSize: '13px', lineHeight: '1.5', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
-              }}>
-                {e.detail}
-              </div>
-              <div style={{ fontSize: '10px', color: t.muted, marginTop: '3px', textAlign: outbound ? 'right' : 'left' }}>
-                {new Date(e.at).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
-                {e.manual && <span style={{ marginLeft: '6px', color: t.orange }}>· manual</span>}
-              </div>
+            <div key={i} className={`max-w-[75%] ${outbound ? 'self-end' : 'self-start'}`}>
+              <div className={bubble(outbound)}>{e.detail}</div>
+              <Stamp at={e.at} outbound={outbound} manual={e.manual} />
             </div>
           );
         })
@@ -59,22 +60,17 @@ export default function Conversation({ events, timeline }) {
       {/* Fallback for a backend that predates `events`. */}
       {!events && (
         timeline.length === 0 ? (
-          <p style={{ color: t.muted, textAlign: 'center', marginTop: '40px' }}>No messages yet.</p>
+          <p className="mt-10 text-center text-muted">No messages yet.</p>
         ) : timeline.map((msg, i) => (
-          <div key={i} style={{ alignSelf: msg.direction === 'outbound' ? 'flex-end' : 'flex-start', maxWidth: '75%' }}>
+          <div key={i} className={`max-w-[75%] ${msg.direction === 'outbound' ? 'self-end' : 'self-start'}`}>
             {msg.system ? (
-              <div style={{ textAlign: 'center', width: '100%', alignSelf: 'center' }}>
-                <span style={{ fontSize: '11px', color: t.muted, background: t.borderDim, padding: '3px 12px', borderRadius: '999px' }}>{msg.body.replace('[SYSTEM] ', '')}</span>
+              <div className="w-full self-center text-center">
+                <span className="rounded-full bg-edge px-3 py-[3px] text-[11px] text-muted">{msg.body.replace('[SYSTEM] ', '')}</span>
               </div>
             ) : (
               <>
-                <div style={{ padding: '10px 14px', borderRadius: msg.direction === 'outbound' ? '14px 14px 4px 14px' : '14px 14px 14px 4px', background: msg.direction === 'outbound' ? '#005c4b' : '#1C1C19', color: t.text, fontSize: '13px', lineHeight: '1.5', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-                  {msg.body}
-                </div>
-                <div style={{ fontSize: '10px', color: t.muted, marginTop: '3px', textAlign: msg.direction === 'outbound' ? 'right' : 'left' }}>
-                  {new Date(msg.timestamp).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
-                  {msg.manual && <span style={{ marginLeft: '6px', color: t.orange }}>· manual</span>}
-                </div>
+                <div className={bubble(msg.direction === 'outbound')}>{msg.body}</div>
+                <Stamp at={msg.timestamp} outbound={msg.direction === 'outbound'} manual={msg.manual} />
               </>
             )}
           </div>

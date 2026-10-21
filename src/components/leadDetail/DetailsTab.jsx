@@ -1,9 +1,8 @@
-import { t } from './tokens';
 import { STAGE_LABEL, canonical } from '../crm/crmHelpers';
 
 export default function DetailsTab({ lead }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+    <div className="grid grid-cols-2 gap-2.5 max-sm:grid-cols-1">
       {[
         { label: 'Phone',        value: lead?.phone },
         { label: 'Name',         value: lead?.name },
@@ -21,9 +20,9 @@ export default function DetailsTab({ lead }) {
         { label: 'Last Message', value: lead?.lastMessageAt ? new Date(lead.lastMessageAt).toLocaleDateString('en-ZA') : null },
         { label: 'Assigned To',  value: lead?.assignedAgent },
       ].filter(item => item.value).map((item, i) => (
-        <div key={i} style={{ background: t.surface, borderRadius: '10px', padding: '12px 14px' }}>
-          <p style={{ color: t.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>{item.label}</p>
-          <p style={{ color: t.text, fontSize: '14px', fontWeight: '500' }}>{item.value}</p>
+        <div key={i} className="rounded-[10px] bg-ground px-3.5 py-3">
+          <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.06em] text-muted">{item.label}</p>
+          <p className="text-sm font-medium break-words text-ink">{item.value}</p>
         </div>
       ))}
     </div>

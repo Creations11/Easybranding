@@ -1,17 +1,17 @@
-import { t } from './tokens';
+import Badge from '../ui/Badge';
 
 export default function HistoryTab({ takeoverHistory }) {
   return (
     <>
       {takeoverHistory.length === 0 ? (
-        <p style={{ color: t.muted, textAlign: 'center', marginTop: '40px' }}>No takeover history.</p>
+        <p className="mt-10 text-center text-muted">No takeover history.</p>
       ) : takeoverHistory.map((event, i) => (
-        <div key={i} style={{ background: t.surface, borderRadius: '10px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <span style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '999px', background: event.action === 'takeover' ? `${t.orange}18` : `${t.lime}18`, color: event.action === 'takeover' ? t.orange : t.lime, fontWeight: '600', marginRight: '10px', textTransform: 'capitalize' }}>{event.action}</span>
-            {event.reason && <span style={{ color: t.muted, fontSize: '13px' }}>{event.reason}</span>}
+        <div key={i} className="flex flex-wrap items-center justify-between gap-2 rounded-[10px] bg-ground px-3.5 py-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Badge tone={event.action === 'takeover' ? 'warn' : 'live'}><span className="capitalize">{event.action}</span></Badge>
+            {event.reason && <span className="text-[13px] text-muted">{event.reason}</span>}
           </div>
-          <p style={{ color: t.muted, fontSize: '12px' }}>{new Date(event.timestamp).toLocaleString('en-ZA')}</p>
+          <p className="font-mono text-xs text-muted">{new Date(event.timestamp).toLocaleString('en-ZA')}</p>
         </div>
       ))}
     </>
