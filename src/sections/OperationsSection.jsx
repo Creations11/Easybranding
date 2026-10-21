@@ -154,7 +154,7 @@ export default function OperationsSection({
           <SectionErrorBoundary name="Today" onRetry={refetch}>
             <TodayVerdict owedWork={owedWorkQ} health={healthQ} colors={c} />
             <ActionRail query={owedWorkQ} colors={c} onOpenLead={setLeadDetailId} scope={opsScope} />
-            <MoneyPanel query={moneyQ} colors={c} />
+            <MoneyPanel query={moneyQ} />
             <HealthWarnings query={healthQ} colors={c} />
           </SectionErrorBoundary>
         )}
