@@ -212,7 +212,7 @@ export default function SuperAdminDashboard() {
     // EasyRentals moderation (2026-10-06). Every listing needs a person to
     // approve it, so the badge is the number waiting.
     if (isRentalsStaff) { s.push({ id: 'rentals', icon: '🏘️', label: 'Rentals', badge: rentalsWaiting }); }
-    if (!isEBAgent) { s.push({ id: 'operations', icon: '🏠', label: 'Operations', badge: alerts.length }); }
+    if (!isEBAgent) { s.push({ id: 'operations', icon: '🏠', label: 'WhatsApp API', badge: alerts.length }); }
     if (!isEBAgent) { s.push({ id: 'clients',    icon: '👥', label: 'Clients',    badge: 0 }); }
     // FIX: PACMembersPanel had no nav entry anywhere — added here,
     // gated to super admin since member management is an

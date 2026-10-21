@@ -103,11 +103,11 @@ export default function OperationsSection({
   const open = (id) => setLeadDetailId(id);
 
   return (
-    <SectionErrorBoundary name="Operations" onRetry={refetch}>
+    <SectionErrorBoundary name="WhatsApp API" onRetry={refetch}>
       <div>
         <div style={{ marginBottom: 18, display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <div>
-            <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4 }}>Operations</h1>
+            <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4 }}>WhatsApp API</h1>
             <p style={{ color: c.muted, fontSize: 15, marginBottom: 6 }}>
               {opsScope ? (tenants.find((t) => t._id === opsScope)?.businessName || 'Selected client') + ': every lead, by sales stage' : 'Every client: every lead, by sales stage'}
             </p>
