@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { colors } from '../../utils/theme';
-import { input, act } from './helpers';
+import Button from '../ui/Button';
+import { Input, Select } from '../ui/Field';
 import { Field } from './ui';
 
 const VEHICLES = [['', 'Not given'], ['motorbike', 'Motorbike'], ['motorcycle', 'Motorcycle'], ['car', 'Car']];
@@ -12,19 +12,19 @@ export default function DriverForm({ initial, submitLabel, onSubmit, onCancel, b
   });
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit(f); }} style={{ display: 'grid', gap: '8px', marginTop: '10px' }}>
-      <Field label="Name on the job card"><input aria-label="Driver name" value={f.name} onChange={set('name')} style={input} /></Field>
-      <Field label="Cellphone"><input aria-label="Driver phone" value={f.phone} onChange={set('phone')} placeholder="0821234567" style={input} /></Field>
-      {initial && <Field label="Name on their licence"><input aria-label="Licence name" value={f.fullName} onChange={set('fullName')} style={input} /></Field>}
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit(f); }} className="mt-2.5 grid gap-2">
+      <Field label="Name on the job card"><Input mono={false} aria-label="Driver name" value={f.name} onChange={set('name')} /></Field>
+      <Field label="Cellphone"><Input aria-label="Driver phone" value={f.phone} onChange={set('phone')} placeholder="0821234567" /></Field>
+      {initial && <Field label="Name on their licence"><Input mono={false} aria-label="Licence name" value={f.fullName} onChange={set('fullName')} /></Field>}
       <Field label="Vehicle">
-        <select aria-label="Vehicle" value={f.vehicleType} onChange={set('vehicleType')} style={input}>
+        <Select aria-label="Vehicle" value={f.vehicleType} onChange={set('vehicleType')}>
           {VEHICLES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-        </select>
+        </Select>
       </Field>
-      <Field label="Registration"><input aria-label="Registration" value={f.vehicleRegistration} onChange={set('vehicleRegistration')} style={input} /></Field>
-      <div style={{ display: 'flex', gap: '8px' }}>
-        <button type="submit" disabled={busy} style={act(colors.lime, busy)}>{submitLabel}</button>
-        <button type="button" onClick={onCancel} style={act(colors.muted, false)}>Cancel</button>
+      <Field label="Registration"><Input aria-label="Registration" value={f.vehicleRegistration} onChange={set('vehicleRegistration')} /></Field>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="primary" type="submit" disabled={busy}>{submitLabel}</Button>
+        <Button variant="ghost" onClick={onCancel}>Cancel</Button>
       </div>
     </form>
   );

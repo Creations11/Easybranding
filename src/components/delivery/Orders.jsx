@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { colors } from '../../utils/theme';
-import { REFRESH_MS, MOVING, ago, isUnclaimed, pill } from './helpers';
-import { Empty } from './ui';
+import { Input } from '../ui/Field';
+import { REFRESH_MS, MOVING, ago, isUnclaimed } from './helpers';
+import { Empty, Pill } from './ui';
 import OrderCard from './OrderCard';
 
 const FILTERS = [
@@ -48,38 +48,33 @@ export default function Orders({ orders, open, onOpen, detail, updatedAt }) {
       {counts.attention > 0 && filter !== 'attention' && (
         <div
           onClick={() => setFilter('attention')}
-          style={{
-            background: `${colors.red}14`, border: `1px solid ${colors.red}40`, color: colors.red,
-            borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', fontSize: '13px', cursor: 'pointer',
-          }}
+          className="mb-3.5 cursor-pointer rounded-[10px] border border-red/25 bg-red/8 px-3.5 py-2.5 text-[13px] text-red"
         >
           {counts.attention} order{counts.attention === 1 ? ' needs' : 's need'} attention. Tap to see {counts.attention === 1 ? 'it' : 'them'}.
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+      <div className="mb-2.5 flex flex-wrap gap-2">
         {FILTERS.map(([key, label]) => (
-          <button
+          <Pill
             key={key}
             onClick={() => setFilter(key)}
-            style={{ ...pill(filter === key, key === 'attention' && counts.attention > 0 ? colors.red : colors.lime), padding: '5px 12px', fontSize: '12px' }}
-          >{label} ({counts[key]})</button>
+            selected={filter === key}
+            tone={key === 'attention' && counts.attention > 0 ? 'red' : 'lime'}
+          >{label} ({counts[key]})</Pill>
         ))}
       </div>
 
-      <input
+      <Input
+        mono={false}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Find by reference, customer, driver or shop"
         aria-label="Find an order"
-        style={{
-          width: '100%', boxSizing: 'border-box', background: colors.card, color: colors.text,
-          border: `1px solid ${colors.borderDim}`, borderRadius: '10px',
-          padding: '9px 12px', fontSize: '13px', marginBottom: '6px',
-        }}
+        className="mb-1.5 bg-card"
       />
       {updatedAt && (
-        <div style={{ color: colors.muted, fontSize: '11px', marginBottom: '12px' }}>
+        <div className="mb-3 text-[11px] text-muted">
           Updated {ago(updatedAt)} · refreshes every {REFRESH_MS / 1000}s
         </div>
       )}

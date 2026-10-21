@@ -36,9 +36,9 @@
 import { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
-import { colors } from '../utils/theme';
-import { REFRESH_MS, NONE, unwrap, pill, isUnclaimed } from './delivery/helpers';
-import { Card, Empty } from './delivery/ui';
+import Button from './ui/Button';
+import { REFRESH_MS, NONE, unwrap, isUnclaimed } from './delivery/helpers';
+import { Card, Empty, Pill } from './delivery/ui';
 import Orders from './delivery/Orders';
 import Drivers from './delivery/Drivers';
 import Businesses from './delivery/Businesses';
@@ -133,7 +133,7 @@ export default function DeliveryTab() {
   };
 
   if (loading && !choices.length) {
-    return <div style={{ padding: '60px', textAlign: 'center', color: colors.muted }}>Loading deliveries…</div>;
+    return <div className="p-[60px] text-center text-muted">Loading deliveries…</div>;
   }
 
   // Nobody has named a business yet, and this session has no tenant of its
@@ -142,12 +142,12 @@ export default function DeliveryTab() {
   if (choices.length > 0 && !tenantId) {
     return (
       <div>
-        <div style={{ color: colors.muted, fontSize: '13px', marginBottom: '14px' }}>
+        <div className="mb-3.5 text-[13px] text-muted">
           Which delivery business?
         </div>
         {choices.map((t) => (
           <Card key={t.id} onClick={() => pickBusiness(t.id)}>
-            <div style={{ color: colors.text, fontWeight: 600, fontSize: '14px' }}>{t.name}</div>
+            <div className="text-sm font-semibold text-ink">{t.name}</div>
           </Card>
         ))}
       </div>
@@ -155,7 +155,7 @@ export default function DeliveryTab() {
   }
 
   if (loading) {
-    return <div style={{ padding: '60px', textAlign: 'center', color: colors.muted }}>Loading deliveries…</div>;
+    return <div className="p-[60px] text-center text-muted">Loading deliveries…</div>;
   }
 
   if (data.overview && data.overview.enabled === false) {
@@ -174,36 +174,26 @@ export default function DeliveryTab() {
   return (
     <div>
       {problem && (
-        <div style={{
-          background: `${colors.amber}14`, border: `1px solid ${colors.amber}40`, color: colors.amber,
-          borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', fontSize: '13px',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px',
-        }}>
+        <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-amber/25 bg-amber/8 px-3.5 py-2.5 text-[13px] text-amber">
           <span>{problem}</span>
-          <button
-            onClick={load}
-            style={{
-              background: 'transparent', border: `1px solid ${colors.amber}60`, color: colors.amber,
-              borderRadius: '999px', padding: '4px 12px', cursor: 'pointer', fontSize: '12px',
-            }}
-          >Try again</button>
+          <Button variant="warn" onClick={load}>Try again</Button>
         </div>
       )}
 
       {/* The four questions, as four buttons. */}
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+      <div className="mb-4 flex flex-wrap gap-2">
         {sections.map(([key, label]) => (
-          <button
+          <Pill
             key={key}
             onClick={() => { setSection(key); openOrder(null); }}
-            style={pill(section === key)}
-          >{label}{key === 'orders' && unclaimedCount > 0 ? ' ●' : ''}</button>
+            selected={section === key}
+          >{label}{key === 'orders' && unclaimedCount > 0 ? ' ●' : ''}</Pill>
         ))}
-        <button onClick={load} style={{ ...pill(false), marginLeft: 'auto' }}>↻ Refresh</button>
+        <Pill onClick={load} className="ml-auto">↻ Refresh</Pill>
         {choices.length > 0 && (
-          <button onClick={() => { setTenantId(null); setOpen(null); }} style={pill(false)}>
+          <Pill onClick={() => { setTenantId(null); setOpen(null); }}>
             ⇄ Another business
-          </button>
+          </Pill>
         )}
       </div>
 

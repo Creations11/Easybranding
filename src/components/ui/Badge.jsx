@@ -4,6 +4,7 @@ const TONE = {
   warn:    'bg-amber/12 border-amber/30 text-amber',
   bad:     'bg-red/12 border-red/30 text-red',
   system:  'bg-cyan/12 border-cyan/30 text-cyan',
+  moving:  'bg-sage/12 border-sage/30 text-sage',     // on the road: a delivery under way
   neutral: 'bg-muted/10 border-white/10 text-muted',
 };
 

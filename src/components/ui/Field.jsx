@@ -8,11 +8,15 @@ export default function Field({ id, label, hint, children }) {
   );
 }
 
-export function Input({ className = '', ...props }) {
-  return (
-    <input
-      {...props}
-      className={`min-h-[44px] w-full rounded-lg border border-white/12 bg-ground px-3.5 font-mono text-sm text-ink focus:border-lime focus:outline-none ${className}`}
-    />
-  );
+// Mono by default: most console inputs hold numbers, phones and codes. Pass
+// mono={false} for names and addresses, which read badly in a code face.
+const control = (mono, className) =>
+  `min-h-[44px] w-full rounded-lg border border-white/12 bg-ground px-3.5 text-sm text-ink focus:border-lime focus:outline-none ${mono ? 'font-mono' : ''} ${className}`;
+
+export function Input({ mono = true, className = '', ...props }) {
+  return <input {...props} className={control(mono, className)} />;
+}
+
+export function Select({ mono = false, className = '', children, ...props }) {
+  return <select {...props} className={control(mono, className)}>{children}</select>;
 }

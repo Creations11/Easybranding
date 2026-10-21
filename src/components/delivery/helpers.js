@@ -1,16 +1,16 @@
 // Shared by every part of the delivery tab (DeliveryTab.jsx and delivery/*).
-import { colors } from '../../utils/theme';
 
 export const REFRESH_MS = 20000;
 
+// tone is a Badge tone (ui/Badge.jsx): one meaning each, never decoration.
 export const STATUS_STYLE = {
-  pending:    { label: 'waiting',     tint: colors.amber },
-  assigned:   { label: 'accepted',    tint: colors.cyan },
-  collected:  { label: 'collected',   tint: colors.cyan },
-  on_the_way: { label: 'on the way',  tint: colors.sage },
-  arrived:    { label: 'at the door', tint: colors.sage },
-  delivered:  { label: 'delivered',   tint: colors.emerald },
-  failed:     { label: 'stopped',     tint: colors.red },
+  pending:    { label: 'waiting',     tone: 'warn' },
+  assigned:   { label: 'accepted',    tone: 'system' },
+  collected:  { label: 'collected',   tone: 'system' },
+  on_the_way: { label: 'on the way',  tone: 'moving' },
+  arrived:    { label: 'at the door', tone: 'moving' },
+  delivered:  { label: 'delivered',   tone: 'good' },
+  failed:     { label: 'stopped',     tone: 'bad' },
 };
 
 export const MOVING = ['assigned', 'collected', 'on_the_way', 'arrived'];
@@ -31,14 +31,6 @@ export const ago = (iso) => {
 // change the outcome, so it is defined once and used everywhere.
 export const isUnclaimed = (d) => d.status === 'pending' && d.paymentStatus === 'paid' && !d.driverName;
 
-export const pill = (selected, tint = colors.lime) => ({
-  background: selected ? `${tint}1A` : 'transparent',
-  border: `1px solid ${selected ? tint : colors.borderDim}`,
-  color: selected ? tint : colors.muted,
-  borderRadius: '999px', padding: '7px 14px', cursor: 'pointer',
-  fontSize: '13px', fontWeight: selected ? 600 : 400,
-});
-
 export const NONE = [];
 export const unwrap = (r) => r.data?.data ?? r.data;
 
@@ -50,14 +42,6 @@ export const unwrap = (r) => r.data?.data ?? r.data;
 // shown as it is. Anything that messages a driver or a shop says so in its
 // confirmation first. Money (payouts, how a shop is paid) is still WhatsApp.
 
-export const input = {
-  width: '100%', boxSizing: 'border-box', background: colors.card, color: colors.text,
-  border: `1px solid ${colors.borderDim}`, borderRadius: '10px', padding: '8px 12px', fontSize: '13px',
-};
-export const act = (tint, disabled) => ({
-  background: `${tint}14`, color: tint, border: `1px solid ${tint}44`, borderRadius: '999px',
-  padding: '5px 12px', fontSize: '12px', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
-});
 
 /** Only the fields that changed, so an edit never re-sends what nobody touched. */
 export const changed = (before, after, keys) => {

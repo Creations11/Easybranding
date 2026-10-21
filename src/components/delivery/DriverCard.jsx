@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { colors } from '../../utils/theme';
+import Badge from '../ui/Badge';
+import Button from '../ui/Button';
 import { useDeliveryManage } from '../../hooks/useDeliveryManage';
 import { useRun } from './useRun';
-import { money, act, changed } from './helpers';
-import { Card, Chip, Row, Said } from './ui';
+import { money, changed } from './helpers';
+import { Card, CardHead, Row, Said } from './ui';
 import DriverForm from './DriverForm';
 
 export default function DriverCard({ d, q }) {
@@ -42,30 +43,29 @@ export default function DriverCard({ d, q }) {
 
   return (
     <Card>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center' }}>
-        <div style={{ color: colors.text, fontWeight: 600, fontSize: '14px' }}>{who}</div>
-        <Chip text={suspended ? 'suspended' : d.onShift ? 'on shift' : 'off'} tint={suspended ? colors.red : d.onShift ? colors.emerald : colors.muted} />
-      </div>
-      <div style={{ color: colors.muted, fontSize: '12px', marginTop: '6px' }}>
+      <CardHead title={who}>
+        <Badge tone={suspended ? 'bad' : d.onShift ? 'good' : 'neutral'}>{suspended ? 'suspended' : d.onShift ? 'on shift' : 'off'}</Badge>
+      </CardHead>
+      <div className="mt-1.5 text-xs text-muted">
         {d.phone}{d.vehicleType ? ` · ${d.vehicleType}` : ''}{d.vehicleRegistration ? ` · ${d.vehicleRegistration}` : ''}
       </div>
-      <div style={{ marginTop: '8px' }}>
+      <div className="mt-2">
         <Row left="Papers" right={d.kycStatus || 'not asked for'} />
         <Row left="Practice run" right={d.practiceDoneAt ? 'done' : d.practiceRequired ? 'not done — no jobs reach them' : 'not required'} />
         <Row left="Carrying" right={d.carrying || 'nothing'} />
-        <Row left="Owed" right={money(d.owed)} />
+        <Row left="Owed" right={money(d.owed)} mono />
       </div>
       {editing
         ? <DriverForm initial={d} submitLabel="Save" onSubmit={save} onCancel={() => setEditing(false)} busy={busy} />
         : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
-            <button onClick={() => setEditing(true)} disabled={busy} style={act(colors.cyan, busy)}>Edit</button>
-            {papersWaiting && <button onClick={verify} disabled={busy} style={act(colors.emerald, busy)}>Accept papers</button>}
-            {papersWaiting && <button onClick={reject} disabled={busy} style={act(colors.amber, busy)}>Send papers back</button>}
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            <Button variant="secondary" onClick={() => setEditing(true)} disabled={busy}>Edit</Button>
+            {papersWaiting && <Button variant="good" onClick={verify} disabled={busy}>Accept papers</Button>}
+            {papersWaiting && <Button variant="warn" onClick={reject} disabled={busy}>Send papers back</Button>}
             {suspended
-              ? <button onClick={activate} disabled={busy} style={act(colors.emerald, busy)}>Activate</button>
-              : <button onClick={suspend} disabled={busy} style={act(colors.amber, busy)}>Suspend</button>}
-            <button onClick={remove} disabled={busy} style={act(colors.red, busy)}>Remove</button>
+              ? <Button variant="good" onClick={activate} disabled={busy}>Activate</Button>
+              : <Button variant="warn" onClick={suspend} disabled={busy}>Suspend</Button>}
+            <Button variant="danger" onClick={remove} disabled={busy}>Remove</Button>
           </div>
         )}
       <Said result={result} />

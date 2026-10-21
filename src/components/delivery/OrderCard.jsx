@@ -1,37 +1,40 @@
-import { colors } from '../../utils/theme';
+import Badge from '../ui/Badge';
 import { STATUS_STYLE, ago, money, isUnclaimed } from './helpers';
-import { Card, Chip, Row } from './ui';
+import { Card, CardHead, Row } from './ui';
 
 /** One order in the list; opened, it shows the delivery and its history. */
 export default function OrderCard({ d, isOpen, onOpen, detail }) {
-  const s = STATUS_STYLE[d.status] || { label: d.status, tint: colors.muted };
+  const s = STATUS_STYLE[d.status] || { label: d.status, tone: 'neutral' };
   return (
     <Card active={isOpen} onClick={() => onOpen(isOpen ? null : d.reference)}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center' }}>
-        <div style={{ color: colors.text, fontWeight: 600, fontSize: '14px' }}>
-          {d.reference}
-          {d.orderSource === 'BUSINESS_WHATSAPP' && (
-            <span style={{ color: colors.muted, fontWeight: 400, fontSize: '12px' }}> · sent by {d.vendorName || 'a shop'}</span>
-          )}
-        </div>
-        <Chip text={s.label} tint={s.tint} />
-      </div>
+      <CardHead
+        title={
+          <>
+            <span className="font-mono">{d.reference}</span>
+            {d.orderSource === 'BUSINESS_WHATSAPP' && (
+              <span className="text-xs font-normal text-muted"> · sent by {d.vendorName || 'a shop'}</span>
+            )}
+          </>
+        }
+      >
+        <Badge tone={s.tone}>{s.label}</Badge>
+      </CardHead>
 
-      <div style={{ color: colors.muted, fontSize: '12px', marginTop: '6px' }}>
+      <div className="mt-1.5 text-xs text-muted">
         {d.customerName || d.customerPhone} · {d.driverName || 'no driver yet'} · {ago(d.createdAt)}
-        {d.total != null && ` · ${money(d.total)}`}
+        {d.total != null && <span className="font-mono tabular-nums">{` · ${money(d.total)}`}</span>}
       </div>
 
       {isUnclaimed(d) && (
-        <div style={{ color: colors.red, fontSize: '12px', marginTop: '6px' }}>
+        <div className="mt-1.5 text-xs text-red">
           Paid, and nobody has taken it.
         </div>
       )}
 
       {isOpen && (
-        <div style={{ marginTop: '12px', borderTop: `1px solid ${colors.borderDim}`, paddingTop: '12px' }}>
-          {!detail && <div style={{ color: colors.muted, fontSize: '13px' }}>Opening…</div>}
-          {detail?.error && <div style={{ color: colors.red, fontSize: '13px' }}>{detail.error}</div>}
+        <div className="mt-3 border-t border-edge pt-3">
+          {!detail && <div className="text-[13px] text-muted">Opening…</div>}
+          {detail?.error && <div className="text-[13px] text-red">{detail.error}</div>}
           {detail && !detail.error && (
             <>
               <Row left="Customer" right={`${detail.customerName || '—'} · ${detail.customerPhone}`} />
@@ -46,27 +49,27 @@ export default function OrderCard({ d, isOpen, onOpen, detail }) {
                   right={`${detail.quotedKm} km${detail.distanceSource === 'ESTIMATED' ? ' (estimated)' : ' by road'}`}
                 />
               )}
-              <Row left="Total" right={money(detail.total)} />
+              <Row left="Total" right={money(detail.total)} mono />
               {/* Three fees, never one — whose money is whose. */}
-              <Row left="Driver earns" right={money(detail.driverFee)} />
-              <Row left="We keep" right={money(detail.kasiFee)} />
+              <Row left="Driver earns" right={money(detail.driverFee)} mono />
+              <Row left="We keep" right={money(detail.kasiFee)} mono />
               {detail.trackingUrl && (
-                <div style={{ marginTop: '10px' }}>
+                <div className="mt-2.5">
                   <a
                     href={detail.trackingUrl}
                     target="_blank"
                     rel="noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    style={{ color: colors.lime, fontSize: '13px' }}
+                    className="text-[13px] text-lime"
                   >
                     Open the customer's tracking page ↗
                   </a>
                 </div>
               )}
               {detail.history?.length > 0 && (
-                <div style={{ marginTop: '12px' }}>
+                <div className="mt-3">
                   {detail.history.map((h, i) => (
-                    <div key={i} style={{ color: colors.muted, fontSize: '12px', margin: '2px 0' }}>
+                    <div key={i} className="my-0.5 text-xs text-muted">
                       {(STATUS_STYLE[h.status]?.label) || h.status} · {ago(h.at)}
                       {h.note ? ` · ${h.note}` : ''}
                     </div>

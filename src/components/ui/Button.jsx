@@ -4,6 +4,7 @@ const VARIANT = {
   secondary: 'bg-transparent text-ink font-semibold border-white/15',
   danger:    'bg-red/10 text-red font-semibold border-red/30',
   warn:      'bg-amber/10 text-amber font-bold border-amber/35',
+  good:      'bg-emerald/10 text-emerald font-semibold border-emerald/30',
   ghost:     'bg-transparent text-muted font-semibold border-transparent hover:bg-raise',
 };
 

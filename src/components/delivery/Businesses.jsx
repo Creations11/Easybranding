@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { colors } from '../../utils/theme';
+import Button from '../ui/Button';
 import { useDeliveryManage, useShopCategories } from '../../hooks/useDeliveryManage';
 import { useRun } from './useRun';
-import { act } from './helpers';
 import { Card, Empty, Said } from './ui';
 import ShopForm from './ShopForm';
 import ShopCard from './ShopCard';
@@ -13,8 +12,8 @@ function AddShop({ q, categories }) {
   const [open, setOpen] = useState(false);
   if (!open) {
     return (
-      <div style={{ marginBottom: '12px' }}>
-        <button onClick={() => { clear(); setOpen(true); }} style={act(colors.lime, false)}>+ Add shop</button>
+      <div className="mb-3">
+        <Button variant="primary" onClick={() => { clear(); setOpen(true); }}>+ Add shop</Button>
         <Said result={result} />
       </div>
     );
@@ -31,7 +30,7 @@ function AddShop({ q, categories }) {
   };
   return (
     <Card>
-      <div style={{ color: colors.text, fontWeight: 600, fontSize: '14px' }}>Add a shop</div>
+      <div className="text-sm font-semibold text-ink">Add a shop</div>
       <ShopForm submitLabel="Add shop" onSubmit={submit} onCancel={() => setOpen(false)} busy={busy} categories={categories} />
       <Said result={result} />
     </Card>

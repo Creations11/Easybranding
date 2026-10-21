@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { colors } from '../../utils/theme';
+import Badge from '../ui/Badge';
+import Button from '../ui/Button';
 import { useDeliveryManage } from '../../hooks/useDeliveryManage';
 import { useRun } from './useRun';
-import { money, act, changed } from './helpers';
-import { Card, Chip, Row, Said } from './ui';
+import { money, changed } from './helpers';
+import { Card, CardHead, Row, Said } from './ui';
 import ShopForm from './ShopForm';
 
 export default function ShopCard({ v, q, categories }) {
@@ -37,22 +38,21 @@ export default function ShopCard({ v, q, categories }) {
     run(() => m.removeShop(v.id), `${v.name} is deleted.`);
   };
 
-  let state = ['closed', colors.muted];
-  if (waiting) state = ['waiting for approval', colors.amber];
-  else if (settingUp) state = ['setting up', colors.cyan];
-  else if (!v.active) state = ['switched off', colors.red];
-  else if (v.open) state = ['open', colors.emerald];
+  let state = ['closed', 'neutral'];
+  if (waiting) state = ['waiting for approval', 'warn'];
+  else if (settingUp) state = ['setting up', 'system'];
+  else if (!v.active) state = ['switched off', 'bad'];
+  else if (v.open) state = ['open', 'good'];
 
   return (
     <Card>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center' }}>
-        <div style={{ color: colors.text, fontWeight: 600, fontSize: '14px' }}>{v.name}</div>
-        <Chip text={state[0]} tint={state[1]} />
-      </div>
-      <div style={{ color: colors.muted, fontSize: '12px', marginTop: '6px' }}>{v.phone} · {v.category}{v.contactName ? ` · ${v.contactName}` : ''}</div>
-      <div style={{ marginTop: '8px' }}>
+      <CardHead title={v.name}>
+        <Badge tone={state[1]}>{state[0]}</Badge>
+      </CardHead>
+      <div className="mt-1.5 text-xs text-muted">{v.phone} · {v.category}{v.contactName ? ` · ${v.contactName}` : ''}</div>
+      <div className="mt-2">
         <Row left="Plan" right={v.plan === 'subscriber' ? 'subscriber' : 'pay as you go'} />
-        {v.plan === 'subscriber' && <Row left="Wallet" right={money(v.wallet)} />}
+        {v.plan === 'subscriber' && <Row left="Wallet" right={money(v.wallet)} mono />}
         <Row left="Paid by" right={v.paystackSubaccount ? 'split at checkout' : 'by hand'} />
         {!v.deliveryOnly && <Row left="Commission" right={`${v.commissionPct || 0}%`} />}
         {v.address && <Row left="Address" right={v.address} />}
@@ -60,19 +60,19 @@ export default function ShopCard({ v, q, categories }) {
         {v.joinCode && <Row left="Join code" right={v.joinCode} />}
       </div>
       {v.joinLink && (
-        <div style={{ fontSize: '12px', marginTop: '6px', wordBreak: 'break-all' }}>
-          <a href={v.joinLink} target="_blank" rel="noreferrer" style={{ color: colors.lime }}>Their join link ↗</a>
+        <div className="mt-1.5 break-all text-xs">
+          <a href={v.joinLink} target="_blank" rel="noreferrer" className="text-lime">Their join link ↗</a>
         </div>
       )}
       {editing
         ? <ShopForm initial={v} submitLabel="Save" onSubmit={save} onCancel={() => setEditing(false)} busy={busy} categories={categories} />
         : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
-            <button onClick={() => setEditing(true)} disabled={busy} style={act(colors.cyan, busy)}>Edit</button>
-            {waiting && <button onClick={approve} disabled={busy} style={act(colors.emerald, busy)}>Approve</button>}
-            {!settingUp && v.active && <button onClick={off} disabled={busy} style={act(colors.amber, busy)}>Switch off</button>}
-            {!settingUp && !v.active && <button onClick={on} disabled={busy} style={act(colors.emerald, busy)}>Switch on</button>}
-            <button onClick={remove} disabled={busy} style={act(colors.red, busy)}>Delete</button>
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            <Button variant="secondary" onClick={() => setEditing(true)} disabled={busy}>Edit</Button>
+            {waiting && <Button variant="good" onClick={approve} disabled={busy}>Approve</Button>}
+            {!settingUp && v.active && <Button variant="warn" onClick={off} disabled={busy}>Switch off</Button>}
+            {!settingUp && !v.active && <Button variant="good" onClick={on} disabled={busy}>Switch on</Button>}
+            <Button variant="danger" onClick={remove} disabled={busy}>Delete</Button>
           </div>
         )}
       <Said result={result} />

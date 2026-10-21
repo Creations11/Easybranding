@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { colors } from '../../utils/theme';
+import Button from '../ui/Button';
 import { useDeliveryManage } from '../../hooks/useDeliveryManage';
 import { useRun } from './useRun';
-import { act } from './helpers';
 import { Card, Empty, Said } from './ui';
 import DriverForm from './DriverForm';
 import DriverCard from './DriverCard';
@@ -13,8 +12,8 @@ function AddDriver({ q }) {
   const [open, setOpen] = useState(false);
   if (!open) {
     return (
-      <div style={{ marginBottom: '12px' }}>
-        <button onClick={() => { clear(); setOpen(true); }} style={act(colors.lime, false)}>+ Add driver</button>
+      <div className="mb-3">
+        <Button variant="primary" onClick={() => { clear(); setOpen(true); }}>+ Add driver</Button>
         <Said result={result} />
       </div>
     );
@@ -28,7 +27,7 @@ function AddDriver({ q }) {
   };
   return (
     <Card>
-      <div style={{ color: colors.text, fontWeight: 600, fontSize: '14px' }}>Add a driver</div>
+      <div className="text-sm font-semibold text-ink">Add a driver</div>
       <DriverForm submitLabel="Add driver" onSubmit={submit} onCancel={() => setOpen(false)} busy={busy} />
       <Said result={result} />
     </Card>
