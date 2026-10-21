@@ -18,7 +18,6 @@ import { useState, useMemo } from 'react';
 import api from '../api';
 import LeadDetailModal from '../components/LeadDetailModal';
 import OperationsSection from '../sections/OperationsSection';
-import ChatTab from '../components/ChatTab';
 import DeliveryTab from '../components/DeliveryTab';
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
 import { useAuth } from '../context/auth';
@@ -186,12 +185,13 @@ export default function SuperAdminDashboard() {
   // ── Navigation ─────────────────────────────────────────────
   const navSections = useMemo(() => {
     const s = [];
-    // Chat first. Added 2026-08-17 after the owner could not find it: the tab
-    // was only on AdminDashboard, which is where role=admin tenants land —
-    // super_admin routes to THIS page and never saw it.
-    s.push({ id: 'chat', icon: '💬', label: 'Chat', badge: 0 });
-    // Delivery here as well as on AdminDashboard, and for exactly the reason
-    // written above Chat: super_admin routes to THIS page. It shipped on
+    // No separate Chat item since 2026-10-21: talking to customers is the
+    // WhatsApp API page's Inbox (components/inbox/), which lists every
+    // conversation rather than "active" ones and keeps an open one fresh.
+    // Chat was added here on 2026-08-17 because the owner could not find it;
+    // the Inbox tab is where it went, not away.
+    // Delivery here as well as on AdminDashboard, for the reason Chat was
+    // once added here: super_admin routes to THIS page. It shipped on
     // AdminDashboard alone on 2026-09-30 and the owner could not find it,
     // which is the same mistake twice in the same file.
     if (!isEBAgent) { s.push({ id: 'delivery', icon: '🛵', label: 'Delivery', badge: 0 }); }
@@ -255,7 +255,7 @@ export default function SuperAdminDashboard() {
       {/* Main content */}
       <div className="main-content" style={{ marginLeft: sidebarOpen ? 220 : 64, flex: 1, minWidth: 0, padding: '32px', paddingTop: 96, transition: 'margin-left 0.2s ease', minHeight: '100vh' }}>
 
-        {/* ════════ CHAT ════════ */}
+        {/* ════════ DELIVERY ════════ */}
         {section === 'delivery' && <DeliveryTab />}
 
         {/* ════════ RENTALS ════════ */}
@@ -265,15 +265,6 @@ export default function SuperAdminDashboard() {
           </SectionErrorBoundary>
         )}
 
-        {section === 'chat' && (
-          <SectionErrorBoundary name="Chat" onRetry={refetch}>
-            <ChatTab
-              conversations={activeLeads}
-              onRefresh={refetch}
-              onExit={() => setSection('operations')}
-            />
-          </SectionErrorBoundary>
-        )}
 
         {/* ════════ OPERATIONS ════════ */}
         {section === 'operations' && (

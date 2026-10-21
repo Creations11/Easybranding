@@ -12,7 +12,9 @@
 //             already lists the unanswered), money and health warnings.
 //   Pipeline  every lead in its sales column, most urgent first.
 //   Leads     the same leads as a sortable list, for finding someone.
-//   Inbox     recent conversations, one card per person.
+//   Inbox     where you talk to customers: every conversation, the thread
+//             refreshing while open, and the lead's stage and notes beside it
+//             (components/inbox/, 2026-10-21; it replaced the Chat tab).
 //   Reports   the funnel and the trends.
 //   Alerts    each one opens its lead.
 //
@@ -36,7 +38,8 @@ import KpiStrip from '../components/crm/KpiStrip';
 import CrmToolbar from '../components/crm/CrmToolbar';
 import PipelineBoard from '../components/crm/PipelineBoard';
 import LeadsList from '../components/crm/LeadsList';
-import { InboxView, AlertsView, ReportsView } from '../components/crm/CrmViews';
+import { AlertsView, ReportsView } from '../components/crm/CrmViews';
+import InboxView from '../components/inbox/InboxView';
 import { EMPTY_FILTERS, applyFilters } from '../components/crm/crmHelpers';
 
 const NONE = [];
@@ -172,7 +175,10 @@ export default function OperationsSection({
 
         {view === 'inbox' && (
           <SectionErrorBoundary name="Inbox" onRetry={refetch}>
-            <InboxView scope={opsScope} tenantNameById={tenantNameById} onOpen={open} />
+            <InboxView
+              scope={opsScope} showBusiness={showBusiness} onOpenRecord={open}
+              businessName={opsScope ? tenantNameById[opsScope] : ''}
+            />
           </SectionErrorBoundary>
         )}
         {view === 'reports' && (
