@@ -1,34 +1,35 @@
 import api from '../../api';
-import { colors } from '../../utils/theme';
+import Badge from '../ui/Badge';
+import Button from '../ui/Button';
 
 export default function UsersTab({ pendingUsers, allUsers, isSuperAdmin, userTenantId, currentUser, setApproveModal, handleRejectUser, loadData }) {
   return (
     <div>
       {/* Pending approvals — filter by tenant for admin */}
-      <div style={{ marginBottom: '40px' }}>
-        <h2 style={{ fontSize: '20px', marginBottom: '16px' }}>
+      <div className="mb-10">
+        <h2 className="mb-4 text-xl">
           Pending Approvals
-          {pendingUsers.length > 0 && <span style={{ marginLeft: '10px', background: colors.amber, color: '#050505', fontSize: '12px', padding: '3px 10px', borderRadius: '999px', fontWeight: '700' }}>{pendingUsers.length} waiting</span>}
+          {pendingUsers.length > 0 && <span className="ml-2.5 rounded-full bg-amber px-2.5 py-[3px] text-xs font-bold text-[#050505]">{pendingUsers.length} waiting</span>}
         </h2>
         {pendingUsers.length === 0
-          ? <div style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '14px', padding: '40px', textAlign: 'center', color: colors.muted }}><p style={{ fontSize: '32px', marginBottom: '12px' }}>✅</p><p>No pending approvals.</p></div>
+          ? <div className="rounded-[14px] border border-edge bg-card p-10 text-center text-muted"><p className="mb-3 text-[32px]">✅</p><p>No pending approvals.</p></div>
           : pendingUsers.map(user => (
-            <div key={user._id} style={{ background: colors.card, border: `1px solid ${colors.amber}44`, borderRadius: '14px', padding: '18px 24px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div key={user._id} className="mb-2.5 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-amber/25 bg-card px-6 py-[18px]">
               <div>
-                <strong style={{ fontSize: '16px' }}>{user.fullName}</strong>
-                <p style={{ color: colors.muted, fontSize: '13px', marginTop: '2px' }}>{user.email} · {user.phone}</p>
-                <p style={{ color: colors.muted, fontSize: '12px', marginTop: '2px' }}>
+                <strong className="text-base">{user.fullName}</strong>
+                <p className="mt-0.5 text-[13px] text-muted">{user.email} · <span className="font-mono">{user.phone}</span></p>
+                <p className="mt-0.5 text-xs text-muted">
                   Registered {new Date(user.createdAt).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}
                   {user.requestedPlan && (
-                    <span style={{ marginLeft: '8px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(184,240,64,0.12)', color: '#B8F040', fontWeight: '600', fontSize: '11px', textTransform: 'capitalize' }}>
+                    <span className="ml-2 rounded-full bg-lime/12 px-2 py-0.5 text-[11px] font-semibold capitalize text-lime">
                       {user.requestedPlan} plan
                     </span>
                   )}
                 </p>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={() => setApproveModal(user)} style={{ padding: '10px 20px', background: `${colors.lime}22`, color: colors.lime, border: `1px solid ${colors.border}`, borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }}>✅ Approve</button>
-                <button onClick={() => handleRejectUser(user)} style={{ padding: '10px 16px', background: `${colors.red}22`, color: colors.red, border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '13px' }}>Reject</button>
+              <div className="flex gap-2">
+                <Button variant="live" onClick={() => setApproveModal(user)}>✅ Approve</Button>
+                <Button variant="danger" onClick={() => handleRejectUser(user)}>Reject</Button>
               </div>
             </div>
           ))}
@@ -41,24 +42,24 @@ export default function UsersTab({ pendingUsers, allUsers, isSuperAdmin, userTen
           : allUsers.filter(u => u.tenantId === userTenantId);
         return (
           <div>
-            <h2 style={{ fontSize: '20px', marginBottom: '16px' }}>
+            <h2 className="mb-4 text-xl">
               {isSuperAdmin ? `All Users (${allUsers.length})` : `Your Team (${visibleUsers.length})`}
             </h2>
             {visibleUsers.map(user => (
-              <div key={user._id} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '14px', padding: '16px 24px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
+              <div key={user._id} className="mb-2 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-edge bg-card px-6 py-4">
+                <div className="min-w-0">
                   <strong>{user.fullName}</strong>
-                  <p style={{ color: colors.muted, fontSize: '13px', marginTop: '2px' }}>{user.email}</p>
+                  <p className="mt-0.5 text-[13px] text-muted">{user.email}</p>
                 </div>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: user.approved ? `${colors.lime}22` : `${colors.amber}22`, color: user.approved ? colors.lime : colors.amber }}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone={user.approved ? 'live' : 'warn'}>
                     {user.approved ? '✅ Approved' : '⏳ Pending'}
-                  </span>
+                  </Badge>
                   {/* Protect super_admin accounts — show badge, no dropdown */}
                   {user.role === 'super_admin' || user._id === currentUser.id ? (
-                    <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: `${colors.cyan}22`, color: colors.cyan, fontWeight: '600' }}>
+                    <Badge tone="system">
                       {user.role} {user._id === currentUser.id ? '(you)' : '🔒'}
-                    </span>
+                    </Badge>
                   ) : (
                     <select
                       defaultValue={user.role}
@@ -71,7 +72,7 @@ export default function UsersTab({ pendingUsers, allUsers, isSuperAdmin, userTen
                           e.target.value = user.role;
                         }
                       }}
-                      style={{ padding: '4px 10px', background: `${colors.cyan}18`, border: `1px solid ${colors.cyan}33`, color: colors.cyan, borderRadius: '8px', fontSize: '12px', cursor: 'pointer', outline: 'none' }}
+                      className="min-h-[44px] cursor-pointer rounded-lg border border-cyan/20 bg-cyan/10 px-2.5 text-xs text-cyan focus:outline-none"
                     >
                       <option value="borrower">borrower</option>
                       <option value="agent">agent</option>
@@ -83,8 +84,8 @@ export default function UsersTab({ pendingUsers, allUsers, isSuperAdmin, userTen
               </div>
             ))}
             {visibleUsers.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: colors.muted }}>
-                <p style={{ fontSize: '32px', marginBottom: '12px' }}>👥</p>
+              <div className="py-10 text-center text-muted">
+                <p className="mb-3 text-[32px]">👥</p>
                 <p>No team members yet.</p>
               </div>
             )}

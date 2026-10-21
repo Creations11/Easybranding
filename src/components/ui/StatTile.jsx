@@ -7,7 +7,14 @@ const NOTE_TONE = {
   bad: 'text-red',
 };
 
-export default function StatTile({ label, value, note, noteTone = 'muted', highlight = false }) {
+// What the figure itself means, when a strip colours each one (the admin
+// dashboard's stats). Whole class names, so Tailwind can see them.
+const VALUE_TONE = {
+  ink: 'text-ink', lime: 'text-lime', cyan: 'text-cyan', red: 'text-red',
+  amber: 'text-amber', emerald: 'text-emerald', muted: 'text-muted',
+};
+
+export default function StatTile({ label, value, note, noteTone = 'muted', highlight = false, tone }) {
   return (
     <div
       className={`flex min-w-[150px] flex-1 basis-[160px] flex-col gap-1.5 rounded-card border bg-card px-[17px] py-[15px] ${
@@ -19,7 +26,7 @@ export default function StatTile({ label, value, note, noteTone = 'muted', highl
       </span>
       <span
         className={`font-mono text-[25px] font-bold leading-[1.05] tabular-nums ${
-          highlight ? 'text-lime' : 'text-ink'
+          tone ? VALUE_TONE[tone] : highlight ? 'text-lime' : 'text-ink'
         }`}
       >
         {value}

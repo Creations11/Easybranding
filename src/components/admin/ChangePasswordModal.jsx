@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import api from '../../api';
-import { colors } from '../../utils/theme';
+import Button from '../ui/Button';
+import { Input } from '../ui/Field';
 
 // ── Account controls ──────────────────────────────────────────────────
 //
@@ -36,68 +37,46 @@ export default function ChangePasswordModal({ onClose }) {
     } finally { setBusy(false); }
   };
 
-  const field = {
-    width: '100%', padding: '12px', borderRadius: '10px', background: '#1C1C19',
-    border: '1px solid ' + colors.borderDim, color: colors.text, fontSize: '14px',
-    marginBottom: '12px', outline: 'none', fontFamily: 'inherit',
-  };
+  // Typed on a phone, so each field is full width and 44px tall.
+  const field = 'mb-3 bg-[#1C1C19]';
 
   return (
     <div
       onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
-      }}
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{
-          background: colors.card, border: '1px solid ' + colors.borderDim,
-          borderRadius: '14px', padding: '22px', width: '100%', maxWidth: '380px',
-        }}
+        className="w-full max-w-[380px] rounded-[14px] border border-edge bg-card p-[22px]"
       >
-        <h3 style={{ color: colors.lime, marginBottom: '14px', fontSize: '17px' }}>Change password</h3>
+        <h3 className="mb-3.5 text-[17px] text-lime">Change password</h3>
 
         {done ? (
           <>
-            <p style={{ color: colors.text, fontSize: '14px', marginBottom: '18px' }}>
+            <p className="mb-[18px] text-sm text-ink">
               ✅ Password updated. Use the new one next time you sign in.
             </p>
-            <button onClick={onClose} style={{
-              width: '100%', padding: '11px', background: colors.lime, color: '#050505',
-              border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}>Done</button>
+            <Button variant="primary" className="w-full" onClick={onClose}>Done</Button>
           </>
         ) : (
           <>
             {/* autoCapitalize/autoCorrect off: a mobile keyboard "helpfully"
                 capitalising the first character is a wrong password. */}
-            <input type="password" value={current} onChange={(e) => setCurrent(e.target.value)}
-              placeholder="Current password" style={field} autoComplete="current-password"
+            <Input mono={false} type="password" value={current} onChange={(e) => setCurrent(e.target.value)}
+              placeholder="Current password" className={field} autoComplete="current-password"
               autoCapitalize="none" autoCorrect="off" spellCheck={false} />
-            <input type="password" value={next} onChange={(e) => setNext(e.target.value)}
-              placeholder="New password (6+ characters)" style={field} autoComplete="new-password"
+            <Input mono={false} type="password" value={next} onChange={(e) => setNext(e.target.value)}
+              placeholder="New password (6+ characters)" className={field} autoComplete="new-password"
               autoCapitalize="none" autoCorrect="off" spellCheck={false} />
-            <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)}
-              placeholder="Repeat new password" style={field} autoComplete="new-password"
+            <Input mono={false} type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)}
+              placeholder="Repeat new password" className={field} autoComplete="new-password"
               autoCapitalize="none" autoCorrect="off" spellCheck={false} />
 
-            {error && <p style={{ color: colors.red, fontSize: '13px', marginBottom: '12px' }}>{error}</p>}
+            {error && <p className="mb-3 text-[13px] text-red">{error}</p>}
 
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={submit} disabled={busy} style={{
-                flex: 1, padding: '11px', background: colors.lime, color: '#050505',
-                border: 'none', borderRadius: '10px', fontWeight: 700,
-                cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.7 : 1,
-                fontFamily: 'inherit',
-              }}>{busy ? 'Saving…' : 'Change password'}</button>
-              <button onClick={onClose} style={{
-                padding: '11px 18px', background: 'rgba(255,255,255,0.05)',
-                border: '1px solid ' + colors.borderDim, color: colors.muted,
-                borderRadius: '10px', cursor: 'pointer', fontFamily: 'inherit',
-              }}>Cancel</button>
+            <div className="flex gap-2">
+              <Button variant="primary" className="flex-1" onClick={submit} disabled={busy}>{busy ? 'Saving…' : 'Change password'}</Button>
+              <Button variant="secondary" onClick={onClose}>Cancel</Button>
             </div>
           </>
         )}

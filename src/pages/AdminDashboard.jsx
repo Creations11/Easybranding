@@ -11,7 +11,7 @@ import AdminClientModal from '../components/AdminClientModal';
 import useMediaQuery, { MOBILE_QUERY } from '../hooks/useMediaQuery';
 import ChatTab from '../components/ChatTab';
 import DeliveryTab from '../components/DeliveryTab';
-import { colors } from '../utils/theme';
+import Button from '../components/ui/Button';
 import { getStoredUser, ADMIN_DASHBOARD_KEY, NO_DATA, loadAdminData } from '../components/admin/adminData';
 import ChangePasswordModal from '../components/admin/ChangePasswordModal';
 import InviteLinkModal from '../components/admin/InviteLinkModal';
@@ -128,8 +128,8 @@ export default function AdminDashboard() {
     return ms && mf;
   });
 
-  if (loading) return <div style={{ padding: '140px', textAlign: 'center', color: colors.muted }}>Loading Admin Operations Center...</div>;
-  if (error)   return <div style={{ padding: '140px', color: colors.red }}>{error}</div>;
+  if (loading) return <div className="p-[140px] text-center text-muted">Loading Admin Operations Center...</div>;
+  if (error)   return <div className="p-[140px] text-red">{error}</div>;
 
   const tabs = [
     'chat', 'overview', 'leads',
@@ -147,15 +147,12 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div style={{ minHeight: '100vh', background: '#050505', color: colors.text, padding: 'clamp(80px, 10vw, 100px) clamp(16px, 4vw, 40px) 40px' }}>
-      <style>{`.leads-board-scroll::-webkit-scrollbar{height:10px}.leads-board-scroll::-webkit-scrollbar-track{background:${colors.borderDim};border-radius:999px}.leads-board-scroll::-webkit-scrollbar-thumb{background:${colors.lime};border-radius:999px}`}</style>
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: isMobile ? '0 12px' : undefined }}>
+    <div className="min-h-screen bg-[#050505] px-[clamp(16px,4vw,40px)] pt-[clamp(80px,10vw,100px)] pb-10 text-ink">
+      <style>{`.leads-board-scroll::-webkit-scrollbar{height:10px}.leads-board-scroll::-webkit-scrollbar-track{background:var(--color-edge);border-radius:999px}.leads-board-scroll::-webkit-scrollbar-thumb{background:var(--color-lime);border-radius:999px}`}</style>
+      <div className={`mx-auto max-w-[1400px] ${isMobile ? 'px-3' : ''}`}>
 
         {panelError && (
-          <div style={{
-            marginBottom: '24px', padding: '12px 16px', borderRadius: '8px',
-            border: `1px solid ${colors.amber}`, color: colors.amber, fontSize: '14px',
-          }}>
+          <div className="mb-6 rounded-lg border border-amber px-4 py-3 text-sm text-amber">
             ⚠️ Some panels could not load: {panelError}
           </div>
         )}
@@ -164,45 +161,28 @@ export default function AdminDashboard() {
             way OUT is visible on the first screen instead of below the fold.
             There is no nav bar on this route (ConditionalNav renders <Nav/> on
             public routes only), so these buttons are the only ones. */}
-        <div style={{
-          marginBottom: '40px', display: 'flex', flexWrap: 'wrap', gap: '16px',
-          alignItems: 'flex-start', justifyContent: 'space-between',
-        }}>
-          <div style={{ minWidth: 0 }}>
-            <h1 style={{ fontSize: 'clamp(24px, 5vw, 48px)', fontWeight: '900', marginBottom: '8px' }}>
+        <div className="mb-10 flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="mb-2 text-[clamp(24px,5vw,48px)] font-black">
               {isSuperAdmin ? 'Admin Control Center' : 'Operations Dashboard'}
             </h1>
-            <p style={{ color: colors.muted, fontSize: 'clamp(14px, 2.5vw, 20px)' }}>
+            <p className="text-[clamp(14px,2.5vw,20px)] text-muted">
               {isSuperAdmin ? 'Real-time Platform Operations & Oversight' : 'Your agency\'s live WhatsApp pipeline'}
             </p>
             {currentUser.email && (
-              <p style={{ color: colors.muted, fontSize: '13px', marginTop: '6px' }}>
+              <p className="mt-1.5 text-[13px] text-muted">
                 Signed in as {currentUser.email}
               </p>
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => setShowPasswordModal(true)}
-              style={{
-                padding: '10px 16px', background: 'rgba(255,255,255,0.05)',
-                border: '1px solid ' + colors.borderDim, color: colors.text,
-                borderRadius: '10px', cursor: 'pointer', fontSize: '14px', fontFamily: 'inherit',
-              }}
-            >
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => setShowPasswordModal(true)}>
               🔑 Change password
-            </button>
-            <button
-              onClick={signOut}
-              style={{
-                padding: '10px 16px', background: 'rgba(255,255,255,0.05)',
-                border: '1px solid ' + colors.borderDim, color: colors.muted,
-                borderRadius: '10px', cursor: 'pointer', fontSize: '14px', fontFamily: 'inherit',
-              }}
-            >
+            </Button>
+            <Button variant="ghost" onClick={signOut}>
               Sign out
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -214,18 +194,15 @@ export default function AdminDashboard() {
         )}
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '2px', marginBottom: '28px', borderBottom: `1px solid ${colors.borderDim}`, overflowX: 'auto' }}>
+        <div className="mb-7 flex gap-0.5 overflow-x-auto border-b border-edge">
           {tabs.map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{
-              padding: '12px 16px', background: 'none', border: 'none',
-              borderBottom: tab === t ? `2px solid ${colors.lime}` : '2px solid transparent',
-              color: tab === t ? colors.lime : colors.muted,
-              cursor: 'pointer', fontSize: '13px', fontWeight: tab === t ? '600' : '400',
-              textTransform: 'capitalize', marginBottom: '-1px', whiteSpace: 'nowrap',
-            }}>
+            <button key={t} type="button" onClick={() => setTab(t)}
+              className={`-mb-px min-h-[44px] cursor-pointer whitespace-nowrap border-b-2 bg-transparent px-4 text-[13px] capitalize ${
+                tab === t ? 'border-lime font-semibold text-lime' : 'border-transparent text-muted hover:text-ink'
+              }`}>
               {t.charAt(0).toUpperCase() + t.slice(1)}
-              {t === 'alerts' && alerts.length > 0 && <span style={{ marginLeft: '5px', background: colors.red, color: '#fff', fontSize: '10px', padding: '1px 5px', borderRadius: '999px' }}>{alerts.length}</span>}
-              {t === 'users'  && pendingUsers.length > 0 && <span style={{ marginLeft: '5px', background: colors.amber, color: '#050505', fontSize: '10px', padding: '1px 5px', borderRadius: '999px' }}>{pendingUsers.length}</span>}
+              {t === 'alerts' && alerts.length > 0 && <span className="ml-[5px] rounded-full bg-red px-[5px] py-px font-mono text-[10px] text-white">{alerts.length}</span>}
+              {t === 'users'  && pendingUsers.length > 0 && <span className="ml-[5px] rounded-full bg-amber px-[5px] py-px font-mono text-[10px] text-[#050505]">{pendingUsers.length}</span>}
             </button>
           ))}
         </div>

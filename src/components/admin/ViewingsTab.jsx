@@ -1,31 +1,29 @@
-import { colors } from '../../utils/theme';
-
 export default function ViewingsTab({ viewingRequests, setLeadDetailId }) {
   return (
     <div>
-      <h2 style={{ marginBottom: '20px', fontSize: '20px' }}>Viewing Requests ({viewingRequests.length})</h2>
+      <h2 className="mb-5 text-xl">Viewing Requests ({viewingRequests.length})</h2>
       {viewingRequests.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: colors.muted }}>
-          <p style={{ fontSize: '40px', marginBottom: '16px' }}>📅</p>
+        <div className="py-[60px] text-center text-muted">
+          <p className="mb-4 text-[40px]">📅</p>
           <p>No viewing requests yet.</p>
         </div>
       ) : viewingRequests.map(v => (
-        <div key={v._id} onClick={() => setLeadDetailId(v._id)} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '14px', padding: '18px 24px', marginBottom: '10px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div key={v._id} onClick={() => setLeadDetailId(v._id)} className="mb-2.5 flex cursor-pointer items-center justify-between gap-3 rounded-[14px] border border-edge bg-card px-6 py-[18px] hover:bg-raise">
           <div>
-            <strong style={{ fontSize: '15px' }}>{v.name !== 'Unknown' ? v.name : v.phone}</strong>
-            <p style={{ color: colors.muted, fontSize: '13px', marginTop: '2px' }}>{v.phone}</p>
-            {v.propertyAddress && <p style={{ color: colors.muted, fontSize: '12px' }}>📍 {v.propertyAddress}</p>}
+            <strong className="text-[15px]">{v.name !== 'Unknown' ? v.name : v.phone}</strong>
+            <p className="mt-0.5 font-mono text-[13px] text-muted">{v.phone}</p>
+            {v.propertyAddress && <p className="text-xs text-muted">📍 {v.propertyAddress}</p>}
           </div>
-          <div style={{ textAlign: 'right' }}>
+          <div className="text-right">
             {v.viewingScheduledAt ? (
               <>
-                <p style={{ color: colors.lime, fontWeight: '700' }}>{new Date(v.viewingScheduledAt).toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' })}</p>
-                <p style={{ color: colors.muted, fontSize: '12px' }}>{new Date(v.viewingScheduledAt).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}</p>
+                <p className="font-bold text-lime">{new Date(v.viewingScheduledAt).toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' })}</p>
+                <p className="font-mono text-xs text-muted">{new Date(v.viewingScheduledAt).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}</p>
               </>
             ) : (
-              <span style={{ fontSize: '12px', color: '#fbbf24' }}>Pending schedule</span>
+              <span className="text-xs text-amber">Pending schedule</span>
             )}
-            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(52,211,153,0.15)', color: '#34d399', display: 'block', marginTop: '4px' }}>
+            <span className="mt-1 block rounded-full bg-emerald/15 px-2 py-0.5 text-[11px] text-emerald">
               {v.viewingStatus || 'requested'}
             </span>
           </div>

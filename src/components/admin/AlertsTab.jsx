@@ -1,15 +1,15 @@
-import { colors } from '../../utils/theme';
+import Badge from '../ui/Badge';
 
 export default function AlertsTab({ alerts }) {
   return (
     <div>
-      <h2 style={{ marginBottom: '20px', fontSize: '20px' }}>Alerts ({alerts.length})</h2>
+      <h2 className="mb-5 text-xl">Alerts ({alerts.length})</h2>
       {alerts.length === 0
-        ? <div style={{ textAlign: 'center', padding: '60px 0', color: colors.muted }}><p style={{ fontSize: '40px', marginBottom: '16px' }}>✅</p><p>No alerts.</p></div>
+        ? <div className="py-[60px] text-center text-muted"><p className="mb-4 text-[40px]">✅</p><p>No alerts.</p></div>
         : alerts.map((alert, i) => (
-          <div key={i} style={{ background: colors.card, border: `1px solid ${alert.severity === 'high' ? colors.red : colors.amber}44`, borderRadius: '14px', padding: '16px 20px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div><strong>{alert.lead.name !== 'Unknown' ? alert.lead.name : alert.lead.phone}</strong><p style={{ color: colors.muted, fontSize: '13px', marginTop: '4px' }}>{alert.message}</p></div>
-            <span style={{ fontSize: '12px', padding: '4px 12px', borderRadius: '999px', background: alert.severity === 'high' ? `${colors.red}22` : `${colors.amber}22`, color: alert.severity === 'high' ? colors.red : colors.amber, fontWeight: '600', textTransform: 'uppercase' }}>{alert.severity}</span>
+          <div key={i} className={`mb-2.5 flex items-center justify-between gap-3 rounded-[14px] border bg-card px-5 py-4 ${alert.severity === 'high' ? 'border-red/25' : 'border-amber/25'}`}>
+            <div><strong>{alert.lead.name !== 'Unknown' ? alert.lead.name : alert.lead.phone}</strong><p className="mt-1 text-[13px] text-muted">{alert.message}</p></div>
+            <Badge tone={alert.severity === 'high' ? 'bad' : 'warn'}><span className="uppercase">{alert.severity}</span></Badge>
           </div>
         ))}
     </div>
