@@ -21,7 +21,6 @@ import OperationsSection from '../sections/OperationsSection';
 import ChatTab from '../components/ChatTab';
 import DeliveryTab from '../components/DeliveryTab';
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
-import StatCard from '../components/StatCard';
 import { useAuth } from '../context/auth';
 import {
   useOverview, useAllLeads, useActiveLeads, useAlerts,
@@ -35,12 +34,7 @@ import EBTeamPanel from '../components/EBTeamPanel';
 import ClientModal from '../components/ClientModal';
 import ApproveModal from '../components/ApproveModal';
 import BulkClientActions from '../components/BulkClientActions';
-import Pagination from '../components/Pagination';
 import { useSearchFilter } from '../hooks/useSearchFilter';
-import QuickPaymentPanel from '../components/QuickPaymentPanel';
-import WhatsAppStatus from '../components/WhatsAppStatus';
-import AuditLog from '../components/AuditLog';
-import exportCSV from '../utils/exportCSV';
 // FIX: PACMembersPanel existed but was never imported.
 import PACMembersPanel from '../components/PACMembersPanel';
 import AutomationPanel from '../components/AutomationPanel';
@@ -49,24 +43,16 @@ import SystemHealthPanel from '../components/SystemHealthPanel';
 import RentalsPanel from '../components/RentalsPanel';
 import { useRentalListings } from '../hooks/useRentalsModeration';
 import { useBillingActions, billingErrorMessage } from '../hooks/useClientBilling';
+import { c } from '../components/superadmin/tokens';
+import Sidebar from '../components/superadmin/Sidebar';
+import MobileNav from '../components/superadmin/MobileNav';
+import ClientsSection from '../components/superadmin/ClientsSection';
+import UsersSection from '../components/superadmin/UsersSection';
+import PlatformSection from '../components/superadmin/PlatformSection';
+import InviteModal from '../components/superadmin/InviteModal';
 
-// ── Design tokens ─────────────────────────────────────────────
-const c = {
-  bg: '#06080A', sidebar: '#080B08', surface: '#0D110C',
-  card: '#121710', lime: '#B8F040', earth: '#C4873A',
-  moss: '#4A6741', sage: '#7A9E6E', cyan: '#22d3ee',
-  emerald: '#34d399', amber: '#fbbf24', red: '#f87171',
-  orange: '#f97316', text: '#EEF0E8', muted: '#8A9080',
-  border: 'rgba(184,240,64,0.12)', borderDim: 'rgba(255,255,255,0.06)',
-};
-
-const STATUS_COLOR = {
-  active: c.lime, trial: c.amber, suspended: c.red,
-  cancelled: c.muted, qualified: c.lime, not_qualified: c.red,
-  taken_over: c.orange, closed: c.muted,
-};
-
-const PLAN_COLOR = { starter: c.sage, growth: c.lime, enterprise: c.cyan };
+// The colours, the navigation and the larger sections live in
+// ../components/superadmin/.
 
 // ── Main Component ────────────────────────────────────────────
 export default function SuperAdminDashboard() {
@@ -256,61 +242,15 @@ export default function SuperAdminDashboard() {
         @media(min-width:769px){.mobile-hamburger{display:none!important}.mobile-drawer{display:none!important}}
       `}</style>
 
-      {/* Mobile hamburger */}
-      <button className="mobile-hamburger" onClick={() => setMobileMenuOpen(true)} style={{ display: 'none', position: 'fixed', top: 14, left: 12, zIndex: 200, width: 44, height: 44, borderRadius: 10, background: c.sidebar, border: '1px solid ' + c.borderDim, color: c.lime, fontSize: 20, cursor: 'pointer' }}>☰</button>
+      <MobileNav
+        navSections={navSections} section={section} setSection={setSection} user={user} signOut={signOut}
+        mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen}
+      />
 
-      {/* Mobile drawer overlay */}
-      {mobileMenuOpen && <div onClick={() => setMobileMenuOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 250 }} />}
-
-      {/* Mobile drawer */}
-      <div className="mobile-drawer" style={{ display: 'none', position: 'fixed', top: 0, left: 0, bottom: 0, width: 260, maxWidth: '80vw', background: c.sidebar, borderRight: '1px solid ' + c.borderDim, zIndex: 300, flexDirection: 'column', overflowY: 'auto', transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform 0.25s ease' }}>
-        <div style={{ padding: '20px 16px', borderBottom: '1px solid ' + c.borderDim, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 34, height: 34, background: 'linear-gradient(135deg,' + c.lime + ',' + c.moss + ')', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17 }}>🌿</div>
-          <div style={{ flex: 1 }}><p style={{ fontSize: 14, fontWeight: 700, color: c.text }}>Easy Branding</p><p style={{ fontSize: 11, color: c.lime, fontWeight: 600 }}>AI</p></div>
-          <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'none', border: 'none', color: c.muted, fontSize: 24, cursor: 'pointer' }}>×</button>
-        </div>
-        <div style={{ padding: '12px 8px', flex: 1 }}>
-          {navSections.map(nav => (
-            <button key={nav.id} onClick={() => { setSection(nav.id); setMobileMenuOpen(false); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '13px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', background: section === nav.id ? 'rgba(184,240,64,0.12)' : 'transparent', color: section === nav.id ? c.lime : c.muted, fontSize: 15, fontWeight: section === nav.id ? 600 : 400, fontFamily: 'inherit', marginBottom: 2, textAlign: 'left' }}>
-              <span style={{ fontSize: 20, width: 26, textAlign: 'center' }}>{nav.icon}</span>
-              <span style={{ flex: 1 }}>{nav.label}</span>
-              {nav.badge > 0 && <span style={{ background: c.amber, color: '#080A06', fontSize: 11, fontWeight: 800, padding: '2px 7px', borderRadius: 999 }}>{nav.badge}</span>}
-            </button>
-          ))}
-        </div>
-        <div style={{ padding: 16, borderTop: '1px solid ' + c.borderDim }}>
-          <p style={{ fontSize: 14, fontWeight: 600, color: c.text, marginBottom: 2 }}>{user?.fullName || 'Ayanda'}</p>
-          <p style={{ fontSize: 12, color: c.lime, marginBottom: 12 }}>{user?.role}</p>
-          <button onClick={signOut} style={{ width: '100%', padding: 11, background: 'rgba(255,255,255,0.05)', border: '1px solid ' + c.borderDim, color: c.muted, borderRadius: 8, cursor: 'pointer', fontSize: 14, fontFamily: 'inherit' }}>Sign Out</button>
-        </div>
-      </div>
-
-      {/* Desktop sidebar */}
-      <div className="sidebar" style={{ width: sidebarOpen ? 220 : 64, minHeight: '100vh', background: c.sidebar, borderRight: '1px solid ' + c.borderDim, display: 'flex', flexDirection: 'column', position: 'fixed', top: 64, left: 0, bottom: 0, zIndex: 50, transition: 'width 0.2s ease', overflowY: 'auto', overflowX: 'hidden' }}>
-        <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid ' + c.borderDim, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 32, height: 32, background: 'linear-gradient(135deg,' + c.lime + ',' + c.moss + ')', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>🌿</div>
-          {sidebarOpen && <div><p style={{ fontSize: 13, fontWeight: 700, color: c.text }}>Easy Branding</p><p style={{ fontSize: 11, color: c.lime, fontWeight: 600 }}>AI</p></div>}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: c.muted, cursor: 'pointer', fontSize: 16, padding: 4, flexShrink: 0 }}>{sidebarOpen ? '←' : '→'}</button>
-        </div>
-        <div style={{ padding: '12px 8px', flex: 1 }}>
-          {navSections.map(nav => (
-            <button key={nav.id} onClick={() => setSection(nav.id)} className="nav-item-hover" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px', borderRadius: 10, border: 'none', cursor: 'pointer', background: section === nav.id ? 'rgba(184,240,64,0.12)' : 'transparent', color: section === nav.id ? c.lime : c.muted, fontSize: 14, fontWeight: section === nav.id ? 600 : 400, fontFamily: 'inherit', marginBottom: 2, textAlign: 'left' }}>
-              <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>{nav.icon}</span>
-              {sidebarOpen && <span style={{ flex: 1, whiteSpace: 'nowrap' }}>{nav.label}</span>}
-              {sidebarOpen && nav.badge > 0 && <span style={{ background: c.amber, color: '#080A06', fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 999 }}>{nav.badge}</span>}
-            </button>
-          ))}
-        </div>
-        <div style={{ padding: '12px 16px', borderTop: '1px solid ' + c.borderDim }}>
-          {sidebarOpen ? (
-            <>
-              <p style={{ fontSize: 13, fontWeight: 600, color: c.text, marginBottom: 2 }}>{user?.fullName || 'Ayanda'}</p>
-              <p style={{ fontSize: 11, color: c.lime, marginBottom: 10 }}>{user?.role}</p>
-              <button onClick={signOut} style={{ width: '100%', padding: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid ' + c.borderDim, color: c.muted, borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>Sign Out</button>
-            </>
-          ) : <button onClick={signOut} style={{ width: '100%', padding: 8, background: 'none', border: 'none', color: c.muted, cursor: 'pointer', fontSize: 18 }}>↩</button>}
-        </div>
-      </div>
+      <Sidebar
+        navSections={navSections} section={section} setSection={setSection} user={user} signOut={signOut}
+        sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}
+      />
 
       {/* Main content */}
       <div className="main-content" style={{ marginLeft: sidebarOpen ? 220 : 64, flex: 1, minWidth: 0, padding: '32px', paddingTop: 96, transition: 'margin-left 0.2s ease', minHeight: '100vh' }}>
@@ -352,142 +292,13 @@ export default function SuperAdminDashboard() {
         {/* ════════ CLIENTS ════════ */}
         {section === 'clients' && (
           <SectionErrorBoundary name="Clients" onRetry={refetch}>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
-                <div><h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4 }}>Clients</h1><p style={{ color: c.muted, fontSize: 15 }}>Manage rental agency accounts</p></div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <button onClick={() => {
-                    if (selectedClientIds.length === 0) {
-                      alert('Select clients first by checking the boxes');
-                      return;
-                    }
-                    setBulkModal(true);
-                  }} style={{ padding: '12px 18px', background: selectedClientIds.length > 0 ? c.amber + '22' : 'rgba(255,255,255,0.04)', color: selectedClientIds.length > 0 ? c.amber : c.muted, border: '1px solid ' + (selectedClientIds.length > 0 ? c.amber + '33' : c.borderDim), borderRadius: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px' }}>
-                    📦 Bulk ({selectedClientIds.length})
-                  </button>
-                  <button onClick={() => {
-                    const exportData = clientsFilter.filtered.map(t => ({
-                      businessName: t.businessName || '',
-                      status: t.status || '',
-                      plan: t.plan || '',
-                      email: t.contactEmail || '',
-                      whatsapp: t.whatsappNumber || '',
-                      leads: t.totalLeads || 0,
-                      monthlyFee: 'R' + (t.monthlyFee || 0),
-                    }));
-                    exportCSV(exportData, 'clients-export');
-                  }} style={{ padding: '12px 18px', background: c.cyan + '22', color: c.cyan, border: '1px solid ' + c.cyan + '33', borderRadius: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px' }}>📥 Export CSV</button>
-                  <button onClick={() => setClientModal({})} style={{ padding: '12px 24px', background: c.lime, color: '#080A06', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>+ Add Client</button>
-                </div>
-              </div>
-              {tenantStats && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 28 }}>
-                  <StatCard label="Total" value={tenantStats.total || 0} icon="👥" />
-                  <StatCard label="Active" value={tenantStats.active || 0} color={c.lime} icon="✅" />
-                  <StatCard label="Trial" value={tenantStats.trial || 0} color={c.amber} icon="🧪" />
-                  <StatCard label="MRR" value={'R' + ((tenantStats.mrr || 0).toLocaleString())} color={c.lime} icon="💰" sub="monthly recurring" />
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-                <input
-                  value={clientsFilter.searchTerm}
-                  onChange={e => { clientsFilter.setSearchTerm(e.target.value); setClientsPage(1); }}
-                  placeholder="Search clients..."
-                  style={{ padding: '10px 14px', background: c.card, border: '1px solid ' + c.borderDim, borderRadius: '10px', color: c.text, fontSize: '14px', outline: 'none', fontFamily: 'inherit', flex: 1, minWidth: '200px' }}
-                />
-                <select
-                  value={clientsFilter.filters.status || 'all'}
-                  onChange={e => { clientsFilter.setFilter('status', e.target.value === 'all' ? null : e.target.value); setClientsPage(1); }}
-                  style={{ padding: '10px 14px', background: c.card, border: '1px solid ' + c.borderDim, borderRadius: '10px', color: c.text, fontSize: '14px', outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}
-                >
-                  <option value="all">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="trial">Trial</option>
-                  <option value="suspended">Suspended</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-                <select
-                  value={clientsFilter.filters.plan || 'all'}
-                  onChange={e => { clientsFilter.setFilter('plan', e.target.value === 'all' ? null : e.target.value); setClientsPage(1); }}
-                  style={{ padding: '10px 14px', background: c.card, border: '1px solid ' + c.borderDim, borderRadius: '10px', color: c.text, fontSize: '14px', outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}
-                >
-                  <option value="all">All Plans</option>
-                  <option value="starter">Starter</option>
-                  <option value="growth">Growth</option>
-                  <option value="enterprise">Enterprise</option>
-                </select>
-                {(clientsFilter.searchTerm || clientsFilter.filters.status || clientsFilter.filters.plan) && (
-                  <button onClick={() => { clientsFilter.clearAll(); setClientsPage(1); }} style={{ padding: '10px 14px', background: 'transparent', border: '1px solid ' + c.borderDim, borderRadius: '10px', color: c.muted, cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>
-                    Clear
-                  </button>
-                )}
-              </div>
-
-              {clientsFilter.filteredCount !== clientsFilter.totalCount && (
-                <p style={{ color: c.muted, fontSize: 13, marginBottom: 12 }}>
-                  Showing {clientsFilter.filteredCount} of {clientsFilter.totalCount} clients
-                </p>
-              )}
-
-              {clientsFilter.filtered.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 0', color: c.muted }}>
-                  <p style={{ fontSize: 40, marginBottom: 16 }}>{clientsFilter.searchTerm ? '🔍' : '🌿'}</p>
-                  <p>{clientsFilter.searchTerm ? 'No clients match your search.' : 'No clients yet — add your first one.'}</p>
-                </div>
-              ) : (
-                <>
-                  {clientsFilter.filtered
-                    .slice((clientsPage - 1) * ITEMS_PER_PAGE, clientsPage * ITEMS_PER_PAGE)
-                    .map(tenant => (
-                    <div key={tenant._id} className="card-hover" style={{ background: c.card, border: '1px solid ' + (!tenant.whatsappNumber ? c.amber + '44' : selectedClientIds.includes(tenant._id) ? c.lime + '66' : c.borderDim), borderRadius: 14, padding: '18px 24px', marginBottom: 10 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                        <input type="checkbox" checked={selectedClientIds.includes(tenant._id)} onChange={() => {
-                          setSelectedClientIds(prev => prev.includes(tenant._id) ? prev.filter(id => id !== tenant._id) : [...prev, tenant._id]);
-                        }} style={{ cursor: 'pointer', accentColor: c.lime, width: 16, height: 16 }} />
-                        <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-                              <strong style={{ fontSize: 16 }}>{tenant.businessName}</strong>
-                              <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: (STATUS_COLOR[tenant.status] || c.muted) + '22', color: STATUS_COLOR[tenant.status] || c.muted, fontWeight: 600 }}>{tenant.status}</span>
-                              <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: (PLAN_COLOR[tenant.plan] || c.muted) + '22', color: PLAN_COLOR[tenant.plan] || c.muted }}>{tenant.plan}</span>
-                              {!tenant.whatsappNumber && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: c.amber + '22', color: c.amber, fontWeight: 600 }}>⚠️ No WhatsApp</span>}
-                            </div>
-                            <p style={{ color: c.muted, fontSize: 13 }}>{tenant.contactEmail}{tenant.whatsappNumber ? ' · ' + tenant.whatsappNumber : ''}</p>
-                          </div>
-                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                            <div style={{ textAlign: 'center', padding: '6px 12px', background: c.lime + '08', borderRadius: 8 }}><p style={{ color: c.lime, fontWeight: 700, fontSize: 16 }}>{tenant.totalLeads || 0}</p><p style={{ color: c.muted, fontSize: 10 }}>Leads</p></div>
-                            <div style={{ textAlign: 'center', padding: '6px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}><p style={{ color: c.text, fontWeight: 700, fontSize: 16 }}>R{tenant.monthlyFee}</p><p style={{ color: c.muted, fontSize: 10 }}>/mo</p></div>
-                            {['suspended', 'cancelled'].includes(tenant.status)
-                              ? <button onClick={() => handleActivate(tenant)} style={{ padding: '7px 14px', background: c.lime + '22', color: c.lime, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' }}>{tenant.status === 'cancelled' ? '▶ Reopen' : '▶ Activate'}</button>
-                              : <button onClick={() => handleSuspend(tenant)} style={{ padding: '7px 14px', background: c.amber + '22', color: c.amber, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' }}>⏸ Suspend</button>}
-                            <button onClick={() => setClientModal(tenant)} style={{ padding: '7px 14px', background: c.lime + '22', color: c.lime, border: '1px solid ' + c.border, borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>Edit</button>
-                            <button onClick={() => generateInvite(tenant)} style={{ padding: '7px 14px', background: c.cyan + '22', color: c.cyan, border: '1px solid ' + c.cyan + '33', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>🔗 Invite</button>
-                            {isSuperAdmin && tenant.status !== 'cancelled' && <button onClick={() => handleCloseClient(tenant)} style={{ padding: '7px 14px', background: c.red + '22', color: c.red, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>Close account</button>}
-                            {isSuperAdmin && flowTemplates.length > 0 && (
-                              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                                <select value={flowChoice[tenant._id] || flowTemplates[0].id} onChange={e => setFlowChoice(prev => ({ ...prev, [tenant._id]: e.target.value }))} title="Industry flow template" style={{ padding: '7px 8px', background: c.moss + '22', color: c.sage, border: '1px solid ' + c.moss + '55', borderRadius: 8, fontSize: 12, cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}>
-                                  {flowTemplates.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-                                </select>
-                                <button onClick={() => handleAllocateFlow(tenant)} title="Allocate this flow as the client's live bot" style={{ padding: '7px 12px', background: c.lime + '22', color: c.lime, border: '1px solid ' + c.border, borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' }}>⚡ Allocate</button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  <Pagination
-                    currentPage={clientsPage}
-                    totalPages={Math.ceil(clientsFilter.filtered.length / ITEMS_PER_PAGE)}
-                    onPageChange={setClientsPage}
-                    showInfo
-                    totalItems={clientsFilter.filtered.length}
-                    itemsPerPage={ITEMS_PER_PAGE}
-                  />
-                </>
-              )}
-            </div>
+            <ClientsSection
+              selectedClientIds={selectedClientIds} setSelectedClientIds={setSelectedClientIds} setBulkModal={setBulkModal}
+              clientsFilter={clientsFilter} clientsPage={clientsPage} setClientsPage={setClientsPage} ITEMS_PER_PAGE={ITEMS_PER_PAGE}
+              setClientModal={setClientModal} tenantStats={tenantStats} handleActivate={handleActivate} handleSuspend={handleSuspend}
+              generateInvite={generateInvite} handleCloseClient={handleCloseClient} isSuperAdmin={isSuperAdmin}
+              flowTemplates={flowTemplates} flowChoice={flowChoice} setFlowChoice={setFlowChoice} handleAllocateFlow={handleAllocateFlow}
+            />
           </SectionErrorBoundary>
         )}
 
@@ -538,106 +349,11 @@ export default function SuperAdminDashboard() {
         {/* ════════ USERS ════════ */}
         {section === 'users' && (
           <SectionErrorBoundary name="Users" onRetry={refetch}>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
-                <div><h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4 }}>Users</h1><p style={{ color: c.muted, fontSize: 15 }}>Platform user management</p></div>
-                <button onClick={() => {
-                  const exportData = usersFilter.filtered.map(u => ({
-                    name: u.fullName || '',
-                    email: u.email || '',
-                    phone: u.phone || '',
-                    role: u.role || '',
-                    approved: u.approved ? 'Yes' : 'No',
-                    plan: u.requestedPlan || '',
-                  }));
-                  exportCSV(exportData, 'users-export');
-                }} style={{ padding: '12px 18px', background: c.cyan + '22', color: c.cyan, border: '1px solid ' + c.cyan + '33', borderRadius: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px' }}>📥 Export CSV</button>
-              </div>
-              {pendingUsers.length > 0 && (
-                <div style={{ marginBottom: 32 }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 14, color: c.amber }}>⏳ Pending Approvals ({pendingUsers.length})</h3>
-                  {pendingUsers.map(u => (
-                    <div key={u._id} style={{ background: c.card, border: '1px solid ' + c.amber + '44', borderRadius: 14, padding: '16px 20px', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                      <div><strong>{u.fullName}</strong><p style={{ color: c.muted, fontSize: 13, marginTop: 2 }}>{u.email} · {u.phone}</p>{u.requestedPlan && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: c.lime + '18', color: c.lime, fontWeight: 600, marginTop: 4, display: 'inline-block' }}>{u.requestedPlan} plan</span>}</div>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => setApproveModal(u)} style={{ padding: '8px 18px', background: c.lime + '22', color: c.lime, border: '1px solid ' + c.border, borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'inherit' }}>✅ Approve</button>
-                        <button onClick={() => handleRejectUser(u)} style={{ padding: '8px 14px', background: c.red + '22', color: c.red, border: 'none', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>Reject</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-                <input
-                  value={usersFilter.searchTerm}
-                  onChange={e => { usersFilter.setSearchTerm(e.target.value); setUsersPage(1); }}
-                  placeholder="Search users..."
-                  style={{ padding: '10px 14px', background: c.card, border: '1px solid ' + c.borderDim, borderRadius: '10px', color: c.text, fontSize: '14px', outline: 'none', fontFamily: 'inherit', flex: 1, minWidth: '200px' }}
-                />
-                <select
-                  value={usersFilter.filters.role || 'all'}
-                  onChange={e => { usersFilter.setFilter('role', e.target.value === 'all' ? null : e.target.value); setUsersPage(1); }}
-                  style={{ padding: '10px 14px', background: c.card, border: '1px solid ' + c.borderDim, borderRadius: '10px', color: c.text, fontSize: '14px', outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}
-                >
-                  <option value="all">All Roles</option>
-                  <option value="super_admin">Super Admin</option>
-                  <option value="eb_manager">EB Manager</option>
-                  <option value="eb_agent">EB Agent</option>
-                  <option value="admin">Admin</option>
-                  <option value="agent">Agent</option>
-                  <option value="borrower">Borrower</option>
-                </select>
-                {(usersFilter.searchTerm || usersFilter.filters.role) && (
-                  <button onClick={() => { usersFilter.clearAll(); setUsersPage(1); }} style={{ padding: '10px 14px', background: 'transparent', border: '1px solid ' + c.borderDim, borderRadius: '10px', color: c.muted, cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>
-                    Clear
-                  </button>
-                )}
-              </div>
-
-              {usersFilter.filteredCount !== usersFilter.totalCount && (
-                <p style={{ color: c.muted, fontSize: 13, marginBottom: 12 }}>
-                  Showing {usersFilter.filteredCount} of {usersFilter.totalCount} users
-                </p>
-              )}
-
-              <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 14 }}>All Users ({usersFilter.filteredCount})</h3>
-
-              {usersFilter.filtered.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 0', color: c.muted }}>
-                  <p style={{ fontSize: 40, marginBottom: 16 }}>{usersFilter.searchTerm ? '🔍' : '👤'}</p>
-                  <p>{usersFilter.searchTerm ? 'No users match your search.' : 'No users yet.'}</p>
-                </div>
-              ) : (
-                <>
-                  {usersFilter.filtered
-                    .slice((usersPage - 1) * ITEMS_PER_PAGE, usersPage * ITEMS_PER_PAGE)
-                    .map(u => (
-                    <div key={u._id} style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 12, padding: '14px 18px', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-                      <div><strong>{u.fullName}</strong><p style={{ color: c.muted, fontSize: 13, marginTop: 2 }}>{u.email}</p></div>
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 999, background: u.approved ? c.lime + '22' : c.amber + '22', color: u.approved ? c.lime : c.amber }}>{u.approved ? '✅ Approved' : '⏳ Pending'}</span>
-                        {u.role === 'super_admin' || u._id === user.id ? <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 999, background: c.cyan + '22', color: c.cyan, fontWeight: 600 }}>{u.role} {u._id === user.id ? '(you)' : '🔒'}</span>
-                          : <select defaultValue={u.role} onChange={async (e) => { try { await api.put('/users/' + u._id, { role: e.target.value }); refetch(); } catch (err) { alert(err.response?.data?.message || 'Failed'); e.target.value = u.role; } }} style={{ padding: '4px 8px', background: c.cyan + '18', border: '1px solid ' + c.cyan + '33', color: c.cyan, borderRadius: 8, fontSize: 12, cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}>
-                            <option value="borrower">borrower</option><option value="agent">agent</option><option value="admin">admin</option><option value="eb_agent">eb_agent</option><option value="eb_manager">eb_manager</option>{isSuperAdmin && <option value="super_admin">super_admin</option>}
-                          </select>}
-                        {!(u.role === 'super_admin' || u._id === user.id) && (
-                          <button onClick={() => handleDeleteUser(u)} title="Delete user" style={{ padding: '5px 10px', background: c.red + '18', color: c.red, border: '1px solid ' + c.red + '33', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>🗑 Delete</button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  <Pagination
-                    currentPage={usersPage}
-                    totalPages={Math.ceil(usersFilter.filtered.length / ITEMS_PER_PAGE)}
-                    onPageChange={setUsersPage}
-                    showInfo
-                    totalItems={usersFilter.filtered.length}
-                    itemsPerPage={ITEMS_PER_PAGE}
-                  />
-                </>
-              )}
-            </div>
+            <UsersSection
+              usersFilter={usersFilter} usersPage={usersPage} setUsersPage={setUsersPage} ITEMS_PER_PAGE={ITEMS_PER_PAGE}
+              pendingUsers={pendingUsers} setApproveModal={setApproveModal} handleRejectUser={handleRejectUser}
+              handleDeleteUser={handleDeleteUser} user={user} isSuperAdmin={isSuperAdmin} refetch={refetch}
+            />
           </SectionErrorBoundary>
         )}
 
@@ -657,38 +373,7 @@ export default function SuperAdminDashboard() {
         {/* ════════ PLATFORM ════════ */}
         {section === 'platform' && isSuperAdmin && (
           <SectionErrorBoundary name="Platform" onRetry={refetch}>
-            <div>
-              <div style={{ marginBottom: 28 }}>
-                <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4 }}>Platform</h1>
-                <p style={{ color: c.muted, fontSize: 15 }}>System health and revenue overview</p>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 28 }}>
-                <StatCard label="API Status" value={health?.status === 'ok' ? '✅ Online' : '❌ Issue'} color={c.lime} icon="🟢" />
-                <StatCard label="Database" value={health?.services?.database?.status === 'connected' ? '✅ Connected' : '❌ Down'} color={c.lime} icon="🗄️" />
-                <StatCard label="Environment" value={health?.environment || 'production'} color={c.cyan} icon="⚙️" />
-                <StatCard label="Total MRR" value={'R' + ((tenantStats?.mrr || 0).toLocaleString())} color={c.lime} icon="💰" sub="active clients only" />
-              </div>
-              <div style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 14, padding: 20, marginBottom: 16 }}>
-                <p style={{ color: c.muted, fontSize: 12, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Backend URL</p>
-                <p style={{ color: c.lime, fontSize: 14, fontFamily: 'monospace' }}>{import.meta.env.VITE_API_URL}</p>
-              </div>
-              <WhatsAppStatus />
-              <AuditLog />
-              <QuickPaymentPanel />
-              {tenantStats?.byPlan && (
-                <div style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 14, padding: 20 }}>
-                  <p style={{ color: c.muted, fontSize: 12, marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Revenue by Plan</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10 }}>
-                    {Object.entries(tenantStats.byPlan).map(([plan, count]) => (
-                      <div key={plan} style={{ background: c.surface, borderRadius: 10, padding: 14 }}>
-                        <p style={{ color: c.muted, fontSize: 11, textTransform: 'uppercase', marginBottom: 6 }}>{plan}</p>
-                        <p style={{ color: PLAN_COLOR[plan] || c.lime, fontSize: 20, fontWeight: 700 }}>{count} <span style={{ color: c.muted, fontSize: 12 }}>clients</span></p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            <PlatformSection health={health} tenantStats={tenantStats} />
           </SectionErrorBoundary>
         )}
       </div>
@@ -701,19 +386,7 @@ export default function SuperAdminDashboard() {
           <ApproveModal user={approveModal} tenants={tenants} onClose={() => setApproveModal(null)} onApproved={() => { setApproveModal(null); refetch(); }} />
         </div>
       )}
-      {inviteModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
-          <div style={{ width: '100%', maxWidth: 500, background: c.surface, borderRadius: 20, border: '1px solid ' + c.border, padding: 32 }}>
-            <h3 style={{ color: c.lime, marginBottom: 8 }}>🔗 Invite Link</h3>
-            <p style={{ color: c.muted, fontSize: 14, marginBottom: 20 }}>Share with <strong style={{ color: c.text }}>{inviteModal.businessName}</strong> staff.</p>
-            <div style={{ background: '#1C1C19', border: '1px solid ' + c.borderDim, borderRadius: 10, padding: 14, marginBottom: 14, wordBreak: 'break-all' }}><p style={{ color: c.lime, fontSize: 13, fontFamily: 'monospace' }}>{inviteUrl}</p></div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => navigator.clipboard.writeText(inviteUrl)} style={{ flex: 1, padding: 12, background: c.lime, color: '#050505', border: 'none', borderRadius: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Copy Link</button>
-              <button onClick={() => setInviteModal(null)} style={{ padding: '12px 20px', background: 'transparent', border: '1px solid ' + c.borderDim, color: c.muted, borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit' }}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {inviteModal && <InviteModal client={inviteModal} inviteUrl={inviteUrl} onClose={() => setInviteModal(null)} />}
       {bulkModal && (
         <BulkClientActions
           selectedIds={selectedClientIds}
