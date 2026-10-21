@@ -1,4 +1,4 @@
-import { c, labelStyle } from './styles';
+import { SectionTitle, Hint } from './ui';
 
 export default function Addons({ addons, toggleAddon }) {
   return (
@@ -8,18 +8,18 @@ export default function Addons({ addons, toggleAddon }) {
           moving to a whole new plan. See hasFeature() in the backend's
           config/planLimits.js for how these combine with the plan's
           own included features. */}
-      <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '4px' }}>Add-ons</p>
-      <p style={{ color: c.muted, fontSize: '12px', marginBottom: '10px' }}>Paid top-ups this client has bought, on top of whatever their plan already includes.</p>
-      <div style={{ background: c.surface, borderRadius: '12px', padding: '14px 16px', border: '1px solid ' + c.borderDim, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+      <SectionTitle className="mb-1">Add-ons</SectionTitle>
+      <Hint>Paid top-ups this client has bought, on top of whatever their plan already includes.</Hint>
+      <div className="mb-3.5 grid grid-cols-2 gap-2.5 rounded-xl border border-edge bg-surface px-4 py-3.5">
         {[
           { key: 'payments',  label: 'Payments' },
           { key: 'invoicing', label: 'Invoicing' },
           { key: 'ownNumber', label: 'Own WhatsApp Number' },
           { key: 'extraFlow', label: 'Extra Flow' },
         ].map(({ key, label }) => (
-          <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input type="checkbox" id={'addon-' + key} checked={addons[key]} onChange={() => toggleAddon(key)} style={{ cursor: 'pointer', accentColor: c.lime, width: '16px', height: '16px' }} />
-            <label htmlFor={'addon-' + key} style={{ color: c.text, fontSize: '14px', cursor: 'pointer' }}>{label}</label>
+          <div key={key} className="flex min-h-[44px] items-center gap-2">
+            <input type="checkbox" id={'addon-' + key} checked={addons[key]} onChange={() => toggleAddon(key)} className="h-4 w-4 cursor-pointer accent-lime" />
+            <label htmlFor={'addon-' + key} className="cursor-pointer text-sm text-ink">{label}</label>
           </div>
         ))}
       </div>

@@ -13,7 +13,9 @@ import { useState, useEffect } from 'react';
 import { loadProducts } from '../config/plans';
 import api from '../api';
 import QuestionEditor from './QuestionEditor';
-import { c, iStyle, labelStyle } from './clientModal/styles';
+import Button from './ui/Button';
+import { Input, Select } from './ui/Field';
+import { SectionTitle, Label, Hint } from './clientModal/ui';
 import EftDetails from './clientModal/EftDetails';
 import PaymentSplit from './clientModal/PaymentSplit';
 import Addons from './clientModal/Addons';
@@ -177,48 +179,48 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px', overflowY: 'auto' }}>
-      <div style={{ width: '100%', maxWidth: '560px', background: c.surface, borderRadius: '24px', border: '1px solid ' + c.border, padding: '32px', maxHeight: '90vh', overflowY: 'auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: '900', color: c.lime }}>
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto bg-black/85 p-5">
+      <div className="max-h-[90vh] w-full max-w-[560px] overflow-y-auto rounded-3xl border border-edge-live bg-surface p-8 max-sm:p-5">
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <h3 className="font-['Fraunces',serif] text-[22px] font-black text-lime">
             {isNew ? '+ Add Client' : 'Edit — ' + tenant.businessName}
           </h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: c.muted, cursor: 'pointer', fontSize: '20px' }}>×</button>
+          <button type="button" onClick={onClose} aria-label="Close" className="min-h-[44px] min-w-[44px] cursor-pointer text-xl text-muted">×</button>
         </div>
 
-        {error && <div style={{ background: c.red + '18', border: '1px solid ' + c.red + '33', borderRadius: '10px', padding: '12px 16px', color: c.red, fontSize: '14px', marginBottom: '16px' }}>{error}</div>}
+        {error && <div role="alert" className="mb-4 rounded-[10px] border border-red/20 bg-red/10 px-4 py-3 text-sm text-red">{error}</div>}
 
-        <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginBottom: '12px' }}>Business Details</p>
-        <label style={labelStyle}>Business Name *</label>
-        <input value={form.businessName} onChange={e => set('businessName', e.target.value)} placeholder="ABC Rentals" style={iStyle} />
-        <label style={labelStyle}>Brand Name</label>
-        <input value={form.brandName} onChange={e => set('brandName', e.target.value)} placeholder="Displayed to renters" style={iStyle} />
-        <label style={labelStyle}>Contact Email *</label>
-        <input value={form.contactEmail} onChange={e => set('contactEmail', e.target.value)} placeholder="admin@abcrentals.co.za" style={iStyle} />
-        <label style={labelStyle}>WhatsApp Number</label>
-        <input value={form.whatsappNumber} onChange={e => set('whatsappNumber', e.target.value)} placeholder="whatsapp:+27821234567" style={iStyle} />
-        <label style={labelStyle}>Owner Personal WhatsApp</label>
-        <input value={form.ownerPhone || ''} onChange={e => set('ownerPhone', e.target.value)} placeholder="+27831234567" style={iStyle} />
+        <SectionTitle className="mt-0">Business Details</SectionTitle>
+        <Label htmlFor="cm-1">Business Name *</Label>
+        <Input mono={false} id="cm-1" value={form.businessName} onChange={e => set('businessName', e.target.value)} placeholder="ABC Rentals" className="mb-3.5 bg-white/4" />
+        <Label htmlFor="cm-2">Brand Name</Label>
+        <Input mono={false} id="cm-2" value={form.brandName} onChange={e => set('brandName', e.target.value)} placeholder="Displayed to renters" className="mb-3.5 bg-white/4" />
+        <Label htmlFor="cm-3">Contact Email *</Label>
+        <Input mono={false} id="cm-3" value={form.contactEmail} onChange={e => set('contactEmail', e.target.value)} placeholder="admin@abcrentals.co.za" className="mb-3.5 bg-white/4" />
+        <Label htmlFor="cm-4">WhatsApp Number</Label>
+        <Input id="cm-4" value={form.whatsappNumber} onChange={e => set('whatsappNumber', e.target.value)} placeholder="whatsapp:+27821234567" className="mb-3.5 bg-white/4" />
+        <Label htmlFor="cm-5">Owner Personal WhatsApp</Label>
+        <Input id="cm-5" value={form.ownerPhone || ''} onChange={e => set('ownerPhone', e.target.value)} placeholder="+27831234567" className="mb-3.5 bg-white/4" />
 
-        <label style={labelStyle}>Payment Processing Fee</label>
-        <p style={{ color: c.muted, fontSize: '12px', marginBottom: '8px' }}>Who covers the Paystack + platform fees?</p>
-        <select value={form.feeMode || 'absorb'} onChange={e => set('feeMode', e.target.value)} style={{ ...iStyle, cursor: 'pointer' }}>
+        <Label htmlFor="cm-feemode">Payment Processing Fee</Label>
+        <Hint>Who covers the Paystack + platform fees?</Hint>
+        <Select id="cm-feemode" value={form.feeMode || 'absorb'} onChange={e => set('feeMode', e.target.value)} className="mb-3.5 bg-white/4 cursor-pointer">
           <option value="absorb">Business absorbs — customer pays exact price</option>
           <option value="gross_up">Pass to customer — customer covers all fees</option>
-        </select>
+        </Select>
 
-        <label style={labelStyle}>Paystack Subaccount (payment split)</label>
-        <p style={{ color: c.muted, fontSize: '12px', marginBottom: '8px' }}>The client's Paystack subaccount code (ACCT_...). Payments split to their bank automatically. Leave blank to keep the current value.</p>
-        <input value={form.paystackSubaccount || ''} onChange={e => set('paystackSubaccount', e.target.value)} placeholder="ACCT_xxxxxxxxxxxx" style={iStyle} />
+        <Label htmlFor="cm-subaccount">Paystack Subaccount (payment split)</Label>
+        <Hint>The client's Paystack subaccount code (ACCT_...). Payments split to their bank automatically. Leave blank to keep the current value.</Hint>
+        <Input id="cm-subaccount" value={form.paystackSubaccount || ''} onChange={e => set('paystackSubaccount', e.target.value)} placeholder="ACCT_xxxxxxxxxxxx" className="mb-3.5 bg-white/4" />
 
         <EftDetails form={form} setEft={setEft} eftComplete={eftComplete} />
 
         <PaymentSplit tenant={tenant} isNew={isNew} businessName={form.businessName} onSubaccount={(code) => set('paystackSubaccount', code)} />
 
-        <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginBottom: '12px', marginTop: '8px' }}>Plan & Status</p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <SectionTitle className="mt-2">Plan & Status</SectionTitle>
+        <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
           <div>
-            <label style={labelStyle}>Plan</label>
+            <Label htmlFor="cm-plan">Plan</Label>
             {/*
               Names and prices come from src/config/plans.js, the same table
               Onboarding sells from. This dropdown used to carry its own
@@ -240,7 +242,8 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
               price, and what a client actually pays is negotiated. NovaCare
               is on `growth` at R150.
             */}
-            <select
+            <Select
+              id="cm-plan"
               value={form.product || ''}
               onChange={e => {
                 const chosen = products.find(p => p.key === e.target.value);
@@ -249,7 +252,7 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
                 set('plan', chosen.plan);
                 set('monthlyFee', chosen.price);
               }}
-              style={{ ...iStyle, marginBottom: 0 }}
+              className="cursor-pointer bg-white/4"
             >
               <option value="">
                 {products.length ? `Current: ${form.plan} · R${form.monthlyFee}` : 'Loading prices…'}
@@ -257,33 +260,33 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
               {products.map(p => (
                 <option key={p.key} value={p.key}>{p.label} — R{p.price}/mo</option>
               ))}
-            </select>
+            </Select>
           </div>
           <div>
-            <label style={labelStyle}>Status</label>
-            <select value={form.status} onChange={e => set('status', e.target.value)} style={{ ...iStyle, marginBottom: 0 }}>
+            <Label htmlFor="cm-status">Status</Label>
+            <Select id="cm-status" value={form.status} onChange={e => set('status', e.target.value)} className="cursor-pointer bg-white/4">
               <option value="trial">Trial</option>
               <option value="active">Active</option>
               <option value="suspended">Suspended</option>
               <option value="cancelled">Cancelled</option>
-            </select>
+            </Select>
           </div>
         </div>
 
         <Addons addons={form.addons} toggleAddon={toggleAddon} />
 
-        <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '12px' }}>Workflow</p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <SectionTitle>Workflow</SectionTitle>
+        <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
           <div>
-            <label style={labelStyle}>Workflow Type</label>
-            <select value={form.workflowType} onChange={e => set('workflowType', e.target.value)} style={{ ...iStyle, marginBottom: 0 }}>
+            <Label htmlFor="cm-workflow">Workflow Type</Label>
+            <Select id="cm-workflow" value={form.workflowType} onChange={e => set('workflowType', e.target.value)} className="cursor-pointer bg-white/4">
               <option value="basic">Basic</option>
               <option value="full">Full</option>
-            </select>
+            </Select>
           </div>
           <div>
-            <label style={labelStyle}>Monthly Fee (R)</label>
-            <input type="number" value={form.monthlyFee} onChange={e => set('monthlyFee', Number(e.target.value))} style={{ ...iStyle, marginBottom: 0 }} />
+            <Label htmlFor="cm-monthly">Monthly Fee (R)</Label>
+            <Input id="cm-monthly" type="number" value={form.monthlyFee} onChange={e => set('monthlyFee', Number(e.target.value))} className="bg-white/4 tabular-nums" />
           </div>
         </div>
 
@@ -292,21 +295,19 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
         {/* NEW: Custom Questions section — the actual fix. Every
             question's answer type is now a deliberate choice made
             here, not guessed at by the backend after the fact. */}
-        <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '12px' }}>
-          Custom Questions
-        </p>
+        <SectionTitle>Custom Questions</SectionTitle>
         <QuestionEditor questions={questions} onChange={setQuestions} />
 
-        <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '12px' }}>AI Settings</p>
-        <div style={{ background: c.surface, borderRadius: '12px', padding: '14px 16px', border: '1px solid ' + c.borderDim }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-            <input type="checkbox" id="aiEnabled" checked={form.aiEnabled} onChange={e => set('aiEnabled', e.target.checked)} style={{ cursor: 'pointer', accentColor: c.lime, width: '16px', height: '16px' }} />
-            <label htmlFor="aiEnabled" style={{ color: c.text, fontSize: '14px', cursor: 'pointer', fontWeight: '600' }}>Enable AI lead summaries</label>
+        <SectionTitle>AI Settings</SectionTitle>
+        <div className="rounded-xl border border-edge bg-surface px-4 py-2">
+          <div className="flex min-h-[44px] items-center gap-2.5">
+            <input type="checkbox" id="aiEnabled" checked={form.aiEnabled} onChange={e => set('aiEnabled', e.target.checked)} className="h-4 w-4 cursor-pointer accent-lime" />
+            <label htmlFor="aiEnabled" className="cursor-pointer text-sm font-semibold text-ink">Enable AI lead summaries</label>
           </div>
         </div>
 
-        <p style={{ ...labelStyle, color: c.lime, fontWeight: '600', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.08em', marginTop: '16px', marginBottom: '12px' }}>Industry</p>
-        <select value={form.industry || 'appointment'} onChange={e => set('industry', e.target.value)} style={{ ...iStyle }}>
+        <SectionTitle>Industry</SectionTitle>
+        <Select value={form.industry || 'appointment'} onChange={e => set('industry', e.target.value)} aria-label="Industry" className="mb-3.5 bg-white/4 cursor-pointer">
           <option value="driving_school">🚦 Driving School</option>
           <option value="salon">💇 Salon / Barbershop</option>
           <option value="appointment">📅 Appointment Booking</option>
@@ -320,13 +321,13 @@ export default function ClientModal({ tenant, onClose, onSaved }) {
           <option value="easy_branding">🌿 Easy Branding AI (own demo)</option>
           <option value="property_sales">🏡 Property Sales</option>
           <option value="custom">⚙️ General / Custom</option>
-        </select>
+        </Select>
 
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
-          <button onClick={onClose} style={{ padding: '12px 24px', background: 'transparent', border: '1px solid ' + c.borderDim, color: c.muted, borderRadius: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
-          <button onClick={handleSave} disabled={saving} style={{ padding: '12px 28px', background: c.lime, color: '#050505', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, fontFamily: 'inherit' }}>
+        <div className="mt-6 flex justify-end gap-3">
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" onClick={handleSave} disabled={saving}>
             {saving ? 'Saving...' : isNew ? 'Add Client' : 'Save Changes'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

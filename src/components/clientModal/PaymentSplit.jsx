@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import api from '../../api';
-import { c, iStyle, labelStyle } from './styles';
+import Button from '../ui/Button';
+import { Input, Select } from '../ui/Field';
+import { Label } from './ui';
 
 /** Create the tenant's Paystack subaccount from bank details. */
 export default function PaymentSplit({ tenant, isNew, businessName, onSubaccount }) {
@@ -66,35 +68,34 @@ export default function PaymentSplit({ tenant, isNew, businessName, onSubaccount
   return (
     <>
       {!isNew && !splitOpen && (
-        <button type="button" onClick={openSplit} style={{ background: 'none', border: '1px dashed ' + c.border, borderRadius: '10px', color: c.lime, fontSize: '13px', padding: '9px 14px', cursor: 'pointer', marginBottom: '14px', fontFamily: 'inherit' }}>
+        <button type="button" onClick={openSplit}
+          className="mb-3.5 min-h-[44px] cursor-pointer rounded-[10px] border border-dashed border-edge-live px-3.5 text-left text-[13px] text-lime">
           + Set up new payment split (create subaccount from bank details)
         </button>
       )}
       {isNew && (
-        <p style={{ color: c.muted, fontSize: '12px', marginBottom: '14px' }}>Save the client first to set up a new payment split.</p>
+        <p className="mb-3.5 text-xs text-muted">Save the client first to set up a new payment split.</p>
       )}
       {splitOpen && (
-        <div style={{ border: '1px solid ' + c.borderDim, borderRadius: '12px', padding: '14px', marginBottom: '14px' }}>
-          <label style={labelStyle}>Bank</label>
-          <select value={split.bankCode} onChange={e => { setSplit(s => ({ ...s, bankCode: e.target.value })); setVerifiedName(''); }} style={{ ...iStyle, cursor: 'pointer' }}>
+        <div className="mb-3.5 rounded-xl border border-edge p-3.5">
+          <Label htmlFor="split-bank">Bank</Label>
+          <Select id="split-bank" value={split.bankCode} onChange={e => { setSplit(s => ({ ...s, bankCode: e.target.value })); setVerifiedName(''); }} className="mb-3.5 cursor-pointer bg-white/4">
             <option value="">Select a bank…</option>
             {banks.map(b => <option key={b.code + b.name} value={b.code}>{b.name}</option>)}
-          </select>
-          <label style={labelStyle}>Account Number</label>
-          <input value={split.accountNumber} onChange={e => { setSplit(s => ({ ...s, accountNumber: e.target.value })); setVerifiedName(''); }} placeholder="1234567890" style={iStyle} />
+          </Select>
+          <Label htmlFor="split-account">Account Number</Label>
+          <Input id="split-account" value={split.accountNumber} onChange={e => { setSplit(s => ({ ...s, accountNumber: e.target.value })); setVerifiedName(''); }} placeholder="1234567890" inputMode="numeric" className="mb-3.5 bg-white/4 tabular-nums" />
           {splitMsg.text && (
-            <p style={{ color: splitMsg.kind === 'ok' ? c.lime : c.red, fontSize: '13px', marginBottom: '10px' }}>{splitMsg.text}</p>
+            <p className={`mb-2.5 text-[13px] ${splitMsg.kind === 'ok' ? 'text-lime' : 'text-red'}`}>{splitMsg.text}</p>
           )}
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button type="button" onClick={verifyAccount} disabled={splitBusy || !split.bankCode || !split.accountNumber.trim()}
-              style={{ flex: 1, padding: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid ' + c.borderDim, borderRadius: '10px', color: c.text, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', opacity: splitBusy || !split.bankCode || !split.accountNumber.trim() ? 0.5 : 1 }}>
+          <div className="flex gap-2.5">
+            <Button variant="secondary" className="flex-1" onClick={verifyAccount} disabled={splitBusy || !split.bankCode || !split.accountNumber.trim()}>
               {splitBusy ? 'Working…' : '1. Verify account'}
-            </button>
+            </Button>
             {/* Create only unlocks after a successful verify — the name check is the typo guard before money starts settling to this account. */}
-            <button type="button" onClick={createSplit} disabled={splitBusy || !verifiedName}
-              style={{ flex: 1, padding: '10px', background: verifiedName ? c.lime : 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '10px', color: verifiedName ? '#0D110C' : c.muted, fontSize: '13px', fontWeight: 600, cursor: verifiedName ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
+            <Button variant="primary" className="flex-1" onClick={createSplit} disabled={splitBusy || !verifiedName}>
               2. Create split
-            </button>
+            </Button>
           </div>
         </div>
       )}

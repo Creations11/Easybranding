@@ -1,4 +1,5 @@
-import { c, iStyle, labelStyle } from './styles';
+import { Input } from '../ui/Field';
+import { Label } from './ui';
 
 export default function EftDetails({ form, setEft, eftComplete }) {
   return (
@@ -13,61 +14,58 @@ export default function EftDetails({ form, setEft, eftComplete }) {
                   owner should be able to see, check and change — and because the
                   live preview below is the read-back that makes a wrong digit
                   catchable before it reaches a customer. */}
-              <div style={{ border: '1px solid ' + c.borderDim, borderRadius: '12px', padding: '14px', marginBottom: '16px' }}>
-                <label style={{ ...labelStyle, marginBottom: '2px', color: c.text, fontSize: '13px', fontWeight: 600 }}>
+              <div className="mb-4 rounded-xl border border-edge p-3.5">
+                <label className="mb-0.5 block text-[13px] font-semibold text-ink">
                   Banking details (EFT)
                 </label>
-                <p style={{ color: c.muted, fontSize: '12px', marginBottom: '12px' }}>
+                <p className="mb-3 text-xs text-muted">
                   Sent alongside every payment link, so customers who won't tap a link can pay by EFT instead.
                   These are the details customers pay INTO — not the Paystack payout account above.
                 </p>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', cursor: 'pointer' }}>
+                <label className="mb-3 flex min-h-[44px] cursor-pointer items-center gap-2">
                   <input
                     type="checkbox"
                     checked={Boolean(form.eft?.enabled)}
                     onChange={e => setEft('enabled', e.target.checked)}
-                    style={{ width: '16px', height: '16px', accentColor: c.lime, cursor: 'pointer' }}
+                    className="h-4 w-4 cursor-pointer accent-lime"
                   />
-                  <span style={{ color: c.text, fontSize: '13px' }}>Offer EFT as a payment option</span>
+                  <span className="text-[13px] text-ink">Offer EFT as a payment option</span>
                 </label>
 
-                <label style={labelStyle}>Bank</label>
-                <input value={form.eft?.bankName || ''} onChange={e => setEft('bankName', e.target.value)} placeholder="Nedbank" style={iStyle} />
+                <Label htmlFor="eft-bank">Bank</Label>
+                <Input mono={false} id="eft-bank" value={form.eft?.bankName || ''} onChange={e => setEft('bankName', e.target.value)} placeholder="Nedbank" className="mb-3.5 bg-white/4" />
 
-                <label style={labelStyle}>Account name</label>
-                <input value={form.eft?.accountName || ''} onChange={e => setEft('accountName', e.target.value)} placeholder="YOUR COMPANY (PTY) LTD" style={iStyle} />
+                <Label htmlFor="eft-name">Account name</Label>
+                <Input mono={false} id="eft-name" value={form.eft?.accountName || ''} onChange={e => setEft('accountName', e.target.value)} placeholder="YOUR COMPANY (PTY) LTD" className="mb-3.5 bg-white/4" />
 
-                <label style={labelStyle}>Account number</label>
-                <input
+                <Label htmlFor="eft-number">Account number</Label>
+                <Input
+                  id="eft-number"
                   value={form.eft?.accountNumber || ''}
                   onChange={e => setEft('accountNumber', e.target.value)}
                   placeholder="1234567890"
                   inputMode="numeric"
-                  style={{
-                    ...iStyle,
-                    marginBottom: '4px',
-                    // Tabular figures so a repeated or missing digit is visible.
-                    fontVariantNumeric: 'tabular-nums',
-                    letterSpacing: '0.06em',
-                    borderColor: form.eft?.accountNumber && !/^\d{6,}$/.test(form.eft.accountNumber.replace(/\s/g, ''))
-                      ? c.red : c.borderDim,
-                  }}
+                  // Mono with tabular figures, spaced, so a repeated or missing
+                  // digit is visible; red until it is digits only, 6 or more.
+                  className={`mb-1 bg-white/4 tabular-nums tracking-[0.06em] ${
+                    form.eft?.accountNumber && !/^d{6,}$/.test(form.eft.accountNumber.replace(/s/g, '')) ? 'border-red' : 'border-white/12'
+                  }`}
                 />
                 {form.eft?.accountNumber && !/^\d{6,}$/.test(form.eft.accountNumber.replace(/\s/g, '')) && (
-                  <p style={{ color: c.red, fontSize: '12px', marginBottom: '10px' }}>
+                  <p className="mb-2.5 text-xs text-red">
                     Digits only, and at least 6 — check this against your bank statement.
                   </p>
                 )}
 
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={labelStyle}>Branch code</label>
-                    <input value={form.eft?.branchCode || ''} onChange={e => setEft('branchCode', e.target.value)} placeholder="198765" inputMode="numeric" style={iStyle} />
+                <div className="flex gap-2.5">
+                  <div className="flex-1">
+                    <Label htmlFor="eft-branch">Branch code</Label>
+                    <Input id="eft-branch" value={form.eft?.branchCode || ''} onChange={e => setEft('branchCode', e.target.value)} placeholder="198765" inputMode="numeric" className="mb-3.5 bg-white/4" />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={labelStyle}>Account type</label>
-                    <input value={form.eft?.accountType || ''} onChange={e => setEft('accountType', e.target.value)} placeholder="CA / Savings" style={iStyle} />
+                  <div className="flex-1">
+                    <Label htmlFor="eft-type">Account type</Label>
+                    <Input mono={false} id="eft-type" value={form.eft?.accountType || ''} onChange={e => setEft('accountType', e.target.value)} placeholder="CA / Savings" className="mb-3.5 bg-white/4" />
                   </div>
                 </div>
 
@@ -75,11 +73,11 @@ export default function EftDetails({ form, setEft, eftComplete }) {
                     the shape the customer will. */}
                 {form.eft?.enabled && (
                   eftComplete ? (
-                    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid ' + c.borderDim, borderRadius: '10px', padding: '12px' }}>
-                      <p style={{ color: c.muted, fontSize: '11px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <div className="rounded-[10px] border border-edge bg-white/3 p-3">
+                      <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.05em] text-muted">
                         What the customer receives
                       </p>
-                      <pre style={{ color: c.text, fontSize: '12.5px', lineHeight: 1.55, whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'inherit' }}>
+                      <pre className="m-0 whitespace-pre-wrap font-[inherit] text-[12.5px] leading-[1.55] text-ink">
 {`🏦 Prefer an EFT? Pay straight into our account:
 
 Bank: ${form.eft.bankName || '—'}
@@ -94,7 +92,7 @@ Send the proof of payment here and we'll get you going. 👍`}
                       </pre>
                     </div>
                   ) : (
-                    <p style={{ color: c.amber, fontSize: '12px', margin: 0 }}>
+                    <p className="m-0 text-xs text-amber">
                       Account name, account number and a bank or branch code are all needed before this can be sent —
                       incomplete details are never shown to a customer.
                     </p>
