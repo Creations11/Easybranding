@@ -8,13 +8,15 @@ import { useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import api from '../api';
 import Pagination from './Pagination';
+import Badge from './ui/Badge';
+import Button from './ui/Button';
+import StatTile from './ui/StatTile';
+import PageHeader from './ui/PageHeader';
+import { Input, Select } from './ui/Field';
 
-const c = {
-  card: '#121710', lime: '#B8F040', earth: '#C4873A',
-  cyan: '#22d3ee', emerald: '#34d399', amber: '#fbbf24',
-  red: '#f87171', text: '#EEF0E8', muted: '#8A9080',
-  borderDim: 'rgba(255,255,255,0.06)', surface: '#0D110C',
-};
+// A tone's text and bar colours, as whole class names so Tailwind sees them.
+const TONE_TEXT = { emerald: 'text-emerald', amber: 'text-amber', earth: 'text-earth' };
+const TONE_FILL = { emerald: 'bg-emerald', amber: 'bg-amber', earth: 'bg-earth' };
 
 const NO_MEMBERS = { members: [], total: 0 };
 
@@ -84,7 +86,7 @@ export default function PACMembersPanel() {
 
   if (loading && !members.length) {
     return (
-      <div style={{ padding: '60px', textAlign: 'center', color: c.muted }}>
+      <div className="p-[60px] text-center text-muted">
         Loading members...
       </div>
     );
@@ -92,67 +94,46 @@ export default function PACMembersPanel() {
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: 4 }}>
-            Members
-          </h1>
-          <p style={{ color: c.muted, fontSize: 15 }}>
-            {stats ? `${stats.total} registered members` : 'Member management'}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={handleExport} style={{ padding: '10px 18px', background: c.cyan + '22', color: c.cyan, border: '1px solid ' + c.cyan + '33', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit' }}>
-            📥 Export CSV
-          </button>
-        </div>
-      </div>
+      <PageHeader title="Members" sub={stats ? `${stats.total} registered members` : 'Member management'}>
+        <Button variant="system" onClick={handleExport}>📥 Export CSV</Button>
+      </PageHeader>
 
       {/* Stats Cards */}
       {stats && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 24 }}>
+        <div className="mb-6 flex flex-wrap gap-2.5">
           {[
-            { label: 'Total Members', value: stats.total, color: c.text, icon: '👥' },
-            { label: 'Active', value: stats.active, color: c.lime, icon: '✅' },
-            { label: 'Today', value: stats.today, color: c.cyan, icon: '📅' },
-            { label: 'Paid Members', value: `${paidCount}/${stats.total}`, color: c.emerald, icon: '💳' },
-            { label: 'Revenue', value: `R${totalRevenue}`, color: c.lime, icon: '💰' },
-            { label: 'Meetings Consent', value: stats.consented?.meetings || 0, color: c.emerald, icon: '📋' },
-            { label: 'Campaigns Consent', value: stats.consented?.campaigns || 0, color: c.amber, icon: '📢' },
-            { label: 'Fundraising Consent', value: stats.consented?.fundraising || 0, color: c.earth, icon: '💰' },
-          ].map(s => (
-            <div key={s.label} style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 12, padding: '14px 16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <p style={{ color: c.muted, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</p>
-                <span>{s.icon}</span>
-              </div>
-              <p style={{ fontSize: 24, fontWeight: 800, color: s.color, fontFamily: "'Fraunces', serif" }}>{s.value}</p>
-            </div>
-          ))}
+            { label: 'Total Members', value: stats.total, tone: 'ink' },
+            { label: 'Active', value: stats.active, tone: 'lime' },
+            { label: 'Today', value: stats.today, tone: 'cyan' },
+            { label: 'Paid Members', value: `${paidCount}/${stats.total}`, tone: 'emerald' },
+            { label: 'Revenue', value: `R${totalRevenue}`, tone: 'lime' },
+            { label: 'Meetings Consent', value: stats.consented?.meetings || 0, tone: 'emerald' },
+            { label: 'Campaigns Consent', value: stats.consented?.campaigns || 0, tone: 'amber' },
+            { label: 'Fundraising Consent', value: stats.consented?.fundraising || 0, tone: 'earth' },
+          ].map(s => <StatTile key={s.label} label={s.label} value={s.value} tone={s.tone} />)}
         </div>
       )}
 
       {/* Consent Overview */}
       {stats && (
-        <div style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 14, padding: 20, marginBottom: 24 }}>
-          <p style={{ color: c.muted, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 16 }}>
+        <div className="mb-6 rounded-[14px] border border-edge bg-card p-5">
+          <p className="mb-4 font-mono text-xs uppercase tracking-[0.06em] text-muted">
             Consent Overview
           </p>
           {[
-            { label: 'Meeting & Event Notices', granted: stats.consented?.meetings || 0, total: stats.total, icon: '📋', color: c.emerald },
-            { label: 'Campaign & Mobilization', granted: stats.consented?.campaigns || 0, total: stats.total, icon: '📢', color: c.amber },
-            { label: 'Fundraising & Donations', granted: stats.consented?.fundraising || 0, total: stats.total, icon: '💰', color: c.earth },
+            { label: 'Meeting & Event Notices', granted: stats.consented?.meetings || 0, total: stats.total, icon: '📋', tone: 'emerald' },
+            { label: 'Campaign & Mobilization', granted: stats.consented?.campaigns || 0, total: stats.total, icon: '📢', tone: 'amber' },
+            { label: 'Fundraising & Donations', granted: stats.consented?.fundraising || 0, total: stats.total, icon: '💰', tone: 'earth' },
           ].map(item => {
             const pct = item.total > 0 ? Math.round((item.granted / item.total) * 100) : 0;
             return (
-              <div key={item.label} style={{ marginBottom: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ color: c.muted, fontSize: 13 }}>{item.icon} {item.label}</span>
-                  <span style={{ color: item.color, fontSize: 13, fontWeight: 600 }}>{item.granted}/{item.total} ({pct}%)</span>
+              <div key={item.label} className="mb-3.5">
+                <div className="mb-1.5 flex justify-between gap-3">
+                  <span className="text-[13px] text-muted">{item.icon} {item.label}</span>
+                  <span className={`font-mono text-[13px] font-semibold tabular-nums ${TONE_TEXT[item.tone]}`}>{item.granted}/{item.total} ({pct}%)</span>
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 999, height: 6, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: pct + '%', background: item.color, borderRadius: 999, transition: 'width 0.3s ease' }} />
+                <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+                  <div className={`h-full rounded-full transition-[width] duration-300 ${TONE_FILL[item.tone]}`} style={{ width: pct + '%' }} />
                 </div>
               </div>
             );
@@ -162,15 +143,15 @@ export default function PACMembersPanel() {
 
       {/* Province Breakdown */}
       {stats?.byProvince && (
-        <div style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 14, padding: 20, marginBottom: 24 }}>
-          <p style={{ color: c.muted, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 16 }}>
+        <div className="mb-6 rounded-[14px] border border-edge bg-card p-5">
+          <p className="mb-4 font-mono text-xs uppercase tracking-[0.06em] text-muted">
             Members by Province
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+          <div className="flex flex-wrap gap-2.5">
             {stats.byProvince.map(p => (
-              <div key={p._id} style={{ background: c.surface, borderRadius: 10, padding: 14, textAlign: 'center' }}>
-                <p style={{ color: c.lime, fontSize: 22, fontWeight: 800, fontFamily: "'Fraunces', serif", marginBottom: 4 }}>{p.count}</p>
-                <p style={{ color: c.muted, fontSize: 12, textTransform: 'capitalize' }}>{(p._id || 'Unknown').replace(/_/g, ' ')}</p>
+              <div key={p._id} className="min-w-[140px] flex-1 rounded-[10px] bg-surface p-3.5 text-center">
+                <p className="mb-1 font-mono text-[22px] font-extrabold tabular-nums text-lime">{p.count}</p>
+                <p className="text-xs capitalize text-muted">{(p._id || 'Unknown').replace(/_/g, ' ')}</p>
               </div>
             ))}
           </div>
@@ -178,44 +159,46 @@ export default function PACMembersPanel() {
       )}
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input
+      <div className="mb-5 flex flex-wrap items-center gap-2.5">
+        <Input
+          mono={false}
           value={search}
           onChange={e => { setSearch(e.target.value); setPage(1); }}
           placeholder="Search by name, phone, or member number..."
-          style={{ padding: '10px 14px', background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 10, color: c.text, fontSize: 14, outline: 'none', fontFamily: 'inherit', flex: 1, minWidth: 200 }}
+          aria-label="Search members"
+          className="min-w-[200px] flex-1 bg-card"
         />
-        <select value={provinceFilter} onChange={e => { setProvinceFilter(e.target.value); setPage(1); }} style={{ padding: '10px 14px', background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 10, color: c.text, fontSize: 14, outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}>
+        <Select value={provinceFilter} onChange={e => { setProvinceFilter(e.target.value); setPage(1); }} aria-label="Province" className="w-auto cursor-pointer bg-card">
           <option value="all">All Provinces</option>
           {provinces.map(p => <option key={p} value={p}>{p.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</option>)}
-        </select>
-        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }} style={{ padding: '10px 14px', background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 10, color: c.text, fontSize: 14, outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}>
+        </Select>
+        <Select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }} aria-label="Status" className="w-auto cursor-pointer bg-card">
           <option value="all">All Status</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
           <option value="suspended">Suspended</option>
           <option value="unsubscribed">Unsubscribed</option>
-        </select>
-        <select value={paymentFilter} onChange={e => { setPaymentFilter(e.target.value); setPage(1); }} style={{ padding: '10px 14px', background: c.card, border: '1px solid ' + c.borderDim, borderRadius: 10, color: c.text, fontSize: 14, outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}>
+        </Select>
+        <Select value={paymentFilter} onChange={e => { setPaymentFilter(e.target.value); setPage(1); }} aria-label="Payment" className="w-auto cursor-pointer bg-card">
           <option value="all">All Payment</option>
           <option value="paid">Paid</option>
           <option value="unpaid">Unpaid</option>
-        </select>
+        </Select>
       </div>
 
       {/* Results count */}
       {total !== members.length && (
-        <p style={{ color: c.muted, fontSize: 13, marginBottom: 12 }}>
+        <p className="mb-3 text-[13px] text-muted">
           Showing {members.length} of {total} members
         </p>
       )}
 
       {/* Member List */}
       {members.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: c.muted }}>
-          <p style={{ fontSize: 40, marginBottom: 16 }}>👥</p>
+        <div className="py-[60px] text-center text-muted">
+          <p className="mb-4 text-[40px]">👥</p>
           <p>{search ? 'No members match your search.' : 'No members registered yet.'}</p>
-          <p style={{ fontSize: 13, marginTop: 8 }}>Members register via WhatsApp by messaging your number.</p>
+          <p className="mt-2 text-[13px]">Members register via WhatsApp by messaging your number.</p>
         </div>
       ) : (
         <>
@@ -223,45 +206,29 @@ export default function PACMembersPanel() {
             <div
               key={member._id}
               onClick={() => setSelectedMember(member)}
-              style={{
-                background: c.card,
-                border: '1px solid ' + c.borderDim,
-                borderRadius: 14,
-                padding: '16px 20px',
-                marginBottom: 8,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-              className="card-hover"
+              className="card-hover mb-2 cursor-pointer rounded-[14px] border border-edge bg-card px-5 py-4"
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-                    <strong style={{ fontSize: 15 }}>{member.fullName}</strong>
-                    <span style={{ fontSize: 12, color: c.lime, fontFamily: 'monospace' }}>{member.memberNumber}</span>
-                    <span style={{
-                      fontSize: 11, padding: '2px 8px', borderRadius: 999,
-                      background: member.status === 'active' ? c.lime + '22' : c.amber + '22',
-                      color: member.status === 'active' ? c.lime : c.amber,
-                      fontWeight: 600,
-                    }}>
-                      {member.status}
-                    </span>
+              <div className="flex flex-wrap items-center justify-between gap-2.5">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex flex-wrap items-center gap-2">
+                    <strong className="text-[15px]">{member.fullName}</strong>
+                    <span className="font-mono text-xs text-lime">{member.memberNumber}</span>
+                    <Badge tone={member.status === 'active' ? 'live' : 'warn'}>{member.status}</Badge>
                   </div>
-                  <p style={{ color: c.muted, fontSize: 12 }}>
-                    {member.phone} · {member.province || 'No province'} · {member.branch || 'No branch'}
+                  <p className="text-xs text-muted">
+                    <span className="font-mono">{member.phone}</span> · {member.province || 'No province'} · {member.branch || 'No branch'}
                   </p>
-                  <p style={{ color: c.muted, fontSize: 11, marginTop: 2 }}>
+                  <p className="mt-0.5 text-[11px] text-muted">
                     Registered: {new Date(member.registeredAt).toLocaleDateString('en-ZA')}
                   </p>
                 </div>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  {member.consents?.meetings && <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: c.emerald + '22', color: c.emerald }}>📋</span>}
-                  {member.consents?.campaigns && <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: c.amber + '22', color: c.amber }}>📢</span>}
-                  {member.consents?.fundraising && <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: c.earth + '22', color: c.earth }}>💰</span>}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {member.consents?.meetings && <span className="rounded-full bg-emerald/15 px-1.5 py-0.5 text-[10px] text-emerald">📋</span>}
+                  {member.consents?.campaigns && <span className="rounded-full bg-amber/15 px-1.5 py-0.5 text-[10px] text-amber">📢</span>}
+                  {member.consents?.fundraising && <span className="rounded-full bg-earth/15 px-1.5 py-0.5 text-[10px] text-earth">💰</span>}
                   {member.membershipPaid
-                    ? <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: c.emerald + '22', color: c.emerald }}>💳 Paid</span>
-                    : <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: c.amber + '22', color: c.amber }}>⚠️ Unpaid</span>
+                    ? <span className="rounded-full bg-emerald/15 px-1.5 py-0.5 text-[10px] text-emerald">💳 Paid</span>
+                    : <span className="rounded-full bg-amber/15 px-1.5 py-0.5 text-[10px] text-amber">⚠️ Unpaid</span>
                   }
                 </div>
               </div>
@@ -282,31 +249,23 @@ export default function PACMembersPanel() {
       {/* Member Detail Modal */}
       {selectedMember && (
         <div
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 1000, padding: 20,
-          }}
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/85 p-5"
           onClick={() => setSelectedMember(null)}
         >
           <div
-            style={{
-              width: '100%', maxWidth: 520, background: c.surface,
-              borderRadius: 20, border: '1px solid ' + c.borderDim,
-              padding: 28, maxHeight: '85vh', overflowY: 'auto',
-            }}
+            className="max-h-[85vh] w-full max-w-[520px] overflow-y-auto rounded-[20px] border border-edge bg-surface p-7 max-sm:p-5"
             onClick={e => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 900, color: c.lime }}>
+            <div className="mb-5 flex items-center justify-between">
+              <h3 className="font-['Fraunces',serif] text-xl font-black text-lime">
                 Member Details
               </h3>
-              <button onClick={() => setSelectedMember(null)} style={{ background: 'none', border: 'none', color: c.muted, cursor: 'pointer', fontSize: 20 }}>
+              <button type="button" onClick={() => setSelectedMember(null)} aria-label="Close" className="min-h-[44px] min-w-[44px] cursor-pointer text-xl text-muted">
                 ×
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div className="flex flex-col gap-3.5">
               {[
                 ['Name', selectedMember.fullName],
                 ['Member Number', selectedMember.memberNumber],
@@ -316,39 +275,34 @@ export default function PACMembersPanel() {
                 ['Status', selectedMember.status],
                 ['Registered', new Date(selectedMember.registeredAt).toLocaleDateString('en-ZA')],
               ].map(([label, value]) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 8, borderBottom: '1px solid ' + c.borderDim }}>
-                  <span style={{ color: c.muted, fontSize: 13 }}>{label}</span>
-                  <span style={{ color: c.text, fontSize: 13, fontWeight: 600 }}>{value}</span>
+                <div key={label} className="flex justify-between gap-3 border-b border-edge pb-2">
+                  <span className="text-[13px] text-muted">{label}</span>
+                  <span className={`text-right text-[13px] font-semibold text-ink ${label === 'Phone' || label === 'Member Number' ? 'font-mono' : ''}`}>{value}</span>
                 </div>
               ))}
 
               {/* Payment Status */}
-              <div style={{ marginTop: 4 }}>
-                <p style={{ color: c.muted, fontSize: 12, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <div className="mt-1">
+                <p className="mb-2.5 font-mono text-xs uppercase tracking-[0.06em] text-muted">
                   Payment Status
                 </p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid ' + c.borderDim, paddingBottom: 8 }}>
-                  <span style={{ color: c.muted, fontSize: 13 }}>Membership Fee (R50)</span>
-                  <span style={{
-                    fontSize: 12, padding: '2px 10px', borderRadius: 999,
-                    background: selectedMember.membershipPaid ? c.lime + '22' : c.amber + '22',
-                    color: selectedMember.membershipPaid ? c.lime : c.amber,
-                    fontWeight: 600,
-                  }}>
+                <div className="flex items-center justify-between gap-3 border-b border-edge py-1.5 pb-2">
+                  <span className="text-[13px] text-muted">Membership Fee (R50)</span>
+                  <Badge tone={selectedMember.membershipPaid ? 'live' : 'warn'}>
                     {selectedMember.membershipPaid ? '✅ Paid' : '⚠️ Unpaid'}
-                  </span>
+                  </Badge>
                 </div>
                 {selectedMember.membershipPaid && (
                   <>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-                      <span style={{ color: c.muted, fontSize: 13 }}>Paid On</span>
-                      <span style={{ color: c.text, fontSize: 13 }}>
+                    <div className="flex justify-between gap-3 py-1.5">
+                      <span className="text-[13px] text-muted">Paid On</span>
+                      <span className="text-[13px] text-ink">
                         {selectedMember.membershipPaidAt ? new Date(selectedMember.membershipPaidAt).toLocaleDateString('en-ZA') : '—'}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-                      <span style={{ color: c.muted, fontSize: 13 }}>Reference</span>
-                      <span style={{ color: c.text, fontSize: 13, fontFamily: 'monospace' }}>
+                    <div className="flex justify-between gap-3 py-1.5">
+                      <span className="text-[13px] text-muted">Reference</span>
+                      <span className="font-mono text-[13px] text-ink">
                         {selectedMember.membershipPaymentRef || '—'}
                       </span>
                     </div>
@@ -357,8 +311,8 @@ export default function PACMembersPanel() {
               </div>
 
               {/* Consent Settings */}
-              <div style={{ marginTop: 4 }}>
-                <p style={{ color: c.muted, fontSize: 12, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <div className="mt-1">
+                <p className="mb-2.5 font-mono text-xs uppercase tracking-[0.06em] text-muted">
                   Consent Settings
                 </p>
                 {[
@@ -366,43 +320,35 @@ export default function PACMembersPanel() {
                   ['Campaign & Mobilization Updates', selectedMember.consents?.campaigns],
                   ['Fundraising & Donation Requests', selectedMember.consents?.fundraising],
                 ].map(([label, granted]) => (
-                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid ' + c.borderDim, paddingBottom: 8, marginBottom: 4 }}>
-                    <span style={{ color: c.muted, fontSize: 13 }}>{label}</span>
-                    <span style={{
-                      fontSize: 12, padding: '2px 10px', borderRadius: 999,
-                      background: granted ? c.lime + '22' : c.red + '22',
-                      color: granted ? c.lime : c.red,
-                      fontWeight: 600,
-                    }}>
+                  <div key={label} className="mb-1 flex items-center justify-between gap-3 border-b border-edge py-1.5 pb-2">
+                    <span className="text-[13px] text-muted">{label}</span>
+                    <Badge tone={granted ? 'live' : 'bad'}>
                       {granted ? '✅ Granted' : '❌ Not Granted'}
-                    </span>
+                    </Badge>
                   </div>
                 ))}
               </div>
 
               {/* Consent History */}
               {selectedMember.consentHistory?.length > 0 && (
-                <div style={{ marginTop: 4 }}>
-                  <p style={{ color: c.muted, fontSize: 12, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                <div className="mt-1">
+                  <p className="mb-2.5 font-mono text-xs uppercase tracking-[0.06em] text-muted">
                     Consent History
                   </p>
                   {selectedMember.consentHistory.map((entry, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 12 }}>
-                      <span style={{ color: c.text, textTransform: 'capitalize' }}>{entry.type} — {entry.action}</span>
-                      <span style={{ color: c.muted }}>{new Date(entry.date).toLocaleDateString('en-ZA')}</span>
+                    <div key={i} className="flex justify-between gap-3 py-1 text-xs">
+                      <span className="capitalize text-ink">{entry.type} — {entry.action}</span>
+                      <span className="text-muted">{new Date(entry.date).toLocaleDateString('en-ZA')}</span>
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setSelectedMember(null)}
-                style={{ padding: '10px 20px', background: 'transparent', border: '1px solid ' + c.borderDim, color: c.muted, borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}
-              >
+            <div className="mt-5 flex justify-end gap-2.5">
+              <Button variant="secondary" onClick={() => setSelectedMember(null)}>
                 Close
-              </button>
+              </Button>
             </div>
           </div>
         </div>

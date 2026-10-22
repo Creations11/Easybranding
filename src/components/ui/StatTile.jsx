@@ -11,7 +11,7 @@ const NOTE_TONE = {
 // dashboard's stats). Whole class names, so Tailwind can see them.
 const VALUE_TONE = {
   ink: 'text-ink', lime: 'text-lime', cyan: 'text-cyan', red: 'text-red',
-  amber: 'text-amber', emerald: 'text-emerald', muted: 'text-muted',
+  amber: 'text-amber', emerald: 'text-emerald', muted: 'text-muted', earth: 'text-earth',
 };
 
 export default function StatTile({ label, value, note, noteTone = 'muted', highlight = false, tone }) {
