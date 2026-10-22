@@ -6,52 +6,30 @@
 // endpoints added 2026-07-18:
 //   GET /admin-ops/automation/agents
 //   GET /admin-ops/automation/flows
-// Styling follows WhatsAppStatus.jsx's local palette convention.
 // ─────────────────────────────────────────────────────────────
 import { useState, useEffect } from 'react';
 import api from '../api';
+import Badge from './ui/Badge';
+import Button from './ui/Button';
+import { Input, Select, Textarea } from './ui/Field';
+import DataTable, { Th, Td } from './ui/DataTable';
 
-const c = {
-  card: '#121710', surface: '#0D110C', lime: '#B8F040',
-  cyan: '#22d3ee', emerald: '#34d399', amber: '#fbbf24',
-  red: '#f87171', text: '#EEF0E8', muted: '#8A9080',
-  borderDim: 'rgba(255,255,255,0.06)',
-};
-
-const pill = (bg, color) => ({
-  display: 'inline-block', padding: '2px 10px', borderRadius: '99px',
-  fontSize: '11px', fontWeight: 700, background: bg, color, letterSpacing: '0.04em',
-});
-
-const card = {
-  background: c.card, border: '1px solid ' + c.borderDim,
-  borderRadius: '14px', padding: '16px', marginBottom: '16px',
-};
+const card = 'mb-4 rounded-[14px] border border-edge bg-card p-4';
 
 function ModePill({ mode, pausedUntil }) {
   const paused = pausedUntil && new Date(pausedUntil) > new Date();
-  if (paused) return <span style={pill('rgba(248,113,113,0.15)', c.red)}>PAUSED</span>;
-  if (mode === 'live') return <span style={pill('rgba(52,211,153,0.15)', c.emerald)}>LIVE</span>;
-  return <span style={pill('rgba(251,191,36,0.15)', c.amber)}>SHADOW</span>;
+  if (paused) return <Badge tone="bad" mono>PAUSED</Badge>;
+  if (mode === 'live') return <Badge tone="good" mono>LIVE</Badge>;
+  return <Badge tone="warn" mono>SHADOW</Badge>;
 }
 
 function ConfigFlag({ ok, label }) {
   return (
-    <span style={{ fontSize: '12px', color: ok ? c.emerald : c.amber }}>
+    <span className={`text-xs ${ok ? 'text-emerald' : 'text-amber'}`}>
       {ok ? '✓' : '⚠'} {label}
     </span>
   );
 }
-
-const input = {
-  width: '100%', background: c.surface, border: '1px solid ' + c.borderDim,
-  borderRadius: '8px', padding: '8px 10px', color: c.text, fontSize: '13px',
-  fontFamily: 'inherit', marginBottom: '8px', boxSizing: 'border-box',
-};
-const btn = (bg, color) => ({
-  padding: '7px 14px', background: bg, color, border: 'none', borderRadius: '8px',
-  fontWeight: 700, fontSize: '12px', cursor: 'pointer', marginRight: '8px',
-});
 
 // ── Agent config editor (PUT /admin-ops/automation/agents/:tenantId) ──
 function AgentConfigEditor({ agent, onSaved }) {
@@ -78,20 +56,22 @@ function AgentConfigEditor({ agent, onSaved }) {
   };
 
   return (
-    <div style={{ background: c.surface, borderRadius: '10px', padding: '12px', marginTop: '10px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px' }}>
-        <select value={form.mode} onChange={set('mode')} style={input}>
+    <div className="mt-2.5 rounded-[10px] bg-surface p-3">
+      <div className="grid grid-cols-[1fr_2fr] gap-2.5 max-sm:grid-cols-1">
+        <Select value={form.mode} onChange={set('mode')} aria-label="Mode" className="mb-2 bg-ground">
           <option value="shadow">shadow (drafts only)</option>
           <option value="live">live (answers customers)</option>
-        </select>
-        <input placeholder="Booking link (Calendly etc.)" value={form.bookingUrl} onChange={set('bookingUrl')} style={input} />
+        </Select>
+        <Input placeholder="Booking link (Calendly etc.)" value={form.bookingUrl} onChange={set('bookingUrl')} className="mb-2 bg-ground" />
       </div>
-      <textarea placeholder="Business description (blank = keep current)" value={form.description} onChange={set('description')} rows={2} style={input} />
-      <textarea placeholder="Policies — delivery, payment, hours (blank = keep current)" value={form.policies} onChange={set('policies')} rows={2} style={input} />
-      <textarea placeholder='Catalog JSON, e.g. [{"name":"Plan A","category":"sub","price":99,"description":"..."}] (blank = keep current)' value={form.catalogJson} onChange={set('catalogJson')} rows={3} style={{ ...input, fontFamily: 'monospace' }} />
-      <textarea placeholder='FAQ JSON, e.g. [{"q":"Delivery?","a":"5 days"}] (blank = keep current)' value={form.faqJson} onChange={set('faqJson')} rows={2} style={{ ...input, fontFamily: 'monospace' }} />
-      <button onClick={save} style={btn(c.lime, '#080A06')}>Save config</button>
-      {msg && <span style={{ fontSize: '12px', color: msg.startsWith('✅') ? c.emerald : c.red }}>{msg}</span>}
+      <Textarea placeholder="Business description (blank = keep current)" value={form.description} onChange={set('description')} rows={2} className="mb-2 bg-ground" />
+      <Textarea placeholder="Policies — delivery, payment, hours (blank = keep current)" value={form.policies} onChange={set('policies')} rows={2} className="mb-2 bg-ground" />
+      <Textarea mono placeholder='Catalog JSON, e.g. [{"name":"Plan A","category":"sub","price":99,"description":"..."}] (blank = keep current)' value={form.catalogJson} onChange={set('catalogJson')} rows={3} className="mb-2 bg-ground" />
+      <Textarea mono placeholder='FAQ JSON, e.g. [{"q":"Delivery?","a":"5 days"}] (blank = keep current)' value={form.faqJson} onChange={set('faqJson')} rows={2} className="mb-2 bg-ground" />
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="primary" onClick={save}>Save config</Button>
+        {msg && <span className={`text-xs ${msg.startsWith('✅') ? 'text-emerald' : 'text-red'}`}>{msg}</span>}
+      </div>
     </div>
   );
 }
@@ -134,25 +114,27 @@ function FlowEditor({ tenants, existing, onSaved, onCancel }) {
   };
 
   return (
-    <div style={{ ...card, borderColor: c.cyan + '44' }}>
-      <strong style={{ color: c.text }}>{existing ? `Edit "${existing.name}" (v${existing.version} → v${existing.version + 1})` : 'New flow'}</strong>
+    <div className={`${card} border-cyan/25`}>
+      <strong className="text-ink">{existing ? `Edit "${existing.name}" (v${existing.version} → v${existing.version + 1})` : 'New flow'}</strong>
       {existing?.activeRuns > 0 && (
-        <div style={{ color: c.amber, fontSize: '12px', margin: '6px 0' }}>⚠ {existing.activeRuns} run(s) in flight read the live definition — edits affect them.</div>
+        <div className="my-1.5 text-xs text-amber">⚠ {existing.activeRuns} run(s) in flight read the live definition — edits affect them.</div>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr', gap: '10px', marginTop: '10px' }}>
-        <input placeholder="Flow name" value={form.name} onChange={set('name')} style={input} />
-        <select value={form.tenantId} onChange={set('tenantId')} style={input}>
+      <div className="mt-2.5 grid grid-cols-[2fr_2fr_1fr] gap-2.5 max-sm:grid-cols-1">
+        <Input mono={false} placeholder="Flow name" value={form.name} onChange={set('name')} aria-label="Flow name" className="mb-2 bg-surface" />
+        <Select value={form.tenantId} onChange={set('tenantId')} aria-label="Client" className="mb-2 bg-surface">
           {tenants.map((t) => <option key={t.tenantId} value={t.tenantId}>{t.businessName}</option>)}
-        </select>
-        <input placeholder="entry node" value={form.entryNodeId} onChange={set('entryNodeId')} style={input} />
+        </Select>
+        <Input placeholder="entry node" value={form.entryNodeId} onChange={set('entryNodeId')} aria-label="Entry node" className="mb-2 bg-surface" />
       </div>
-      <input placeholder="Trigger keywords, comma-separated" value={form.keywords} onChange={set('keywords')} style={input} />
-      <textarea value={form.nodesJson} onChange={set('nodesJson')} rows={14} style={{ ...input, fontFamily: 'monospace', fontSize: '12px' }} />
+      <Input mono={false} placeholder="Trigger keywords, comma-separated" value={form.keywords} onChange={set('keywords')} aria-label="Trigger keywords" className="mb-2 bg-surface" />
+      <Textarea mono value={form.nodesJson} onChange={set('nodesJson')} rows={14} aria-label="Flow nodes (JSON)" className="mb-2 bg-surface" />
       {errors.length > 0 && (
-        <div style={{ color: c.red, fontSize: '12px', marginBottom: '8px' }}>{errors.map((e, i) => <div key={i}>• {e}</div>)}</div>
+        <div className="mb-2 text-xs text-red">{errors.map((e, i) => <div key={i}>• {e}</div>)}</div>
       )}
-      <button onClick={save} style={btn(c.lime, '#080A06')}>{existing ? 'Save new version' : 'Create draft'}</button>
-      <button onClick={onCancel} style={btn('transparent', c.muted)}>Cancel</button>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="primary" onClick={save}>{existing ? 'Save new version' : 'Create draft'}</Button>
+        <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+      </div>
     </div>
   );
 }
@@ -198,57 +180,57 @@ export default function AutomationPanel() {
     return () => clearInterval(t);
   }, []);
 
-  if (error) return <div style={{ ...card, color: c.red }}>{error}</div>;
-  if (!agents || !flows) return <div style={{ ...card, color: c.muted }}>Loading automation…</div>;
+  if (error) return <div className={`${card} text-red`}>{error}</div>;
+  if (!agents || !flows) return <div className={`${card} text-muted`}>Loading automation…</div>;
 
   return (
     <div>
       {/* ── AI Sales Agents ─────────────────────────────────── */}
-      <h3 style={{ color: c.text, margin: '0 0 12px', fontSize: '16px' }}>🤖 AI Sales Agents</h3>
+      <h3 className="mb-3 text-base text-ink">🤖 AI Sales Agents</h3>
       {agents.length === 0 && (
-        <div style={{ ...card, color: c.muted }}>No tenants have the AI sales agent enabled yet.</div>
+        <div className={`${card} text-muted`}>No tenants have the AI sales agent enabled yet.</div>
       )}
       {agents.map((a) => (
-        <div key={a.tenantId} style={card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-            <strong style={{ color: c.text }}>{a.businessName}</strong>
-            <span style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div key={a.tenantId} className={card}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <strong className="text-ink">{a.businessName}</strong>
+            <span className="flex items-center gap-2">
               <ModePill mode={a.mode} pausedUntil={a.pausedUntil} />
               {/* The agent pauses itself (a day when out of AI credit). Until
                   2026-10-08 nothing here could lift it. */}
               {a.pausedUntil && new Date(a.pausedUntil) > new Date() && (
-                <button onClick={() => resumeAgent(a)} style={btn('transparent', c.emerald)}>Resume</button>
+                <Button variant="good" onClick={() => resumeAgent(a)}>Resume</Button>
               )}
             </span>
           </div>
           {a.pausedUntil && new Date(a.pausedUntil) > new Date() && (
-            <div style={{ color: c.muted, fontSize: '12px', marginTop: '6px' }}>
+            <div className="mt-1.5 text-xs text-muted">
               Paused until {new Date(a.pausedUntil).toLocaleString('en-ZA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Johannesburg' })}. Customers get the rule-based flow meanwhile.
             </div>
           )}
-          <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', margin: '10px 0', color: c.muted, fontSize: '13px' }}>
-            <span>🔥 <b style={{ color: c.text }}>{a.pipeline.hot}</b> hot</span>
-            <span>☀️ <b style={{ color: c.text }}>{a.pipeline.warm}</b> warm</span>
-            <span>❄️ <b style={{ color: c.text }}>{a.pipeline.cool}</b> cool</span>
-            <span>✖️ <b style={{ color: c.text }}>{a.pipeline.lost}</b> lost</span>
-            <span>Catalog: <b style={{ color: c.text }}>{a.catalogSize}</b></span>
-            <span>Failures: <b style={{ color: a.consecutiveFailures ? c.red : c.emerald }}>{a.consecutiveFailures}</b></span>
+          <div className="my-2.5 flex flex-wrap gap-[18px] text-[13px] text-muted">
+            <span>🔥 <b className="font-mono tabular-nums text-ink">{a.pipeline.hot}</b> hot</span>
+            <span>☀️ <b className="font-mono tabular-nums text-ink">{a.pipeline.warm}</b> warm</span>
+            <span>❄️ <b className="font-mono tabular-nums text-ink">{a.pipeline.cool}</b> cool</span>
+            <span>✖️ <b className="font-mono tabular-nums text-ink">{a.pipeline.lost}</b> lost</span>
+            <span>Catalog: <b className="font-mono tabular-nums text-ink">{a.catalogSize}</b></span>
+            <span>Failures: <b className={`font-mono tabular-nums ${a.consecutiveFailures ? 'text-red' : 'text-emerald'}`}>{a.consecutiveFailures}</b></span>
           </div>
-          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '8px', alignItems: 'center' }}>
+          <div className="mb-2 flex flex-wrap items-center gap-4">
             <ConfigFlag ok={!!a.bookingUrl} label="booking link" />
             <ConfigFlag ok={!!a.reengagementTemplateSid} label="re-engagement template" />
-            <button onClick={() => setConfigOpen(configOpen === a.tenantId ? null : a.tenantId)} style={btn('transparent', c.cyan)}>
+            <Button variant="system" onClick={() => setConfigOpen(configOpen === a.tenantId ? null : a.tenantId)}>
               {configOpen === a.tenantId ? 'Close config ▲' : 'Configure ▼'}
-            </button>
+            </Button>
           </div>
           {configOpen === a.tenantId && <AgentConfigEditor agent={a} onSaved={fetchAll} />}
           {(a.recentShadowDrafts || []).slice(0, 3).map((d, i) => (
-            <div key={i} style={{ background: c.surface, borderLeft: '3px solid ' + c.cyan, borderRadius: '8px', padding: '8px 12px', margin: '6px 0' }}>
-              <div style={{ color: c.text, fontSize: '13px', fontWeight: 600 }}>
-                {d.lead} <span style={{ color: c.muted, fontWeight: 400 }}>· {d.stage || 'greeting'} · {d.intent || '–'}</span>
+            <div key={i} className="my-1.5 rounded-lg border-l-[3px] border-cyan bg-surface px-3 py-2">
+              <div className="text-[13px] font-semibold text-ink">
+                {d.lead} <span className="font-normal text-muted">· {d.stage || 'greeting'} · {d.intent || '–'}</span>
               </div>
               {(d.latest || []).slice(-1).map((x, j) => (
-                <div key={j} style={{ color: c.muted, fontSize: '12px', marginTop: '4px' }}>
+                <div key={j} className="mt-1 text-xs text-muted">
                   “{(x.draft || '(no draft)').slice(0, 160)}”
                 </div>
               ))}
@@ -258,11 +240,11 @@ export default function AutomationPanel() {
       ))}
 
       {/* ── Workflow Engine ─────────────────────────────────── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0 12px' }}>
-        <h3 style={{ color: c.text, margin: 0, fontSize: '16px' }}>⚙️ Workflow Engine</h3>
-        <button onClick={() => setFlowEditor(flowEditor === 'new' ? null : 'new')} style={btn(c.lime, '#080A06')}>
+      <div className="mt-5 mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-base text-ink">⚙️ Workflow Engine</h3>
+        <Button variant="primary" onClick={() => setFlowEditor(flowEditor === 'new' ? null : 'new')}>
           {flowEditor === 'new' ? 'Cancel' : '+ New flow'}
-        </button>
+        </Button>
       </div>
       {flowEditor && (
         <FlowEditor
@@ -273,16 +255,14 @@ export default function AutomationPanel() {
         />
       )}
       {flows.length === 0 && (
-        <div style={{ ...card, color: c.muted }}>No flows yet — create one above.</div>
+        <div className={`${card} text-muted`}>No flows yet — create one above.</div>
       )}
       {flows.length > 0 && (
-        <div style={{ ...card, overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+        <div className={card}>
+          <DataTable minWidth={760}>
             <thead>
               <tr>
-                {['Flow', 'Status', 'Trigger', 'Nodes', 'Active', 'Today ✓/✗', 'Recent', 'Actions'].map((h) => (
-                  <th key={h} style={{ textAlign: 'left', padding: '7px 10px', color: c.muted, borderBottom: '1px solid ' + c.borderDim }}>{h}</th>
-                ))}
+                {['Flow', 'Status', 'Trigger', 'Nodes', 'Active', 'Today ✓/✗', 'Recent', 'Actions'].map((h) => <Th key={h}>{h}</Th>)}
               </tr>
             </thead>
             <tbody>
@@ -290,37 +270,37 @@ export default function AutomationPanel() {
                 const paused = f.pausedUntil && new Date(f.pausedUntil) > new Date();
                 return (
                   <tr key={f.flowId}>
-                    <td style={{ padding: '7px 10px', color: c.text, borderBottom: '1px solid ' + c.borderDim }}>
-                      <b>{f.name}</b> <span style={{ color: c.muted }}>v{f.version}</span>
-                    </td>
-                    <td style={{ padding: '7px 10px', borderBottom: '1px solid ' + c.borderDim }}>
+                    <Td className="text-ink"><b>{f.name}</b> <span className="font-mono text-muted">v{f.version}</span></Td>
+                    <Td>
                       {paused
-                        ? <span style={pill('rgba(248,113,113,0.15)', c.red)}>PAUSED</span>
-                        : <span style={pill(f.status === 'published' ? 'rgba(52,211,153,0.15)' : 'rgba(251,191,36,0.15)', f.status === 'published' ? c.emerald : c.amber)}>{f.status.toUpperCase()}</span>}
-                    </td>
-                    <td style={{ padding: '7px 10px', color: c.muted, borderBottom: '1px solid ' + c.borderDim }}>{f.trigger || '—'}</td>
-                    <td style={{ padding: '7px 10px', color: c.text, borderBottom: '1px solid ' + c.borderDim }}>{f.nodeCount}</td>
-                    <td style={{ padding: '7px 10px', color: c.text, borderBottom: '1px solid ' + c.borderDim }}>{f.activeRuns}</td>
-                    <td style={{ padding: '7px 10px', borderBottom: '1px solid ' + c.borderDim }}>
-                      <span style={{ color: c.emerald }}>{f.today.completed}</span>
-                      <span style={{ color: c.muted }}>/</span>
-                      <span style={{ color: f.today.failed ? c.red : c.muted }}>{f.today.failed}</span>
-                      <span style={{ color: c.muted }}> of {f.today.started}</span>
-                    </td>
-                    <td style={{ padding: '7px 10px', color: c.muted, borderBottom: '1px solid ' + c.borderDim }}>
+                        ? <Badge tone="bad" mono>PAUSED</Badge>
+                        : <Badge tone={f.status === 'published' ? 'good' : 'warn'} mono>{f.status.toUpperCase()}</Badge>}
+                    </Td>
+                    <Td className="text-muted">{f.trigger || '—'}</Td>
+                    <Td mono className="text-ink">{f.nodeCount}</Td>
+                    <Td mono className="text-ink">{f.activeRuns}</Td>
+                    <Td mono>
+                      <span className="text-emerald">{f.today.completed}</span>
+                      <span className="text-muted">/</span>
+                      <span className={f.today.failed ? 'text-red' : 'text-muted'}>{f.today.failed}</span>
+                      <span className="text-muted"> of {f.today.started}</span>
+                    </Td>
+                    <Td className="text-muted">
                       {(f.recentRuns || []).slice(0, 3).map((r) => r.status + (r.outcome ? `(${r.outcome})` : '')).join(', ') || '—'}
-                    </td>
-                    <td style={{ padding: '7px 10px', borderBottom: '1px solid ' + c.borderDim, whiteSpace: 'nowrap' }}>
-                      <button onClick={() => setFlowEditor(f)} style={btn('transparent', c.cyan)}>Edit</button>
-                      {f.status === 'draft' && <button onClick={() => flowAction(f.flowId, 'publish')} style={btn('transparent', c.emerald)}>Publish</button>}
-                      {f.status === 'published' && !paused && <button onClick={() => flowAction(f.flowId, 'pause')} style={btn('transparent', c.amber)}>Pause</button>}
-                      {paused && <button onClick={() => flowAction(f.flowId, 'resume')} style={btn('transparent', c.emerald)}>Resume</button>}
-                    </td>
+                    </Td>
+                    <Td className="whitespace-nowrap">
+                      <span className="flex gap-1.5">
+                        <Button variant="system" onClick={() => setFlowEditor(f)}>Edit</Button>
+                        {f.status === 'draft' && <Button variant="good" onClick={() => flowAction(f.flowId, 'publish')}>Publish</Button>}
+                        {f.status === 'published' && !paused && <Button variant="warn" onClick={() => flowAction(f.flowId, 'pause')}>Pause</Button>}
+                        {paused && <Button variant="good" onClick={() => flowAction(f.flowId, 'resume')}>Resume</Button>}
+                      </span>
+                    </Td>
                   </tr>
                 );
               })}
             </tbody>
-          </table>
+          </DataTable>
         </div>
       )}
     </div>
