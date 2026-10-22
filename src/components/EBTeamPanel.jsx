@@ -6,7 +6,6 @@ import Badge from './ui/Badge';
 import Button from './ui/Button';
 import StatTile from './ui/StatTile';
 import PageHeader from './ui/PageHeader';
-import { Select } from './ui/Field';
 
 const NO_TEAM = { team: [], prospects: [] };
 
@@ -35,7 +34,6 @@ export default function EBTeamPanel({ isSuperAdmin }) {
   const loadTeam = () => teamQ.refetch();
   const [inviteModal, setInviteModal] = useState(false);
   const [inviteUrl, setInviteUrl] = useState('');
-  const [inviteRole, setInviteRole] = useState('eb_agent');
   const [sending, setSending] = useState(false);
   const [msg, setMsg] = useState('');
 
@@ -69,7 +67,7 @@ export default function EBTeamPanel({ isSuperAdmin }) {
 
   const handleGenerateInvite = async () => {
     setSending(true);
-    setInviteUrl(window.location.origin + '/register?role=' + inviteRole);
+    setInviteUrl(window.location.origin + '/register');
     setMsg('✅ Share this registration link');
     setSending(false);
   };
@@ -165,11 +163,13 @@ export default function EBTeamPanel({ isSuperAdmin }) {
               <h3 className="font-['Fraunces',serif] text-[22px] font-black text-lime">Invite Team Member</h3>
               <button type="button" onClick={() => { setInviteModal(false); setInviteUrl(''); setMsg(''); }} aria-label="Close" className="min-h-[44px] min-w-[44px] cursor-pointer text-xl text-muted">×</button>
             </div>
-            <p className="mb-1.5 text-xs text-muted">Role</p>
-            <Select value={inviteRole} onChange={e => setInviteRole(e.target.value)} aria-label="Role" className="mb-3.5 cursor-pointer bg-[#1C1C19]">
-              <option value="eb_agent">EB Agent — Prospecting only</option>
-              <option value="eb_manager">EB Manager — Full platform access</option>
-            </Select>
+            {/* The link used to carry ?role=, but neither the sign-up page nor
+                the API reads it, so picking Manager here gave nobody anything.
+                The role is chosen where it is actually applied: on approval. */}
+            <p className="mb-3.5 text-sm leading-relaxed text-dim">
+              Send them this link to sign up. Their account waits in <strong className="text-ink">Users</strong>,
+              and you choose EB Agent (prospecting only) or EB Manager (full platform access) when you approve them.
+            </p>
             {inviteUrl && (
               <div className="mb-3.5 break-all rounded-[10px] border border-edge bg-[#1C1C19] p-3.5">
                 <p className="mb-1.5 font-mono text-[11px] uppercase tracking-[0.06em] text-muted">Invite Link</p>
