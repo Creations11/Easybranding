@@ -86,6 +86,21 @@ describe('RentalsPanel and WhatsApp', () => {
     expect(api.get).toHaveBeenCalledWith('/rentals/admin/alerts', { params: { status: 'active' } })
   })
 
+  it('says plainly when Meta declines have paused the alerts', async () => {
+    api.get.mockImplementation((url) => Promise.resolve({
+      data: { data: url === '/rentals/admin/alerts'
+        ? { ...ALERTS, sending: { number: '+27653318266', on: true, paused: true, declined: 4, sentRecently: 12 },
+            alerts: [{ ...ALERTS.alerts[0], told: 2, declined: 1 }] }
+        : { listings: [] } },
+    }))
+    renderWithProviders(<RentalsPanel />)
+    fireEvent.click(screen.getByRole('tab', { name: 'Alerts' }))
+    const row = await screen.findByTestId('alert-al1')
+    expect(screen.getByText('Paused')).toBeInTheDocument()
+    expect(screen.getByText(/Meta declined 4 of the last 12 alerts/)).toBeInTheDocument()
+    expect(row).toHaveTextContent('1 declined by Meta')
+  })
+
   it('stops an alert only after a confirmation', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
     api.delete.mockResolvedValue({ data: { data: { removed: true } } })

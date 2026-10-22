@@ -42,6 +42,7 @@ function AlertRow({ alert }) {
         </div>
         <span className="font-mono text-xs tabular-nums text-muted">
           {alert.matched} matched · {alert.told} sent
+          {alert.declined ? <span className="text-red"> · {alert.declined} declined by Meta</span> : null}
         </span>
       </div>
       <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted">
@@ -67,13 +68,17 @@ export default function AlertsView() {
     <div>
       {data && (
         <Sheet className="flex flex-wrap items-center gap-3">
-          {data.sending.on
-            ? <Badge tone="good" dot>Sending</Badge>
-            : <Badge tone="warn" dot>Not sending yet</Badge>}
+          {!data.sending.on
+            ? <Badge tone="warn" dot>Not sending yet</Badge>
+            : data.sending.paused
+              ? <Badge tone="bad" dot>Paused</Badge>
+              : <Badge tone="good" dot>Sending</Badge>}
           <span className="text-[13px] text-dim">
-            {data.sending.on
-              ? <>Alerts go out from <span className="font-mono">{data.sending.number}</span>.</>
-              : <>Matches are recorded but nothing is sent until the approved template is switched on (RENTALS_ALERTS_TEMPLATE on Render). They will come from <span className="font-mono">{data.sending.number}</span>.</>}
+            {!data.sending.on
+              ? <>Matches are recorded but nothing is sent until the approved template is switched on (RENTALS_ALERTS_TEMPLATE on Render). They will come from <span className="font-mono">{data.sending.number}</span>.</>
+              : data.sending.paused
+                ? <>Meta declined {data.sending.declined} of the last {data.sending.sentRecently} alerts (131049), so sending stopped itself to protect <span className="font-mono">{data.sending.number}</span>. It starts again by itself once the last two days look healthy.</>
+                : <>From <span className="font-mono">{data.sending.number}</span>: at most one a day per person, never between 20:00 and 08:00, the newest place still live.</>}
           </span>
           <span className="ml-auto font-mono text-xs tabular-nums text-muted">{data.counts.active} active · {data.counts.removed} stopped</span>
         </Sheet>
