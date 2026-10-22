@@ -81,8 +81,11 @@ export default function PACMembersPanel() {
 
   const provinces = ['gauteng', 'western_cape', 'kwazulu_natal', 'eastern_cape', 'limpopo', 'mpumalanga', 'north_west', 'free_state', 'northern_cape'];
 
-  const paidCount = members.filter(m => m.membershipPaid).length;
-  const totalRevenue = paidCount * 50;
+  // Every paid member, from the stats (2026-10-22). This used to count the
+  // members on the page being shown, so past one page both figures read low.
+  // Null until the stats answer, shown as a dash rather than a wrong number.
+  const paidCount = stats?.paid ?? null;
+  const totalRevenue = paidCount === null ? null : paidCount * 50;
 
   if (loading && !members.length) {
     return (
@@ -105,8 +108,8 @@ export default function PACMembersPanel() {
             { label: 'Total Members', value: stats.total, tone: 'ink' },
             { label: 'Active', value: stats.active, tone: 'lime' },
             { label: 'Today', value: stats.today, tone: 'cyan' },
-            { label: 'Paid Members', value: `${paidCount}/${stats.total}`, tone: 'emerald' },
-            { label: 'Revenue', value: `R${totalRevenue}`, tone: 'lime' },
+            { label: 'Paid Members', value: paidCount === null ? '—' : `${paidCount}/${stats.total}`, tone: 'emerald' },
+            { label: 'Revenue', value: totalRevenue === null ? '—' : `R${totalRevenue}`, tone: 'lime' },
             { label: 'Meetings Consent', value: stats.consented?.meetings || 0, tone: 'emerald' },
             { label: 'Campaigns Consent', value: stats.consented?.campaigns || 0, tone: 'amber' },
             { label: 'Fundraising Consent', value: stats.consented?.fundraising || 0, tone: 'earth' },
