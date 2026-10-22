@@ -44,7 +44,11 @@ export default function Login() {
       else if (user.role === 'admin')    window.location.href = '/admin';
       else if (user.role === 'agent')    window.location.href = '/agent';
       else if (user.role === 'borrower') window.location.href = '/pending';
-      else window.location.href = '/dashboard';
+      else {
+        // Not one of the six roles the API allows, so nothing to open.
+        localStorage.removeItem('eb_user');
+        setError('This account has no dashboard yet. Please contact support.');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
     } finally { setLoading(false); }

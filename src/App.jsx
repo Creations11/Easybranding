@@ -44,7 +44,6 @@ const lazyPage = (load) => lazy(() => load().catch((err) => {
   throw err;
 }));
 
-const Dashboard           = lazyPage(() => import('./pages/Dashboard'));
 const AdminDashboard      = lazyPage(() => import('./pages/AdminDashboard'));
 const AgentDashboard      = lazyPage(() => import('./pages/AgentDashboard'));
 const PendingApproval     = lazyPage(() => import('./pages/PendingApproval'));
@@ -78,6 +77,16 @@ const getUser = () => {
   catch { return {}; }
 };
 
+// A stored role this app does not route. The API allows only the six above
+// (User.role's enum), so this is stale data from an older build. It used to
+// go to /dashboard, which admits none of them and sent them to /dashboard
+// again, for ever; /dashboard itself was deleted on 2026-10-22. Now the
+// stale user is forgotten and they sign in again.
+function forgetUnknownRole() {
+  try { localStorage.removeItem('eb_user'); } catch { /* nothing stored */ }
+  return <Navigate to="/login" replace />;
+}
+
 function PublicRoute({ children }) {
   const user = getUser();
 
@@ -86,7 +95,7 @@ function PublicRoute({ children }) {
   if (user.role === 'admin')    return <Navigate to="/admin"    replace />;
   if (user.role === 'agent')    return <Navigate to="/agent"    replace />;
   if (user.role === 'borrower') return <Navigate to="/pending"  replace />;
-  return <Navigate to="/dashboard" replace />;
+  return forgetUnknownRole();
 }
 
 function ProtectedRoute({ children, allowedRoles = null }) {
@@ -99,7 +108,7 @@ function ProtectedRoute({ children, allowedRoles = null }) {
     if (user.role === 'admin')    return <Navigate to="/admin"    replace />;
     if (user.role === 'agent')    return <Navigate to="/agent"    replace />;
     if (user.role === 'borrower') return <Navigate to="/pending"  replace />;
-    return <Navigate to="/dashboard" replace />;
+    return forgetUnknownRole();
   }
 
   return children;
@@ -168,12 +177,6 @@ export default function App() {
               <Route path="/superadmin" element={
                 <ProtectedRoute allowedRoles={['super_admin', 'eb_manager', 'eb_agent']}>
                   <SuperAdminDashboard />
-                </ProtectedRoute>
-              } />
-
-              <Route path="/dashboard" element={
-                <ProtectedRoute allowedRoles={['super_admin', 'admin', 'eb_manager']}>
-                  <Dashboard />
                 </ProtectedRoute>
               } />
 
