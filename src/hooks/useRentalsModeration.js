@@ -59,6 +59,17 @@ export function useRentalAlerts(status = 'active') {
   });
 }
 
+/**
+ * The WhatsApp messages to linked accounts (backend rentals/whatsappNotify.js):
+ * {on, counts: {queued, sent, failed, skipped}, notices}.
+ */
+export function useRentalNotices(status = 'all') {
+  return useQuery({
+    queryKey: [...RENTALS_KEY, 'whatsapp-messages', status],
+    queryFn: () => api.get(`${ADMIN}/whatsapp-messages`, { params: { status } }).then((r) => r.data.data),
+  });
+}
+
 /** The actions. Each resolves to the server's `data` and refreshes every rentals list. */
 export function useRentalsActions() {
   const qc = useQueryClient();

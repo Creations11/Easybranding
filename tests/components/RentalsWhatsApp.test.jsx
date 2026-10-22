@@ -33,6 +33,15 @@ const ALERTS = {
   }],
 }
 
+const NOTICES = {
+  on: false,
+  counts: { queued: 1, sent: 1, failed: 1, skipped: 0 },
+  notices: [
+    { id: 'n1', account: 'Nomsa Dube', what: 'New application', detail: 'Sipho applied for Sunny backroom', status: 'sent', attempts: 1, lastError: null, sentAt: '2026-10-22T08:00:00Z' },
+    { id: 'n2', account: 'Sipho D', what: 'Application update', detail: 'You have been shortlisted.', status: 'failed', attempts: 3, lastError: '131026 undeliverable' },
+  ],
+}
+
 describe('RentalsPanel and WhatsApp', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -40,6 +49,7 @@ describe('RentalsPanel and WhatsApp', () => {
       data: {
         data: url === '/rentals/admin/accounts' ? { accounts: [LINKED, UNLINKED] }
           : url === '/rentals/admin/alerts' ? ALERTS
+          : url === '/rentals/admin/whatsapp-messages' ? NOTICES
           : { listings: [] },
       },
     }))
@@ -87,6 +97,19 @@ describe('RentalsPanel and WhatsApp', () => {
     fireEvent.click(screen.getByText('Stop alert'))
     expect(confirm.mock.calls[1][0]).toMatch(/no more messages about this search/)
     await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/rentals/admin/alerts/al1'))
+  })
+
+  it('the WhatsApp tab says whether messages are on, and what each person was told', async () => {
+    renderWithProviders(<RentalsPanel />)
+    fireEvent.click(screen.getByRole('tab', { name: 'WhatsApp' }))
+    const sent = await screen.findByTestId('notice-n1')
+    expect(screen.getByText('Off')).toBeInTheDocument()
+    expect(screen.getByText(/Only emails go out/)).toHaveTextContent('RENTALS_WHATSAPP_NOTIFY')
+    expect(screen.getByText('1 sent · 1 waiting · 1 failed')).toBeInTheDocument()
+    expect(sent).toHaveTextContent('New application')
+    expect(sent).toHaveTextContent('Sipho applied for Sunny backroom')
+    expect(screen.getByTestId('notice-n2')).toHaveTextContent('gave up after 3 tries')
+    expect(screen.getByTestId('notice-n2')).toHaveTextContent('131026 undeliverable')
   })
 
   it('tells staff the owner can moderate from WhatsApp', () => {

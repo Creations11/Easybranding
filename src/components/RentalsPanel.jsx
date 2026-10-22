@@ -16,9 +16,10 @@ import { useRentalListings } from '../hooks/useRentalsModeration';
 import ListingsView from './rentals/ListingsView';
 import AccountsView from './rentals/AccountsView';
 import AlertsView from './rentals/AlertsView';
+import MessagesView from './rentals/MessagesView';
 
 // The parts live in ./rentals/: ListingsView (ListingCard, OwnerBox) and
-// AccountsView (NewAccount, AccountRow, AccountForm), AlertsView.
+// AccountsView (NewAccount, AccountRow, AccountForm), AlertsView, MessagesView.
 
 const VIEWS = [
   { id: 'pending_review', label: 'Waiting for review' },
@@ -28,6 +29,7 @@ const VIEWS = [
   { id: 'archived', label: 'Archived' },
   { id: 'accounts', label: 'Accounts' },
   { id: 'alerts', label: 'Alerts' },
+  { id: 'messages', label: 'WhatsApp' },
 ];
 
 export default function RentalsPanel() {
@@ -59,7 +61,10 @@ export default function RentalsPanel() {
         ))}
       </div>
 
-      {view === 'accounts' ? <AccountsView /> : view === 'alerts' ? <AlertsView /> : <ListingsView status={view} />}
+      {view === 'accounts' ? <AccountsView />
+        : view === 'alerts' ? <AlertsView />
+        : view === 'messages' ? <MessagesView />
+        : <ListingsView status={view} />}
     </div>
   );
 }
