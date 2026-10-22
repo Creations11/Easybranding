@@ -2,12 +2,12 @@ import { useState } from 'react';
 import Button from '../ui/Button';
 import { useRentalsActions } from '../../hooks/useRentalsModeration';
 import { useAct } from './useAct';
-import { when, askReason, changes } from './helpers';
+import { when, askReason, changes, whatsapp } from './helpers';
 import { Result, Sheet, TemporaryPassword } from './ui';
 import AccountForm from './AccountForm';
 
 export default function AccountRow({ account }) {
-  const { suspend, reinstate, updateAccount, resetPassword, deleteAccount } = useRentalsActions();
+  const { suspend, reinstate, updateAccount, resetPassword, deleteAccount, unlinkWhatsApp } = useRentalsActions();
   const { busy, result, act } = useAct();
   const [editing, setEditing] = useState(false);
   const [password, setPassword] = useState(null);
@@ -29,6 +29,10 @@ export default function AccountRow({ account }) {
     const reason = askReason(`Why are you suspending ${account.fullName}? They are signed out at once and all their listings leave the site.`);
     if (reason) act(() => suspend(account.id, reason), `${account.fullName} is suspended.`);
   };
+  const onUnlink = () => {
+    if (!window.confirm(`Unlink ${account.fullName}'s WhatsApp? EasyRentals stops messaging that number until they link it again from their account page.`)) return;
+    act(() => unlinkWhatsApp(account.id), `${account.fullName}'s WhatsApp is unlinked.`);
+  };
   const onReinstate = () => {
     if (!window.confirm(`Reinstate ${account.fullName}?`)) return;
     act(() => reinstate(account.id), `${account.fullName} is reinstated.`);
@@ -48,6 +52,11 @@ export default function AccountRow({ account }) {
         <span className="font-mono">{account.phone}</span>
         <span>joined {when(account.createdAt)}</span>
         <span>{account.lastLoginAt ? `last signed in ${when(account.lastLoginAt)}` : 'never signed in again'}</span>
+        {/* Linked = the handset sent the account page's code, so the number is
+            proved theirs. The cellphone above is only what they typed. */}
+        {account.whatsappPhone
+          ? <span>WhatsApp linked: <a href={whatsapp(account.whatsappPhone)} target="_blank" rel="noopener noreferrer" className="font-mono text-emerald underline">{account.whatsappPhone}</a></span>
+          : <span>WhatsApp not linked</span>}
       </div>
       {editing
         ? <AccountForm initial={account} submitLabel="Save" onSubmit={onSave} onCancel={() => setEditing(false)} busy={busy} />
@@ -58,6 +67,7 @@ export default function AccountRow({ account }) {
             {account.isActive
               ? <Button variant="danger" onClick={onSuspend} disabled={busy}>Suspend</Button>
               : <Button variant="good" onClick={onReinstate} disabled={busy}>Reinstate</Button>}
+            {account.whatsappPhone && <Button variant="secondary" onClick={onUnlink} disabled={busy}>Unlink WhatsApp</Button>}
             <Button variant="danger" onClick={onDelete} disabled={busy}>Delete</Button>
           </div>
         )}

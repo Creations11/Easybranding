@@ -47,6 +47,18 @@ export function useRentalAccounts(q) {
   });
 }
 
+/**
+ * WhatsApp search alerts: {counts, sending: {number, on}, alerts}. `status` is
+ * active (default), removed or all. Staff see the full number, because they
+ * are who a subscriber asks to be taken off.
+ */
+export function useRentalAlerts(status = 'active') {
+  return useQuery({
+    queryKey: [...RENTALS_KEY, 'alerts', status],
+    queryFn: () => api.get(`${ADMIN}/alerts`, { params: { status } }).then((r) => r.data.data),
+  });
+}
+
 /** The actions. Each resolves to the server's `data` and refreshes every rentals list. */
 export function useRentalsActions() {
   const qc = useQueryClient();
@@ -67,5 +79,9 @@ export function useRentalsActions() {
     updateAccount: (accountId, fields) => run(api.patch(`${ADMIN}/accounts/${accountId}`, fields)),
     resetPassword: (accountId) => run(api.post(`${ADMIN}/accounts/${accountId}/reset-password`, {})),
     deleteAccount: (accountId) => run(api.delete(`${ADMIN}/accounts/${accountId}`)),
+    // WhatsApp (backend services/rentals/whatsapp.js): stop EasyRentals using
+    // a linked number, and take someone off the alerts.
+    unlinkWhatsApp: (accountId) => run(api.post(`${ADMIN}/accounts/${accountId}/whatsapp/unlink`, {})),
+    removeAlert: (alertId) => run(api.delete(`${ADMIN}/alerts/${alertId}`)),
   };
 }

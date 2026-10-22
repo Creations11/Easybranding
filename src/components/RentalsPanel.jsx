@@ -15,9 +15,10 @@ import { useState } from 'react';
 import { useRentalListings } from '../hooks/useRentalsModeration';
 import ListingsView from './rentals/ListingsView';
 import AccountsView from './rentals/AccountsView';
+import AlertsView from './rentals/AlertsView';
 
 // The parts live in ./rentals/: ListingsView (ListingCard, OwnerBox) and
-// AccountsView (NewAccount, AccountRow, AccountForm).
+// AccountsView (NewAccount, AccountRow, AccountForm), AlertsView.
 
 const VIEWS = [
   { id: 'pending_review', label: 'Waiting for review' },
@@ -26,6 +27,7 @@ const VIEWS = [
   { id: 'rented', label: 'Let' },
   { id: 'archived', label: 'Archived' },
   { id: 'accounts', label: 'Accounts' },
+  { id: 'alerts', label: 'Alerts' },
 ];
 
 export default function RentalsPanel() {
@@ -38,6 +40,11 @@ export default function RentalsPanel() {
         <h1 className="mb-1 font-['Fraunces',serif] text-[clamp(24px,4vw,40px)] font-black text-ink">Rentals</h1>
         <p className="text-[15px] text-muted">
           EasyRentals. Every listing waits here until a person has checked it, and so does every change to a live one.
+        </p>
+        <p className="mt-1 text-[13px] text-muted">
+          From the owner's phone: send <span className="font-mono text-dim">LISTINGS</span> to the EasyBranding WhatsApp, then{' '}
+          <span className="font-mono text-dim">LISTING</span>, <span className="font-mono text-dim">PUBLISH</span> or{' '}
+          <span className="font-mono text-dim">REJECTLISTING</span> with the 6-character reference.
         </p>
       </div>
 
@@ -52,7 +59,7 @@ export default function RentalsPanel() {
         ))}
       </div>
 
-      {view === 'accounts' ? <AccountsView /> : <ListingsView status={view} />}
+      {view === 'accounts' ? <AccountsView /> : view === 'alerts' ? <AlertsView /> : <ListingsView status={view} />}
     </div>
   );
 }
