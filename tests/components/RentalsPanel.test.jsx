@@ -68,6 +68,18 @@ describe('RentalsPanel', () => {
     expect(await screen.findByRole('tab', { name: 'Waiting for review (1)' })).toBeInTheDocument()
   })
 
+  it('shows where the listing is on a map, on request', async () => {
+    renderWithProviders(<RentalsPanel />)
+    const card = await screen.findByTestId('listing-l1')
+    const query = encodeURIComponent('7 Example Road, Ext 5, Fleurhof, Johannesburg, South Africa')
+    expect(within(card).getByRole('link', { name: 'Open in Google Maps' }))
+      .toHaveAttribute('href', `https://www.google.com/maps/search/?api=1&query=${query}`)
+    expect(within(card).queryByTitle('Map of 1 bedroom flat')).toBeNull()
+    fireEvent.click(within(card).getByText('Show on the map'))
+    expect(within(card).getByTitle('Map of 1 bedroom flat'))
+      .toHaveAttribute('src', `https://maps.google.com/maps?q=${query}&z=16&output=embed`)
+  })
+
   it('publishes only after the person confirms, and says so', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
     renderWithProviders(<RentalsPanel />)

@@ -1,14 +1,16 @@
+import { useState } from 'react';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import { useRentalsActions, photoSrc } from '../../hooks/useRentalsModeration';
 import { useAct } from './useAct';
-import { STATUS, TYPE, AMENITY, rand, when, askReason } from './helpers';
+import { STATUS, TYPE, AMENITY, rand, when, askReason, mapsLink, mapEmbed } from './helpers';
 import { Result, Sheet } from './ui';
 import OwnerBox from './OwnerBox';
 
 export default function ListingCard({ listing }) {
   const { approve, reject, takeDown } = useRentalsActions();
   const { busy, result, act } = useAct();
+  const [showMap, setShowMap] = useState(false);
   const status = STATUS[listing.status] || { label: listing.status, tone: 'neutral' };
   const details = [
     TYPE[listing.propertyType] || listing.propertyType,
@@ -47,6 +49,22 @@ export default function ListingCard({ listing }) {
 
       <div className="mt-1.5 text-xs text-muted">{details.join(' · ')}</div>
       <div className="mt-1.5 text-[13px] text-ink"><span className="text-muted">Address:</span> {listing.addressLine || 'none given'}</div>
+      {/* Where it really is: a listing in a field, or in another suburb, is
+          one of the things a reviewer is here to catch. */}
+      {listing.addressLine && (
+        <div className="mt-1 flex flex-wrap gap-3 text-xs">
+          <button type="button" onClick={() => setShowMap((v) => !v)} className="min-h-[44px] cursor-pointer text-lime underline">
+            {showMap ? 'Hide the map' : 'Show on the map'}
+          </button>
+          <a href={mapsLink(listing)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[44px] items-center text-lime underline">
+            Open in Google Maps
+          </a>
+        </div>
+      )}
+      {showMap && listing.addressLine && (
+        <iframe title={`Map of ${listing.title}`} src={mapEmbed(listing)} loading="lazy" referrerPolicy="no-referrer-when-downgrade"
+          className="mt-1 h-64 w-full rounded-lg border border-edge" />
+      )}
 
       {listing.photos?.length > 0 && (
         <div className="mt-2.5 flex gap-2 overflow-x-auto">

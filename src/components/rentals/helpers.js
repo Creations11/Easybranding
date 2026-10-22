@@ -23,6 +23,12 @@ export const when = (d) => (d
   : '');
 export const whatsapp = (e164) => 'https://wa.me/' + String(e164 || '').replace(/^\+/, '');
 
+// A listing's street address on Google Maps: the same query the EasyRentals
+// website maps (its components/ListingMap.tsx), so staff and the tenant see one place.
+const mapQuery = (l) => [l.addressLine, l.extension, l.area || 'Fleurhof', 'Johannesburg', 'South Africa'].filter(Boolean).join(', ');
+export const mapsLink = (l) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery(l))}`;
+export const mapEmbed = (l) => `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery(l))}&z=16&output=embed`;
+
 /** Ask for the reason the landlord will be emailed. Null if the person backs out. */
 export const askReason = (question) => {
   const reason = window.prompt(question);
