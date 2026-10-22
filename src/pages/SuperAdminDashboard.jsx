@@ -205,7 +205,7 @@ export default function SuperAdminDashboard() {
     // gated to super admin since member management is an
     // administrative function, matching the gating pattern already
     // used for "platform" below.
-    if (isSuperAdmin) { s.push({ id: 'members', icon: '✊', label: 'Team Members', badge: 0 }); }
+    if (isSuperAdmin) { s.push({ id: 'members', icon: '✊', label: 'Membership', badge: 0 }); }
     s.push({ id: 'prospecting', icon: '📤', label: 'Prospecting', badge: 0 });
     if (isEBAgent)  { s.push({ id: 'agentstats', icon: '📊', label: 'My Stats', badge: 0 }); }
     if (!isEBAgent) { s.push({ id: 'ebteam',     icon: '👔', label: 'EB Team',   badge: 0 }); }
@@ -314,7 +314,7 @@ export default function SuperAdminDashboard() {
         {/* FIX: this entire block was missing — PACMembersPanel.jsx
             existed as a complete component but had no render path. */}
         {section === 'members' && isSuperAdmin && (
-          <SectionErrorBoundary name="Team Members" onRetry={refetch}>
+          <SectionErrorBoundary name="Membership" onRetry={refetch}>
             <PACMembersPanel />
           </SectionErrorBoundary>
         )}

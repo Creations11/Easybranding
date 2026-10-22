@@ -97,7 +97,7 @@ export default function PACMembersPanel() {
 
   return (
     <div>
-      <PageHeader title="Team Members" sub={stats ? `${stats.total} registered members` : 'Member management'}>
+      <PageHeader title="Membership" sub={stats ? `${stats.total} registered members` : 'Member management'}>
         <Button variant="system" onClick={handleExport}>📥 Export CSV</Button>
       </PageHeader>
 
