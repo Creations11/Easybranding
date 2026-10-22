@@ -3,7 +3,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../api';
-import { colors } from '../utils/theme';
+import Badge from '../components/ui/Badge';
+import Button from '../components/ui/Button';
+import StatTile from '../components/ui/StatTile';
+import { Input } from '../components/ui/Field';
 
 // Module scope, like App.jsx's getUser(): loadData reads the role through
 // this rather than closing over component state, so the mount effect stays
@@ -13,28 +16,25 @@ const getStoredUser = () => {
   catch { return {}; }
 };
 
-const STATUS_COLORS = {
-  qualified:                 colors.lime,
-  not_qualified:             colors.red,
-  taken_over:                colors.orange,
-  capture_name:              colors.cyan,
-  capture_property_interest: colors.cyan,
-  capture_budget:            colors.cyan,
-  capture_move_in_date:      colors.cyan,
-  capture_employment_type:   colors.cyan,
-  capture_monthly_income:    colors.cyan,
-  awaiting_menu:             colors.amber,
-  closed:                    colors.muted,
+// A lead's workflow status, as a chip: whole class names so Tailwind sees them.
+const STATUS_CLASS = {
+  qualified:                 'bg-lime/15 text-lime',
+  not_qualified:             'bg-red/15 text-red',
+  taken_over:                'bg-orange/15 text-orange',
+  capture_name:              'bg-cyan/15 text-cyan',
+  capture_property_interest: 'bg-cyan/15 text-cyan',
+  capture_budget:            'bg-cyan/15 text-cyan',
+  capture_move_in_date:      'bg-cyan/15 text-cyan',
+  capture_employment_type:   'bg-cyan/15 text-cyan',
+  capture_monthly_income:    'bg-cyan/15 text-cyan',
+  awaiting_menu:             'bg-amber/15 text-amber',
+  closed:                    'bg-muted/15 text-muted',
 };
 
-function StatCard({ label, value, color }) {
-  return (
-    <div style={{ background: colors.card, border: `1px solid ${colors.border}`, borderRadius: '20px', padding: '24px 28px' }}>
-      <p style={{ color: colors.muted, fontSize: '12px', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</p>
-      <p style={{ fontSize: '40px', fontWeight: '800', color: color || colors.text, lineHeight: 1 }}>{value}</p>
-    </div>
-  );
-}
+// A bot-state chip in the take-over orange, which ui/Badge has no tone for.
+const OrangeChip = ({ children }) => (
+  <span className="inline-flex items-center rounded-full border border-orange/30 bg-orange/12 px-[11px] py-[5px] text-xs font-semibold text-orange">{children}</span>
+);
 
 // ── Viewing Scheduler Modal ───────────────────────────────────
 function ViewingModal({ lead, onClose, onScheduled }) {
@@ -61,26 +61,23 @@ function ViewingModal({ lead, onClose, onScheduled }) {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div style={{ width: '100%', maxWidth: '480px', background: colors.surface, borderRadius: '24px', border: `1px solid ${colors.border}`, padding: '32px' }}>
-        <h3 style={{ color: colors.lime, marginBottom: '8px' }}>Schedule Viewing</h3>
-        <p style={{ color: colors.muted, fontSize: '14px', marginBottom: '24px' }}>
-          {lead.name} · {lead.phone} · {lead.propertyInterest || 'Property'}
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/85 p-4">
+      <div className="w-full max-w-[480px] rounded-3xl border border-edge-live bg-surface p-8 max-sm:p-5">
+        <h3 className="mb-2 text-lime">Schedule Viewing</h3>
+        <p className="mb-6 text-sm text-muted">
+          {lead.name} · <span className="font-mono">{lead.phone}</span> · {lead.propertyInterest || 'Property'}
         </p>
-        {error && <p style={{ color: colors.red, marginBottom: '16px', fontSize: '14px' }}>{error}</p>}
+        {error && <p className="mb-4 text-sm text-red">{error}</p>}
 
-        <input type="date" value={date} onChange={e => setDate(e.target.value)}
-          style={{ width: '100%', padding: '14px', borderRadius: '12px', background: '#1C1C19', border: `1px solid ${colors.borderDim}`, color: colors.text, marginBottom: '12px', fontSize: '15px' }} />
-        <input type="time" value={time} onChange={e => setTime(e.target.value)}
-          style={{ width: '100%', padding: '14px', borderRadius: '12px', background: '#1C1C19', border: `1px solid ${colors.borderDim}`, color: colors.text, marginBottom: '12px', fontSize: '15px' }} />
-        <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="Property address (optional)"
-          style={{ width: '100%', padding: '14px', borderRadius: '12px', background: '#1C1C19', border: `1px solid ${colors.borderDim}`, color: colors.text, marginBottom: '24px', fontSize: '15px' }} />
+        <Input type="date" value={date} onChange={e => setDate(e.target.value)} aria-label="Viewing date" className="mb-3 bg-[#1C1C19]" />
+        <Input type="time" value={time} onChange={e => setTime(e.target.value)} aria-label="Viewing time" className="mb-3 bg-[#1C1C19]" />
+        <Input mono={false} type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="Property address (optional)" className="mb-6 bg-[#1C1C19]" />
 
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '12px 24px', background: 'transparent', border: `1px solid ${colors.borderDim}`, color: colors.muted, borderRadius: '12px', cursor: 'pointer' }}>Cancel</button>
-          <button onClick={handleSchedule} disabled={saving} style={{ padding: '12px 28px', background: colors.lime, color: '#050505', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+        <div className="flex justify-end gap-3">
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" onClick={handleSchedule} disabled={saving}>
             {saving ? 'Scheduling...' : 'Confirm Viewing'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -216,64 +213,64 @@ export default function AgentDashboard() {
   const isTakenOver = selectedLead?.workflowStatus === 'taken_over';
 
   if (loading) return (
-    <div style={{ padding: '140px', textAlign: 'center', color: colors.muted }}>
+    <div className="p-[140px] text-center text-muted max-sm:px-4">
       Loading your workspace...
     </div>
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#050505', color: colors.text, padding: 'clamp(80px, 10vw, 100px) clamp(16px, 4vw, 40px) 40px' }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+    <div className="min-h-screen bg-[#050505] px-[clamp(16px,4vw,40px)] pt-[clamp(80px,10vw,100px)] pb-10 text-ink">
+      <div className="mx-auto max-w-[1400px]">
 
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
-          <div>
-            <h1 style={{ fontSize: 'clamp(24px, 6vw, 44px)', fontWeight: '900', marginBottom: '6px' }}>Agent Workspace</h1>
-            <p style={{ color: colors.muted, fontSize: '18px' }}>Welcome, {user.fullName || 'Agent'}</p>
+        <div className="mb-10 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="mb-1.5 text-[clamp(24px,6vw,44px)] font-black">Agent Workspace</h1>
+            <p className="text-lg text-muted">Welcome, {user.fullName || 'Agent'}</p>
           </div>
-          <button onClick={() => navigate('/')} style={{ color: colors.muted, background: 'none', border: 'none', cursor: 'pointer' }}>← Home</button>
+          <Button variant="ghost" onClick={() => navigate('/')}>← Home</Button>
         </div>
 
         {/* Stats */}
         {overview && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '40px' }}>
-            <StatCard label="Assigned Leads"  value={overview.assignedTotal}    />
-            <StatCard label="Active"          value={overview.assignedActive}   color={colors.cyan} />
-            <StatCard label="Qualified"       value={overview.assignedQualified} color={colors.lime} />
-            <StatCard label="In My Queue"     value={overview.takenOverByMe}    color={colors.orange} />
-            <StatCard label="Viewings Set"    value={overview.viewingsScheduled} color={colors.emerald} />
+          <div className="mb-10 flex flex-wrap gap-4">
+            <StatTile label="Assigned Leads"  value={overview.assignedTotal}     highlight tone="ink" />
+            <StatTile label="Active"          value={overview.assignedActive}    highlight tone="cyan" />
+            <StatTile label="Qualified"       value={overview.assignedQualified} highlight tone="lime" />
+            <StatTile label="In My Queue"     value={overview.takenOverByMe}     highlight tone="amber" />
+            <StatTile label="Viewings Set"    value={overview.viewingsScheduled} highlight tone="emerald" />
           </div>
         )}
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', borderBottom: `1px solid ${colors.borderDim}`, paddingBottom: '0', overflowX: 'auto' }}>
+        <div className="mb-7 flex gap-2 overflow-x-auto border-b border-edge">
           {['leads', 'viewings', 'queue', 'alerts'].map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{
-              padding: '12px 24px', background: 'none', border: 'none',
-              borderBottom: tab === t ? `2px solid ${colors.lime}` : '2px solid transparent',
-              color: tab === t ? colors.lime : colors.muted,
-              cursor: 'pointer', fontSize: '15px', fontWeight: tab === t ? '600' : '400',
-              textTransform: 'capitalize', marginBottom: '-1px', whiteSpace: 'nowrap',
-            }}>
+            <button key={t} type="button" onClick={() => setTab(t)}
+              className={`-mb-px min-h-[44px] cursor-pointer whitespace-nowrap border-b-2 bg-transparent px-6 text-[15px] capitalize ${
+                tab === t ? 'border-lime font-semibold text-lime' : 'border-transparent text-muted hover:text-ink'
+              }`}>
               {t === 'queue' ? 'Takeover Queue' : t.charAt(0).toUpperCase() + t.slice(1)}
               {t === 'alerts' && alerts.length > 0 && (
-                <span style={{ marginLeft: '6px', background: colors.red, color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '999px' }}>{alerts.length}</span>
+                <span className="ml-1.5 rounded-full bg-red px-1.5 py-0.5 font-mono text-[10px] text-white">{alerts.length}</span>
               )}
             </button>
           ))}
         </div>
 
         {/* ── Leads Tab ─────────────────────────────────────── */}
+        {/* Two columns on a desktop; stacked on a phone, where a fixed 340px
+            column beside the chat used to push the page sideways. */}
         {tab === 'leads' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '24px' }}>
+          <div className="grid grid-cols-[340px_1fr] gap-6 max-lg:grid-cols-1">
 
             {/* Lead list */}
-            <div style={{ background: colors.card, borderRadius: '24px', padding: '20px', border: `1px solid ${colors.border}` }}>
-              <h3 style={{ marginBottom: '16px', fontSize: '16px' }}>My Leads ({leads.length})</h3>
+            <div className="rounded-3xl border border-edge-live bg-card p-5">
+              <h3 className="mb-4 text-base">My Leads ({leads.length})</h3>
               {leads.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '32px 0' }}>
-                  <p style={{ color: colors.muted, fontSize: '14px', marginBottom: '16px' }}>No leads assigned yet.</p>
-                  <button
+                <div className="py-8 text-center">
+                  <p className="mb-4 text-sm text-muted">No leads assigned yet.</p>
+                  <Button
+                    variant="live"
                     onClick={async () => {
                       try {
                         // Get all unassigned qualified leads and self-assign first one
@@ -285,27 +282,26 @@ export default function AgentDashboard() {
                       } catch (err) {
                         alert(err.response?.data?.message || 'Could not self-assign lead');
                       }
-                    }}
-                    style={{ padding: '10px 20px', background: `${colors.lime}22`, color: colors.lime, border: `1px solid ${colors.border}`, borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
+                    }}>
                     + Claim an unassigned lead
-                  </button>
+                  </Button>
                 </div>
               ) : leads.map(lead => (
                 <div key={lead._id} onClick={() => { setSelectedLead(lead); setActionMsg(''); }}
-                  style={{ padding: '14px', marginBottom: '8px', background: selectedLead?._id === lead._id ? '#1C1C19' : '#0F0F0D', borderRadius: '14px', cursor: 'pointer', border: selectedLead?._id === lead._id ? `2px solid ${colors.lime}` : `1px solid ${colors.borderDim}` }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <strong style={{ fontSize: '14px' }}>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
+                  className={`mb-2 cursor-pointer rounded-[14px] p-3.5 ${selectedLead?._id === lead._id ? 'border-2 border-lime bg-[#1C1C19]' : 'border border-edge bg-[#0F0F0D] hover:bg-raise'}`}>
+                  <div className="flex justify-between gap-2">
+                    <strong className="text-sm">{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
                     {lead.workflowStatus === 'taken_over' && (
-                      <span style={{ fontSize: '10px', background: `${colors.orange}22`, color: colors.orange, padding: '2px 8px', borderRadius: '999px' }}>ACTIVE</span>
+                      <span className="rounded-full bg-orange/15 px-2 py-0.5 text-[10px] text-orange">ACTIVE</span>
                     )}
                   </div>
-                  <div style={{ fontSize: '12px', color: colors.muted, marginTop: '2px' }}>{lead.phone}</div>
-                  <div style={{ marginTop: '6px' }}>
-                    <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '999px', background: `${STATUS_COLORS[lead.workflowStatus] || colors.muted}22`, color: STATUS_COLORS[lead.workflowStatus] || colors.muted, fontWeight: '600' }}>
+                  <div className="mt-0.5 font-mono text-xs text-muted">{lead.phone}</div>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    <span className={`rounded-full px-2 py-[3px] text-[11px] font-semibold ${STATUS_CLASS[lead.workflowStatus] || 'bg-muted/15 text-muted'}`}>
                       {lead.workflowStatus?.replace(/_/g, ' ')}
                     </span>
                     {lead.workflowStatus === 'qualified' && (
-                      <span style={{ marginLeft: '6px', fontSize: '11px', padding: '3px 8px', borderRadius: '999px', background: `${colors.emerald}22`, color: colors.emerald }}>
+                      <span className="rounded-full bg-emerald/15 px-2 py-[3px] font-mono text-[11px] text-emerald">
                         R{lead.monthlyBudget}/mo
                       </span>
                     )}
@@ -315,17 +311,17 @@ export default function AgentDashboard() {
             </div>
 
             {/* Conversation panel */}
-            <div style={{ background: colors.card, borderRadius: '24px', border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', minHeight: '580px' }}>
+            <div className="flex min-h-[580px] min-w-0 flex-col rounded-3xl border border-edge-live bg-card">
               {selectedLead ? (
                 <>
                   {/* Lead header */}
-                  <div style={{ padding: '20px 24px', borderBottom: `1px solid ${colors.borderDim}` }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <h3 style={{ marginBottom: '2px', fontSize: '18px' }}>{selectedLead.name !== 'Unknown' ? selectedLead.name : selectedLead.phone}</h3>
-                        <p style={{ color: colors.muted, fontSize: '13px' }}>{selectedLead.phone}</p>
+                  <div className="border-b border-edge px-6 py-5 max-sm:px-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="mb-0.5 text-lg">{selectedLead.name !== 'Unknown' ? selectedLead.name : selectedLead.phone}</h3>
+                        <p className="font-mono text-[13px] text-muted">{selectedLead.phone}</p>
                         {selectedLead.propertyInterest && (
-                          <p style={{ color: colors.muted, fontSize: '12px', marginTop: '4px' }}>
+                          <p className="mt-1 text-xs text-muted">
                             {selectedLead.propertyInterest}
                             {selectedLead.monthlyBudget ? ` · R${selectedLead.monthlyBudget}/mo` : ''}
                             {selectedLead.moveInDate ? ` · ${selectedLead.moveInDate}` : ''}
@@ -334,62 +330,57 @@ export default function AgentDashboard() {
                         )}
                       </div>
 
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                        <span style={{ fontSize: '12px', padding: '5px 12px', borderRadius: '999px', background: isTakenOver ? `${colors.orange}22` : `${colors.lime}22`, color: isTakenOver ? colors.orange : colors.lime, fontWeight: '600' }}>
-                          {isTakenOver ? '🟡 Bot Paused' : '🟢 Bot Active'}
-                        </span>
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        {isTakenOver ? <OrangeChip>🟡 Bot Paused</OrangeChip> : <Badge tone="live">🟢 Bot Active</Badge>}
 
                         {selectedLead.workflowStatus === 'qualified' && !selectedLead.viewingRequested && (
-                          <button onClick={() => setViewingModal(selectedLead)}
-                            style={{ padding: '7px 14px', background: `${colors.emerald}22`, color: colors.emerald, border: `1px solid ${colors.emerald}44`, borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
+                          <Button variant="good" onClick={() => setViewingModal(selectedLead)}>
                             📅 Schedule Viewing
-                          </button>
+                          </Button>
                         )}
 
                         {selectedLead.viewingRequested && (
-                          <span style={{ fontSize: '12px', padding: '5px 12px', borderRadius: '999px', background: `${colors.emerald}22`, color: colors.emerald }}>
-                            ✅ Viewing Scheduled
-                          </span>
+                          <Badge tone="good">✅ Viewing Scheduled</Badge>
                         )}
 
                         {!isTakenOver ? (
-                          <button onClick={handleTakeover} disabled={takingOver}
-                            style={{ padding: '7px 14px', background: `${colors.orange}22`, color: colors.orange, border: `1px solid ${colors.orange}44`, borderRadius: '10px', cursor: takingOver ? 'not-allowed' : 'pointer', fontSize: '12px', fontWeight: '600', opacity: takingOver ? 0.6 : 1 }}>
+                          <Button variant="attention" onClick={handleTakeover} disabled={takingOver}>
                             {takingOver ? 'Taking over...' : 'Take Over'}
-                          </button>
+                          </Button>
                         ) : (
-                          <button onClick={handleResume} disabled={resuming}
-                            style={{ padding: '7px 14px', background: `${colors.lime}22`, color: colors.lime, border: `1px solid ${colors.border}`, borderRadius: '10px', cursor: resuming ? 'not-allowed' : 'pointer', fontSize: '12px', fontWeight: '600', opacity: resuming ? 0.6 : 1 }}>
+                          <Button variant="live" onClick={handleResume} disabled={resuming}>
                             {resuming ? 'Resuming...' : 'Resume Bot'}
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </div>
-                    {actionMsg && <p style={{ marginTop: '8px', fontSize: '13px', color: actionMsg.startsWith('✅') ? colors.lime : colors.red }}>{actionMsg}</p>}
+                    {actionMsg && <p className={`mt-2 text-[13px] ${actionMsg.startsWith('✅') ? 'text-lime' : 'text-red'}`}>{actionMsg}</p>}
                   </div>
 
                   {/* Messages */}
-                  <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '380px' }}>
+                  <div className="flex max-h-[380px] flex-1 flex-col gap-2.5 overflow-y-auto p-5 max-sm:p-3">
                     {loadingChat ? (
-                      <p style={{ color: colors.muted, textAlign: 'center', marginTop: '60px' }}>Loading...</p>
+                      <p className="mt-[60px] text-center text-muted">Loading...</p>
                     ) : timeline.length === 0 ? (
-                      <p style={{ color: colors.muted, textAlign: 'center', marginTop: '60px' }}>No messages yet.</p>
+                      <p className="mt-[60px] text-center text-muted">No messages yet.</p>
                     ) : timeline.map((msg, i) => (
-                      <div key={i} style={{ alignSelf: msg.direction === 'outbound' ? 'flex-end' : 'flex-start', maxWidth: '75%' }}>
+                      <div key={i} className={`max-w-[75%] ${msg.direction === 'outbound' ? 'self-end' : 'self-start'}`}>
                         {msg.system ? (
-                          <div style={{ alignSelf: 'center', width: '100%', textAlign: 'center', margin: '4px 0' }}>
-                            <span style={{ fontSize: '11px', color: colors.muted, background: 'rgba(255,255,255,0.05)', padding: '4px 14px', borderRadius: '999px', display: 'inline-block' }}>
+                          <div className="my-1 w-full self-center text-center">
+                            <span className="inline-block rounded-full bg-white/5 px-3.5 py-1 text-[11px] text-muted">
                               {msg.body.replace('[SYSTEM] ', '')}
                             </span>
                           </div>
                         ) : (
                           <>
-                            <div style={{ padding: '11px 15px', borderRadius: msg.direction === 'outbound' ? '16px 16px 4px 16px' : '16px 16px 16px 4px', background: msg.direction === 'outbound' ? colors.lime : '#1C1C19', color: msg.direction === 'outbound' ? '#050505' : colors.text, fontSize: '14px', lineHeight: '1.5', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                            <div className={`whitespace-pre-wrap px-[15px] py-[11px] text-sm leading-normal [overflow-wrap:anywhere] ${
+                              msg.direction === 'outbound' ? 'rounded-[16px_16px_4px_16px] bg-lime text-[#050505]' : 'rounded-[16px_16px_16px_4px] bg-[#1C1C19] text-ink'
+                            }`}>
                               {msg.body}
                             </div>
-                            <div style={{ fontSize: '11px', color: colors.muted, marginTop: '3px', textAlign: msg.direction === 'outbound' ? 'right' : 'left' }}>
+                            <div className={`mt-[3px] font-mono text-[11px] text-muted ${msg.direction === 'outbound' ? 'text-right' : 'text-left'}`}>
                               {new Date(msg.timestamp).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
-                              {msg.manual && !msg.system && <span style={{ marginLeft: '6px', color: colors.orange }}>· manual</span>}
+                              {msg.manual && !msg.system && <span className="ml-1.5 text-orange">· manual</span>}
                             </div>
                           </>
                         )}
@@ -399,28 +390,29 @@ export default function AgentDashboard() {
                   </div>
 
                   {/* Message input */}
-                  <div style={{ padding: '16px 24px', borderTop: `1px solid ${colors.borderDim}` }}>
+                  <div className="border-t border-edge px-6 py-4 max-sm:px-3">
                     {isTakenOver ? (
-                      <div style={{ display: 'flex', gap: '10px' }}>
+                      <div className="flex gap-2.5">
                         <input value={message} onChange={e => setMessage(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
                           placeholder="Type a message..."
-                          style={{ flex: 1, padding: '12px 16px', borderRadius: '999px', background: '#1C1C19', border: `1px solid ${colors.border}`, color: colors.text, fontSize: '14px', outline: 'none' }} />
-                        <button onClick={handleSend} disabled={sending || !message.trim()}
-                          style={{ padding: '12px 24px', background: !message.trim() || sending ? `${colors.lime}44` : colors.lime, color: '#050505', border: 'none', borderRadius: '999px', fontWeight: '700', cursor: !message.trim() || sending ? 'not-allowed' : 'pointer', fontSize: '14px' }}>
+                          aria-label="Message"
+                          className="min-h-[44px] min-w-0 flex-1 rounded-full border border-edge-live bg-[#1C1C19] px-4 text-base text-ink focus:border-lime focus:outline-none md:text-sm" />
+                        <button type="button" onClick={handleSend} disabled={sending || !message.trim()}
+                          className={`min-h-[44px] shrink-0 rounded-full px-6 text-sm font-bold text-[#050505] ${!message.trim() || sending ? 'cursor-not-allowed bg-lime/30' : 'cursor-pointer bg-lime'}`}>
                           {sending ? '...' : 'Send'}
                         </button>
                       </div>
                     ) : (
-                      <p style={{ color: colors.muted, fontSize: '13px', textAlign: 'center' }}>
-                        Click <strong style={{ color: colors.orange }}>Take Over</strong> to send manual messages.
+                      <p className="text-center text-[13px] text-muted">
+                        Click <strong className="text-orange">Take Over</strong> to send manual messages.
                       </p>
                     )}
                   </div>
                 </>
               ) : (
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.muted }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <p style={{ fontSize: '48px', marginBottom: '16px' }}>💬</p>
+                <div className="flex flex-1 items-center justify-center text-muted">
+                  <div className="text-center">
+                    <p className="mb-4 text-5xl">💬</p>
                     <p>Select a lead to view conversation</p>
                   </div>
                 </div>
@@ -432,27 +424,27 @@ export default function AgentDashboard() {
         {/* ── Viewings Tab ───────────────────────────────────── */}
         {tab === 'viewings' && (
           <div>
-            <h2 style={{ marginBottom: '24px', fontSize: '22px' }}>Upcoming Viewings ({viewings.length})</h2>
+            <h2 className="mb-6 text-[22px]">Upcoming Viewings ({viewings.length})</h2>
             {viewings.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '80px 0', color: colors.muted }}>
-                <p style={{ fontSize: '40px', marginBottom: '16px' }}>📅</p>
+              <div className="py-20 text-center text-muted">
+                <p className="mb-4 text-[40px]">📅</p>
                 <p>No viewings scheduled yet.</p>
               </div>
             ) : viewings.map(v => (
-              <div key={v._id} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '16px', padding: '20px 24px', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div key={v._id} className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-edge bg-card px-6 py-5">
                 <div>
-                  <strong style={{ fontSize: '16px' }}>{v.name || v.phone}</strong>
-                  <p style={{ color: colors.muted, fontSize: '13px', marginTop: '4px' }}>{v.phone}</p>
-                  {v.propertyAddress && <p style={{ color: colors.muted, fontSize: '13px' }}>📍 {v.propertyAddress}</p>}
+                  <strong className="text-base">{v.name || v.phone}</strong>
+                  <p className="mt-1 font-mono text-[13px] text-muted">{v.phone}</p>
+                  {v.propertyAddress && <p className="text-[13px] text-muted">📍 {v.propertyAddress}</p>}
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <p style={{ color: colors.lime, fontWeight: '700' }}>
+                <div className="text-right">
+                  <p className="font-bold text-lime">
                     {new Date(v.viewingScheduledAt).toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' })}
                   </p>
-                  <p style={{ color: colors.muted, fontSize: '13px' }}>
+                  <p className="font-mono text-[13px] text-muted">
                     {new Date(v.viewingScheduledAt).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
                   </p>
-                  <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '999px', background: `${colors.emerald}22`, color: colors.emerald, marginTop: '6px', display: 'inline-block' }}>
+                  <span className="mt-1.5 inline-block rounded-full bg-emerald/15 px-2.5 py-[3px] text-[11px] text-emerald">
                     {v.viewingStatus}
                   </span>
                 </div>
@@ -464,26 +456,24 @@ export default function AgentDashboard() {
         {/* ── Queue Tab ──────────────────────────────────────── */}
         {tab === 'queue' && (
           <div>
-            <h2 style={{ marginBottom: '24px', fontSize: '22px' }}>
+            <h2 className="mb-6 text-[22px]">
               Active Takeovers ({queue?.active?.count || 0})
             </h2>
             {queue?.active?.leads?.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px 0', color: colors.muted }}>
-                <p style={{ fontSize: '40px', marginBottom: '16px' }}>🌿</p>
+              <div className="py-[60px] text-center text-muted">
+                <p className="mb-4 text-[40px]">🌿</p>
                 <p>No active takeovers.</p>
               </div>
             ) : queue?.active?.leads?.map(lead => (
-              <div key={lead._id} style={{ background: colors.card, border: `1px solid ${colors.borderDim}`, borderRadius: '16px', padding: '20px 24px', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div key={lead._id} className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-edge bg-card px-6 py-5">
                 <div>
                   <strong>{lead.name !== 'Unknown' ? lead.name : lead.phone}</strong>
-                  <p style={{ color: colors.muted, fontSize: '13px', marginTop: '4px' }}>{lead.phone}</p>
-                  {lead.takenOverReason && <p style={{ color: colors.muted, fontSize: '12px' }}>Reason: {lead.takenOverReason}</p>}
+                  <p className="mt-1 font-mono text-[13px] text-muted">{lead.phone}</p>
+                  {lead.takenOverReason && <p className="text-xs text-muted">Reason: {lead.takenOverReason}</p>}
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '12px', padding: '4px 12px', borderRadius: '999px', background: `${colors.orange}22`, color: colors.orange }}>
-                    🟡 Taken Over
-                  </span>
-                  <p style={{ color: colors.muted, fontSize: '12px', marginTop: '6px' }}>
+                <div className="text-right">
+                  <OrangeChip>🟡 Taken Over</OrangeChip>
+                  <p className="mt-1.5 font-mono text-xs text-muted">
                     {new Date(lead.takenOverAt).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
@@ -492,49 +482,40 @@ export default function AgentDashboard() {
           </div>
         )}
 
-      </div>
-
         {/* ── Alerts Tab ─────────────────────────────────── */}
+        {/* Inside the page's width now, with the other tabs; it used to sit
+            after the container closed and ran edge to edge. */}
         {tab === 'alerts' && (
           <div>
-            <h2 style={{ marginBottom: '24px', fontSize: '22px' }}>
+            <h2 className="mb-6 text-[22px]">
               Alerts
               {alerts.length > 0 && (
-                <span style={{ marginLeft: '10px', background: colors.red, color: '#fff', fontSize: '12px', padding: '3px 10px', borderRadius: '999px' }}>{alerts.length}</span>
+                <span className="ml-2.5 rounded-full bg-red px-2.5 py-[3px] font-mono text-xs text-white">{alerts.length}</span>
               )}
             </h2>
             {alerts.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '80px 0', color: colors.muted }}>
-                <p style={{ fontSize: '40px', marginBottom: '16px' }}>✅</p>
+              <div className="py-20 text-center text-muted">
+                <p className="mb-4 text-[40px]">✅</p>
                 <p>No alerts. All conversations are active.</p>
               </div>
             ) : alerts.map((alert, i) => (
-              <div key={i} style={{
-                background: colors.card,
-                border: `1px solid ${alert.severity === 'high' ? colors.red : colors.amber}44`,
-                borderRadius: '14px', padding: '18px 24px', marginBottom: '10px',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              }}>
+              <div key={i} className={`mb-2.5 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border bg-card px-6 py-[18px] ${alert.severity === 'high' ? 'border-red/25' : 'border-amber/25'}`}>
                 <div>
                   <strong>{alert.lead.name !== 'Unknown' ? alert.lead.name : alert.lead.phone}</strong>
-                  <p style={{ color: colors.muted, fontSize: '13px', marginTop: '4px' }}>{alert.message}</p>
-                  <p style={{ color: colors.muted, fontSize: '12px', marginTop: '2px' }}>
+                  <p className="mt-1 text-[13px] text-muted">{alert.message}</p>
+                  <p className="mt-0.5 text-xs text-muted">
                     Last active: {new Date(alert.lead.lastMessageAt).toLocaleString('en-ZA')}
                   </p>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-                  <span style={{
-                    fontSize: '12px', padding: '4px 12px', borderRadius: '999px',
-                    background: alert.severity === 'high' ? `${colors.red}22` : `${colors.amber}22`,
-                    color: alert.severity === 'high' ? colors.red : colors.amber,
-                    fontWeight: '600', textTransform: 'uppercase',
-                  }}>{alert.severity}</span>
-                  <span style={{ fontSize: '11px', color: colors.muted }}>{alert.type}</span>
+                <div className="flex flex-col items-end gap-2">
+                  <Badge tone={alert.severity === 'high' ? 'bad' : 'warn'}><span className="uppercase">{alert.severity}</span></Badge>
+                  <span className="text-[11px] text-muted">{alert.type}</span>
                 </div>
               </div>
             ))}
           </div>
         )}
+      </div>
 
       {/* Viewing Modal */}
       {viewingModal && (
