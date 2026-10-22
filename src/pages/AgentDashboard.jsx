@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../api';
+import { THREAD_REFRESH_MS } from '../hooks/useInbox';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import StatTile from '../components/ui/StatTile';
@@ -151,11 +152,16 @@ export default function AgentDashboard() {
   const loading = dash.isPending;
   const loadData = () => dash.refetch();
 
-  // A failed conversation load shows an empty chat, as it always did.
+  // A failed conversation load shows an empty chat, as it always did. It
+  // refreshes on the inbox's clock, so a lead's reply turns up without the
+  // agent reselecting them; unchanged data keeps its reference, so the
+  // scroll-to-bottom effect only runs when a message actually arrives.
   const chat = useQuery({
     queryKey: ['agent-conversation', selectedLead?._id],
     queryFn: () => loadConversation(selectedLead._id),
     enabled: !!selectedLead,
+    refetchInterval: THREAD_REFRESH_MS,
+    refetchIntervalInBackground: false,
   });
   const timeline = chat.data ?? NO_TIMELINE;
   const loadingChat = !!selectedLead && chat.isPending && chat.fetchStatus !== 'idle';
