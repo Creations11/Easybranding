@@ -2,26 +2,11 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../api';
-
-const c = {
-  card: '#121710', lime: '#B8F040', cyan: '#22d3ee',
-  emerald: '#34d399', amber: '#fbbf24', red: '#f87171',
-  text: '#EEF0E8', muted: '#8A9080',
-  border: 'rgba(184,240,64,0.12)', borderDim: 'rgba(255,255,255,0.06)',
-  surface: '#0D110C',
-};
-
-function StatCard({ label, value, icon, color }) {
-  return (
-    <div style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: '14px', padding: '18px 20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-        <p style={{ color: c.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</p>
-        {icon && <span style={{ fontSize: '16px', opacity: 0.6 }}>{icon}</span>}
-      </div>
-      <p style={{ fontSize: '32px', fontWeight: '800', color: color || c.text, lineHeight: 1, fontFamily: "'Fraunces', serif" }}>{value ?? '—'}</p>
-    </div>
-  );
-}
+import Badge from './ui/Badge';
+import Button from './ui/Button';
+import StatTile from './ui/StatTile';
+import PageHeader from './ui/PageHeader';
+import { Select } from './ui/Field';
 
 const NO_TEAM = { team: [], prospects: [] };
 
@@ -89,85 +74,81 @@ export default function EBTeamPanel({ isSuperAdmin }) {
     setSending(false);
   };
 
-  const ROLE_COLOR = { super_admin: c.lime, eb_manager: c.cyan, eb_agent: c.amber };
+  const ROLE_TONE = { super_admin: 'live', eb_manager: 'system', eb_agent: 'warn' };
+  const ROLE_AVATAR = { super_admin: 'bg-lime/15 text-lime', eb_manager: 'bg-cyan/15 text-cyan', eb_agent: 'bg-amber/15 text-amber' };
   const ROLE_LABEL = { super_admin: 'Super Admin', eb_manager: 'EB Manager', eb_agent: 'EB Agent' };
 
   const totalContacted = prospects.filter(p => ['sent','delivered','replied'].includes(p.status)).length;
   const totalReplied = prospects.filter(p => p.status === 'replied').length;
   const totalConverted = prospects.filter(p => p.status === 'converted').length;
 
-  if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: c.muted }}>Loading team data...</div>;
+  if (loading) return <div className="p-[60px] text-center text-muted">Loading team data...</div>;
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: '900', marginBottom: '4px' }}>EB Team</h1>
-          <p style={{ color: c.muted, fontSize: '15px' }}>Easy Branding AI internal staff — {team.length} member{team.length !== 1 ? 's' : ''}</p>
-        </div>
+      <PageHeader title="EB Team" sub={`Easy Branding AI internal staff — ${team.length} member${team.length !== 1 ? 's' : ''}`}>
         {isSuperAdmin && (
-          <button onClick={() => setInviteModal(true)} style={{ padding: '12px 24px', background: c.lime, color: '#080A06', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'inherit' }}>
+          <Button variant="primary" onClick={() => setInviteModal(true)}>
             + Invite Team Member
-          </button>
+          </Button>
         )}
-      </div>
+      </PageHeader>
 
-      {msg && <div style={{ background: msg.startsWith('✅') ? c.lime + '18' : c.red + '18', border: '1px solid ' + (msg.startsWith('✅') ? c.lime : c.red) + '33', borderRadius: '10px', padding: '10px 16px', marginBottom: '16px', color: msg.startsWith('✅') ? c.lime : c.red, fontSize: '14px' }}>{msg}</div>}
+      {msg && <div className={`mb-4 rounded-[10px] border px-4 py-2.5 text-sm ${msg.startsWith('✅') ? 'border-lime/20 bg-lime/10 text-lime' : 'border-red/20 bg-red/10 text-red'}`}>{msg}</div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '28px' }}>
-        <StatCard label="Team Size" value={team.length} icon="👔" color={c.lime} />
-        <StatCard label="Contacted" value={totalContacted} icon="📤" color={c.cyan} />
-        <StatCard label="Replied" value={totalReplied} icon="💬" color={c.amber} />
-        <StatCard label="Converted" value={totalConverted} icon="✅" color={c.emerald} />
+      <div className="mb-7 flex flex-wrap gap-3">
+        <StatTile label="Team Size" value={team.length} tone="lime" />
+        <StatTile label="Contacted" value={totalContacted} tone="cyan" />
+        <StatTile label="Replied" value={totalReplied} tone="amber" />
+        <StatTile label="Converted" value={totalConverted} tone="emerald" />
       </div>
 
       {team.length === 0 ? (
-        <div style={{ background: c.card, border: '1px solid ' + c.border, borderRadius: '16px', padding: '48px', textAlign: 'center' }}>
-          <p style={{ fontSize: '48px', marginBottom: '16px' }}>👔</p>
-          <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: '900', marginBottom: '8px' }}>No team members yet</h3>
-          <p style={{ color: c.muted, fontSize: '15px', marginBottom: '20px' }}>Invite your first EB agent or manager to get started.</p>
+        <div className="rounded-2xl border border-edge-live bg-card p-12 text-center">
+          <p className="mb-4 text-5xl">👔</p>
+          <h3 className="mb-2 font-['Fraunces',serif] text-2xl font-black">No team members yet</h3>
+          <p className="mb-5 text-[15px] text-muted">Invite your first EB agent or manager to get started.</p>
           {isSuperAdmin && (
-            <button onClick={() => setInviteModal(true)} style={{ padding: '12px 28px', background: c.lime, color: '#080A06', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'inherit' }}>
+            <Button variant="primary" onClick={() => setInviteModal(true)}>
               + Invite First Team Member
-            </button>
+            </Button>
           )}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div className="flex flex-col gap-2.5">
           {team.map(member => {
             const activity = getActivity(member._id);
-            const roleColor = ROLE_COLOR[member.role] || c.muted;
             const currentUserId = JSON.parse(localStorage.getItem('eb_user') || '{}')?.id;
             return (
-              <div key={member._id} style={{ background: c.card, border: '1px solid ' + c.borderDim, borderRadius: '14px', padding: '20px 24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                    <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: roleColor + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: '700', color: roleColor, flexShrink: 0 }}>
+              <div key={member._id} className="rounded-[14px] border border-edge bg-card px-6 py-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3.5">
+                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg font-bold ${ROLE_AVATAR[member.role] || 'bg-white/8 text-muted'}`}>
                       {member.fullName?.[0] || '?'}
                     </div>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <strong style={{ fontSize: '16px' }}>{member.fullName}</strong>
-                        <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: roleColor + '22', color: roleColor, fontWeight: '600' }}>{ROLE_LABEL[member.role] || member.role}</span>
-                        {member._id === currentUserId && <span style={{ fontSize: '11px', color: c.muted }}>(you)</span>}
+                    <div className="min-w-0">
+                      <div className="mb-1 flex flex-wrap items-center gap-2">
+                        <strong className="text-base">{member.fullName}</strong>
+                        <Badge tone={ROLE_TONE[member.role] || 'neutral'}>{ROLE_LABEL[member.role] || member.role}</Badge>
+                        {member._id === currentUserId && <span className="text-[11px] text-muted">(you)</span>}
                       </div>
-                      <p style={{ color: c.muted, fontSize: '13px' }}>{member.email}</p>
+                      <p className="truncate text-[13px] text-muted">{member.email}</p>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div className="flex flex-wrap items-center gap-4">
                     {[
-                      { l: 'Contacted', v: activity.contacted, c2: c.cyan },
-                      { l: 'Replied', v: activity.replied, c2: c.lime },
-                      { l: 'Demos', v: activity.demos, c2: c.amber },
-                      { l: 'Converted', v: activity.converted, c2: c.emerald },
+                      { l: 'Contacted', v: activity.contacted, cls: 'text-cyan' },
+                      { l: 'Replied', v: activity.replied, cls: 'text-lime' },
+                      { l: 'Demos', v: activity.demos, cls: 'text-amber' },
+                      { l: 'Converted', v: activity.converted, cls: 'text-emerald' },
                     ].map(s => (
-                      <div key={s.l} style={{ textAlign: 'center' }}>
-                        <p style={{ fontSize: '22px', fontWeight: '800', color: s.c2, fontFamily: "'Fraunces', serif", lineHeight: 1 }}>{s.v}</p>
-                        <p style={{ fontSize: '11px', color: c.muted, marginTop: '2px' }}>{s.l}</p>
+                      <div key={s.l} className="text-center">
+                        <p className={`font-mono text-[22px] font-extrabold leading-none tabular-nums ${s.cls}`}>{s.v}</p>
+                        <p className="mt-0.5 text-[11px] text-muted">{s.l}</p>
                       </div>
                     ))}
                     {isSuperAdmin && member.role !== 'super_admin' && (
-                      <button onClick={() => handleRemove(member)} style={{ padding: '7px 14px', background: c.red + '22', color: c.red, border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit' }}>Remove</button>
+                      <Button variant="danger" onClick={() => handleRemove(member)}>Remove</Button>
                     )}
                   </div>
                 </div>
@@ -178,34 +159,34 @@ export default function EBTeamPanel({ isSuperAdmin }) {
       )}
 
       {inviteModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ width: '100%', maxWidth: '480px', background: c.surface, borderRadius: '24px', border: '1px solid ' + c.border, padding: '32px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: '900', color: c.lime }}>Invite Team Member</h3>
-              <button onClick={() => { setInviteModal(false); setInviteUrl(''); setMsg(''); }} style={{ background: 'none', border: 'none', color: c.muted, cursor: 'pointer', fontSize: '20px' }}>×</button>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/85 p-5">
+          <div className="w-full max-w-[480px] rounded-3xl border border-edge-live bg-surface p-8 max-sm:p-5">
+            <div className="mb-6 flex items-center justify-between">
+              <h3 className="font-['Fraunces',serif] text-[22px] font-black text-lime">Invite Team Member</h3>
+              <button type="button" onClick={() => { setInviteModal(false); setInviteUrl(''); setMsg(''); }} aria-label="Close" className="min-h-[44px] min-w-[44px] cursor-pointer text-xl text-muted">×</button>
             </div>
-            <p style={{ color: c.muted, fontSize: '12px', marginBottom: '6px' }}>Role</p>
-            <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', background: '#1C1C19', border: '1px solid ' + c.borderDim, color: c.text, fontSize: '14px', marginBottom: '14px', outline: 'none', fontFamily: 'inherit' }}>
+            <p className="mb-1.5 text-xs text-muted">Role</p>
+            <Select value={inviteRole} onChange={e => setInviteRole(e.target.value)} aria-label="Role" className="mb-3.5 cursor-pointer bg-[#1C1C19]">
               <option value="eb_agent">EB Agent — Prospecting only</option>
               <option value="eb_manager">EB Manager — Full platform access</option>
-            </select>
+            </Select>
             {inviteUrl && (
-              <div style={{ background: '#1C1C19', border: '1px solid ' + c.borderDim, borderRadius: '10px', padding: '14px', marginBottom: '14px', wordBreak: 'break-all' }}>
-                <p style={{ color: c.muted, fontSize: '11px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Invite Link</p>
-                <p style={{ color: c.lime, fontSize: '13px', fontFamily: 'monospace' }}>{inviteUrl}</p>
+              <div className="mb-3.5 break-all rounded-[10px] border border-edge bg-[#1C1C19] p-3.5">
+                <p className="mb-1.5 font-mono text-[11px] uppercase tracking-[0.06em] text-muted">Invite Link</p>
+                <p className="font-mono text-[13px] text-lime">{inviteUrl}</p>
               </div>
             )}
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div className="flex gap-2.5">
               {!inviteUrl ? (
-                <button onClick={handleGenerateInvite} disabled={sending} style={{ flex: 1, padding: '12px', background: c.lime, color: '#050505', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: sending ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: sending ? 0.7 : 1 }}>
+                <Button variant="primary" className="flex-1" onClick={handleGenerateInvite} disabled={sending}>
                   {sending ? 'Generating...' : 'Generate Invite Link'}
-                </button>
+                </Button>
               ) : (
-                <button onClick={() => navigator.clipboard.writeText(inviteUrl)} style={{ flex: 1, padding: '12px', background: c.lime, color: '#050505', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <Button variant="primary" className="flex-1" onClick={() => navigator.clipboard.writeText(inviteUrl)}>
                   Copy Link
-                </button>
+                </Button>
               )}
-              <button onClick={() => { setInviteModal(false); setInviteUrl(''); }} style={{ padding: '12px 20px', background: 'transparent', border: '1px solid ' + c.borderDim, color: c.muted, borderRadius: '10px', cursor: 'pointer', fontFamily: 'inherit' }}>Close</button>
+              <Button variant="secondary" onClick={() => { setInviteModal(false); setInviteUrl(''); }}>Close</Button>
             </div>
           </div>
         </div>
