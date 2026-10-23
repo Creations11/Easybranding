@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
 import { HelmetProvider } from 'react-helmet-async';
+import RouteMeta from './components/RouteMeta';
 
 import Nav from './components/Nav';
 import SectionErrorBoundary from './components/SectionErrorBoundary';
@@ -151,6 +152,7 @@ export default function App() {
         <AuthProvider>
           <Router>
             <ConditionalNav />
+            <RouteMeta />
             <RouteBoundary>
             <Routes>
               {/* ── Public Routes ──────────────────────────────────── */}

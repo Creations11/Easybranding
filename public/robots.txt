@@ -1,0 +1,15 @@
+# easybranding.co.za: WABOS by Easy Branding AI.
+# Everything behind a login is kept out; the pages also say noindex
+# (src/components/RouteMeta.jsx). EasyRentals has its own robots.txt at
+# rentals.easybranding.co.za.
+User-agent: *
+Allow: /
+Disallow: /login
+Disallow: /pending
+Disallow: /superadmin
+Disallow: /agent
+Disallow: /admin
+Disallow: /onboarding
+Disallow: /continue
+
+Sitemap: https://easybranding.co.za/sitemap.xml

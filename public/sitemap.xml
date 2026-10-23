@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The public pages of easybranding.co.za. Kept by hand: these are the routes
+  in src/App.jsx that anyone can open. Add a public page here when you add its
+  route (tests/seo.test.jsx checks every one here exists in App.jsx).
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://easybranding.co.za/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://easybranding.co.za/register</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://easybranding.co.za/documentation</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://easybranding.co.za/help</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://easybranding.co.za/contact</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://easybranding.co.za/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://easybranding.co.za/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://easybranding.co.za/refund-policy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://easybranding.co.za/data-deletion</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+</urlset>

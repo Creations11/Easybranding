@@ -17,9 +17,11 @@ const BASE_IMAGE_URL = `${SITE}/og-card.png`;
 // The site has only ever been served from easybranding.co.za. This fell back
 // to a GitHub Pages address that the organisation's structured data named as
 // its home, so search engines were told the company lived somewhere else.
+// The address without any query string or #fragment: a canonical link names
+// the page, and "?utm_source=..." is not a different page.
 const getCurrentUrl = () => {
   if (typeof window !== 'undefined') {
-    return window.location.href;
+    return `${SITE}${window.location.pathname}`;
   }
   return SITE;
 };
@@ -253,7 +255,7 @@ export function RefundPolicy() {
     <LegalLayout 
       title="Refund & Cancellation Policy" 
       subtitle="Last updated: 5 October 2026"
-      pageDescription="Refund and cancellation policy for Easy Branding AI subscriptions — 30-day free trial, monthly billing, cancellation terms."
+      pageDescription="Refund and cancellation policy for Easy Branding AI subscriptions: the free trial, monthly billing and cancellation terms."
     >
       <Section title="1. Free Trial" body={`All Easy Branding AI plans include a 30-day free trial.
 

@@ -2,10 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
     <meta name="theme-color" content="#080A06" />
-    <meta name="description" content="WABOS is a WhatsApp operating system for small businesses. It qualifies leads, books jobs, takes payments and sends invoices inside the WhatsApp you already use." />
+    <!-- data-static-meta on the tags a page sets for itself (RouteMeta.jsx,
+         Legal.jsx). On React 19 Helmet lets React place its tags and nothing
+         removes these, so every page carried two descriptions, this one first;
+         RouteMeta removes these once the app runs. Crawlers that do not run the
+         app (WhatsApp, Facebook) still read these values. -->
+    <meta name="description" data-static-meta content="WABOS is a WhatsApp operating system for small businesses. It qualifies leads, books jobs, takes payments and sends invoices inside the WhatsApp you already use." />
 
     <!--
       Link previews. These static tags are the ONLY thing WhatsApp, Facebook
@@ -21,9 +26,9 @@
       anywhere here: prices are served by /api/products, and a price typed
       into a meta tag is the first copy to go stale.
     -->
-    <meta property="og:title" content="WABOS by Easy Branding AI" />
-    <meta property="og:description" content="WABOS is a WhatsApp operating system for small businesses. It qualifies leads, books jobs, takes payments and sends invoices inside the WhatsApp you already use." />
-    <meta property="og:url" content="https://easybranding.co.za/" />
+    <meta property="og:title" data-static-meta content="WABOS by Easy Branding AI" />
+    <meta property="og:description" data-static-meta content="WABOS is a WhatsApp operating system for small businesses. It qualifies leads, books jobs, takes payments and sends invoices inside the WhatsApp you already use." />
+    <meta property="og:url" data-static-meta content="https://easybranding.co.za/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Easy Branding AI" />
     <meta property="og:image" content="https://easybranding.co.za/og-card.png" />
@@ -34,11 +39,42 @@
     <meta property="og:image:alt" content="Easy Branding AI. WABOS, a WhatsApp operating system for small businesses." />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="WABOS by Easy Branding AI" />
-    <meta name="twitter:description" content="WABOS is a WhatsApp operating system for small businesses. It qualifies leads, books jobs, takes payments and sends invoices inside the WhatsApp you already use." />
+    <meta name="twitter:title" data-static-meta content="WABOS by Easy Branding AI" />
+    <meta name="twitter:description" data-static-meta content="WABOS is a WhatsApp operating system for small businesses. It qualifies leads, books jobs, takes payments and sends invoices inside the WhatsApp you already use." />
     <meta name="twitter:image" content="https://easybranding.co.za/og-card.png" />
 
     <title>WABOS by Easy Branding AI</title>
+    <!--
+      Who runs the site, for search engines. The same name the legal pages
+      publish (src/pages/Legal.jsx). No prices: a price lives only in the API
+      and is fetched. No canonical link here: this one file is served for
+      every address, so a canonical in it would call every page the home page.
+      Each page names its own (src/components/RouteMeta.jsx).
+    -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://easybranding.co.za/#organization",
+            "name": "Easy Branding AI",
+            "legalName": "Easy Branding AI (Pty) Ltd",
+            "url": "https://easybranding.co.za/",
+            "logo": "https://easybranding.co.za/favicon.svg",
+            "image": "https://easybranding.co.za/og-card.png",
+            "address": { "@type": "PostalAddress", "addressCountry": "ZA" }
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://easybranding.co.za/#website",
+            "name": "WABOS by Easy Branding AI",
+            "url": "https://easybranding.co.za/",
+            "publisher": { "@id": "https://easybranding.co.za/#organization" }
+          }
+        ]
+      }
+    </script>
     <style>
       /* In a layer on purpose. Tailwind's classes live in @layer utilities,
          and ANY rule outside a layer beats every layered one, whatever its
