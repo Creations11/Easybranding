@@ -5,7 +5,7 @@
 // confirmation; the Alerts tab says plainly whether anything is being sent,
 // lists who asked for what, and stops an alert only after a confirmation.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { renderWithProviders } from '../test-utils'
 import api from '../../src/api'
 import RentalsPanel from '../../src/components/RentalsPanel'
@@ -42,6 +42,13 @@ const NOTICES = {
   ],
 }
 
+const APPLICATIONS = [
+  { id: 'ap1', fullName: 'Sipho Dlamini', phone: '+27731234567', email: 'sipho@example.com', status: 'rejected',
+    documents: [{ id: 'd1' }, { id: 'd2' }], createdAt: '2026-10-10T08:00:00Z', closedAt: '2026-10-12T08:00:00Z', deleteAfter: '2027-09-07T08:00:00Z' },
+  { id: 'ap2', fullName: 'Lerato M', phone: '+27605556666', email: 'l@example.com', status: 'submitted',
+    documents: [], createdAt: '2026-10-20T08:00:00Z', closedAt: null, deleteAfter: null },
+]
+
 describe('RentalsPanel and WhatsApp', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -50,6 +57,7 @@ describe('RentalsPanel and WhatsApp', () => {
         data: url === '/rentals/admin/accounts' ? { accounts: [LINKED, UNLINKED] }
           : url === '/rentals/admin/alerts' ? ALERTS
           : url === '/rentals/admin/whatsapp-messages' ? NOTICES
+          : url === '/rentals/admin/applications' ? { applications: APPLICATIONS }
           : { listings: [] },
       },
     }))
@@ -125,6 +133,23 @@ describe('RentalsPanel and WhatsApp', () => {
     expect(sent).toHaveTextContent('Sipho applied for Sunny backroom')
     expect(screen.getByTestId('notice-n2')).toHaveTextContent('gave up after 3 tries')
     expect(screen.getByTestId('notice-n2')).toHaveTextContent('131026 undeliverable')
+  })
+
+  it('lists applications with when each is deleted, and deletes one sooner only after a confirmation', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
+    api.delete.mockResolvedValue({ data: { data: { deleted: true } } })
+    renderWithProviders(<RentalsPanel />)
+    fireEvent.click(screen.getByRole('tab', { name: 'Applications' }))
+    const closed = await screen.findByTestId('application-ap1')
+    expect(closed).toHaveTextContent('Declined')
+    expect(closed).toHaveTextContent('deleted automatically on')
+    expect(screen.getByTestId('application-ap2')).toHaveTextContent('kept while it is open')
+
+    fireEvent.click(within(closed).getByText('Delete now'))
+    expect(api.delete).not.toHaveBeenCalled()
+    fireEvent.click(within(closed).getByText('Delete now'))
+    expect(confirm.mock.calls[1][0]).toContain("Sipho Dlamini's application and their 2 documents now? It cannot be undone")
+    await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/rentals/admin/applications/ap1'))
   })
 
   it('tells staff the owner can moderate from WhatsApp', () => {

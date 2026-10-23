@@ -70,6 +70,18 @@ export function useRentalNotices(status = 'all') {
   });
 }
 
+/**
+ * Applications, newest first, with when each closed and the date it will be
+ * deleted (the privacy policy's 12 months; backend services/rentals/retention.js).
+ * `status` narrows it to one; empty is every application.
+ */
+export function useRentalApplications(status = '') {
+  return useQuery({
+    queryKey: [...RENTALS_KEY, 'applications', status],
+    queryFn: () => api.get(`${ADMIN}/applications`, { params: status ? { status } : {} }).then((r) => r.data.data.applications),
+  });
+}
+
 /** The actions. Each resolves to the server's `data` and refreshes every rentals list. */
 export function useRentalsActions() {
   const qc = useQueryClient();
@@ -94,5 +106,7 @@ export function useRentalsActions() {
     // a linked number, and take someone off the alerts.
     unlinkWhatsApp: (accountId) => run(api.post(`${ADMIN}/accounts/${accountId}/whatsapp/unlink`, {})),
     removeAlert: (alertId) => run(api.delete(`${ADMIN}/alerts/${alertId}`)),
+    // POPIA: someone asked for their application to go sooner than 12 months.
+    deleteApplication: (applicationId) => run(api.delete(`${ADMIN}/applications/${applicationId}`)),
   };
 }
