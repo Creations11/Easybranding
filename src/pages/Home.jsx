@@ -783,6 +783,15 @@ export default function Home() {
             <Link to="/login" style={{ color: t.fade, fontSize: '13px', textDecoration: 'none' }}>Sign In</Link>
             <Link to="/register" style={{ color: t.signal, fontSize: '13px', textDecoration: 'none', fontWeight: 600 }}>Get Started</Link>
           </div>
+          {/* EasyRentals is ours too. A link from this established domain is how
+              search engines find and trust the new one, and the words in it are
+              what people type. */}
+          <p style={{ marginTop: '16px', color: t.fade, fontSize: '13px' }}>
+            Also by Easy Branding AI:{' '}
+            <a href="https://rentals.easybranding.co.za/" style={{ color: t.ink, opacity: 0.75 }}>
+              EasyRentals, rooms and homes to rent in Fleurhof
+            </a>
+          </p>
           <p style={{ marginTop: '20px', color: t.fade, opacity: 0.6 }}>
             Easy Branding AI (Pty) Ltd · Reg 2026/453740/07 · easybranding.co.za
           </p>
