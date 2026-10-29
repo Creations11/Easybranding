@@ -98,15 +98,33 @@ export default function ConnectWhatsApp({ businessName, contactEmail, onConnecte
     setError(null);
     setBusy(true);
 
+    // Session logging (Meta requires it for Business-app numbers): the popup
+    // posts WA_EMBEDDED_SIGNUP events to this window. FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING
+    // means the number stays in the WhatsApp Business app ("Coexistence"); the
+    // server also asks Meta (is_on_biz_app), so a lost event changes nothing.
+    let session = null;
+    const onMessage = (event) => {
+      let host;
+      try { host = new URL(event.origin).hostname; } catch { return; }
+      if (host !== 'facebook.com' && !host.endsWith('.facebook.com')) return;
+      try {
+        const d = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        if (d?.type === 'WA_EMBEDDED_SIGNUP') session = d;
+      } catch { /* not ours */ }
+    };
+    window.addEventListener('message', onMessage);
+
     window.FB.login((response) => {
+      window.removeEventListener('message', onMessage);
       const code = response?.authResponse?.code;
+      const coexistence = session?.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING';
       if (!code) {
         setBusy(false);
         setError('Sign-up was cancelled or did not finish. Nothing has changed — you can try again.');
         return;
       }
 
-      api.post('/embedded-signup/complete', { code, businessName, contactEmail })
+      api.post('/embedded-signup/complete', { code, businessName, contactEmail, coexistence })
         .then((r) => {
           const d = r.data?.data || r.data;
           setResult(d);
@@ -134,10 +152,16 @@ export default function ConnectWhatsApp({ businessName, contactEmail, onConnecte
       config_id: cfg.configId,
       response_type: 'code',
       override_default_response_type: true,
-      // EMPTY on purpose — this is what selects Embedded Signup v4. Every
-      // other version expires October 2026, and adding keys here silently
-      // opts back into one of them.
-      extras: {},
+      // v4 with WhatsApp Business app onboarding ("Coexistence"): a business
+      // whose number is in the WhatsApp Business app connects it AND keeps
+      // using the app. Without featureType Meta offers only new numbers
+      // (Meta, "Onboard WhatsApp Business app users", read 2026-10-29). Do not
+      // add "version": v2 and v3 were retired in October 2026.
+      extras: {
+        setup: {},
+        featureType: 'whatsapp_business_app_onboarding',
+        sessionInfoVersion: '3',
+      },
     });
   };
 
@@ -152,8 +176,9 @@ export default function ConnectWhatsApp({ businessName, contactEmail, onConnecte
           </div>
         )}
         <div style={{ color: c.muted, fontSize: '.82rem', marginTop: '.7rem', lineHeight: 1.5 }}>
-          Your number is on your own WhatsApp Business Account. We'll set up your
-          message templates before anything goes out to customers.
+          {result.coexistence
+            ? "Your number stays in the WhatsApp Business app, so keep using it as before. Keep the app open for a few minutes while we copy across your contacts and chats. We'll set up your message templates before anything goes out to customers."
+            : "Your number is on your own WhatsApp Business Account. We'll set up your message templates before anything goes out to customers."}
         </div>
       </div>
     );
