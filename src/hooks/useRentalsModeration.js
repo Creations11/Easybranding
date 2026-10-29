@@ -82,6 +82,18 @@ export function useRentalApplications(status = '') {
   });
 }
 
+/**
+ * Placement fees (backend services/rentals/placements.js): {owed, placements},
+ * newest first. `status` is due (default), accepted, paid, waived,
+ * fell_through, or empty for all. `owed` is the total of every due one.
+ */
+export function useRentalPlacements(status = 'due') {
+  return useQuery({
+    queryKey: [...RENTALS_KEY, 'placements', status],
+    queryFn: () => api.get(`${ADMIN}/placements`, { params: status ? { status } : {} }).then((r) => r.data.data),
+  });
+}
+
 /** The actions. Each resolves to the server's `data` and refreshes every rentals list. */
 export function useRentalsActions() {
   const qc = useQueryClient();
@@ -108,5 +120,8 @@ export function useRentalsActions() {
     removeAlert: (alertId) => run(api.delete(`${ADMIN}/alerts/${alertId}`)),
     // POPIA: someone asked for their application to go sooner than 12 months.
     deleteApplication: (applicationId) => run(api.delete(`${ADMIN}/applications/${applicationId}`)),
+    // A due placement fee was paid, or is not being charged: {status: paid|waived, note?}.
+    settlePlacement: (placementId, status, note) =>
+      run(api.post(`${ADMIN}/placements/${placementId}/settle`, note ? { status, note } : { status })),
   };
 }

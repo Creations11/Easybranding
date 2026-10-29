@@ -12,15 +12,16 @@
 //   - turn a listing down without a reason: the landlord is emailed exactly
 //     what is typed, so a reason is required and shown before it goes.
 import { useState } from 'react';
-import { useRentalListings } from '../hooks/useRentalsModeration';
+import { useRentalListings, useRentalPlacements } from '../hooks/useRentalsModeration';
 import ListingsView from './rentals/ListingsView';
 import AccountsView from './rentals/AccountsView';
 import AlertsView from './rentals/AlertsView';
 import MessagesView from './rentals/MessagesView';
 import ApplicationsView from './rentals/ApplicationsView';
+import PlacementsView from './rentals/PlacementsView';
 
 // The parts live in ./rentals/: ListingsView (ListingCard, OwnerBox) and
-// AccountsView (NewAccount, AccountRow, AccountForm), AlertsView, MessagesView, ApplicationsView.
+// AccountsView (NewAccount, AccountRow, AccountForm), AlertsView, MessagesView, ApplicationsView, PlacementsView.
 
 const VIEWS = [
   { id: 'pending_review', label: 'Waiting for review' },
@@ -29,6 +30,7 @@ const VIEWS = [
   { id: 'rented', label: 'Let' },
   { id: 'archived', label: 'Archived' },
   { id: 'applications', label: 'Applications' },
+  { id: 'placements', label: 'Placements' },
   { id: 'accounts', label: 'Accounts' },
   { id: 'alerts', label: 'Alerts' },
   { id: 'messages', label: 'WhatsApp' },
@@ -37,6 +39,8 @@ const VIEWS = [
 export default function RentalsPanel() {
   const [view, setView] = useState('pending_review');
   const waiting = useRentalListings('pending_review').data?.length || 0;
+  // Placement fees to invoice: shown on the tab so a due one is not missed.
+  const due = useRentalPlacements('due').data?.placements?.length || 0;
 
   return (
     <div>
@@ -58,7 +62,7 @@ export default function RentalsPanel() {
             className={`inline-flex min-h-[44px] cursor-pointer items-center rounded-lg border px-3 text-xs ${
               view === v.id ? 'border-lime/30 bg-lime/10 font-bold text-lime' : 'border-white/10 bg-transparent text-muted hover:bg-raise'
             }`}>
-            {v.label}{v.id === 'pending_review' && waiting ? ` (${waiting})` : ''}
+            {v.label}{v.id === 'pending_review' && waiting ? ` (${waiting})` : ''}{v.id === 'placements' && due ? ` (${due})` : ''}
           </button>
         ))}
       </div>
@@ -67,6 +71,7 @@ export default function RentalsPanel() {
         : view === 'alerts' ? <AlertsView />
         : view === 'messages' ? <MessagesView />
         : view === 'applications' ? <ApplicationsView />
+        : view === 'placements' ? <PlacementsView />
         : <ListingsView status={view} />}
     </div>
   );
