@@ -4,17 +4,22 @@ const navItem = (on) => `nav-item-hover mb-0.5 flex min-h-[44px] w-full cursor-p
   on ? 'bg-lime/12 font-semibold text-lime' : 'bg-transparent text-muted'
 }`;
 
-/** The navigation on a desktop. */
+/**
+ * The navigation on a desktop. It fits the window under the top bar
+ * (top-16 to bottom-0) and only the list scrolls, so Sign Out is always on
+ * screen: with min-h-screen as well it was a full screen tall starting 64px
+ * down, and Sign Out sat below the window's edge (2026-10-30).
+ */
 export default function Sidebar({ navSections, section, setSection, user, signOut, sidebarOpen, setSidebarOpen }) {
   return (
-    <div className={`sidebar fixed top-16 bottom-0 left-0 z-50 flex min-h-screen flex-col overflow-x-hidden overflow-y-auto border-r border-edge bg-[#080B08] transition-[width] duration-200 ${sidebarOpen ? 'w-[220px]' : 'w-16'}`}>
-      <div className="flex items-center gap-2.5 border-b border-edge px-4 pt-5 pb-4">
+    <div className={`sidebar fixed top-16 bottom-0 left-0 z-50 flex flex-col overflow-hidden border-r border-edge bg-[#080B08] transition-[width] duration-200 ${sidebarOpen ? 'w-[220px]' : 'w-16'}`}>
+      <div className="flex shrink-0 items-center gap-2.5 border-b border-edge px-4 pt-5 pb-4">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-lime to-moss text-base">🌿</div>
         {sidebarOpen && <div><p className="text-[13px] font-bold text-ink">Easy Branding</p><p className="text-[11px] font-semibold text-lime">AI</p></div>}
         <button type="button" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? 'Narrow the menu' : 'Widen the menu'}
           className="ml-auto min-h-[44px] min-w-8 shrink-0 cursor-pointer text-base text-muted">{sidebarOpen ? '←' : '→'}</button>
       </div>
-      <div className="flex-1 px-2 py-3">
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
         {navSections.map(nav => (
           <button key={nav.id} type="button" onClick={() => setSection(nav.id)} className={navItem(section === nav.id)} title={sidebarOpen ? undefined : nav.label}>
             <span className="w-6 shrink-0 text-center text-lg">{nav.icon}</span>
@@ -23,7 +28,7 @@ export default function Sidebar({ navSections, section, setSection, user, signOu
           </button>
         ))}
       </div>
-      <div className="border-t border-edge px-4 py-3">
+      <div className="shrink-0 border-t border-edge px-4 py-3">
         {sidebarOpen ? (
           <>
             <p className="mb-0.5 text-[13px] font-semibold text-ink">{user?.fullName || 'Ayanda'}</p>
