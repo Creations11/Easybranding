@@ -789,7 +789,7 @@ export default function Home() {
           <p style={{ marginTop: '16px', color: t.fade, fontSize: '13px' }}>
             Also by Easy Branding AI:{' '}
             <a href="https://rentals.easybranding.co.za/" style={{ color: t.ink, opacity: 0.75 }}>
-              EasyRentals, rooms and homes to rent in Fleurhof
+              EasyRentals, rooms and homes to rent in Roodepoort and Randburg
             </a>
           </p>
           <p style={{ marginTop: '20px', color: t.fade, opacity: 0.6 }}>

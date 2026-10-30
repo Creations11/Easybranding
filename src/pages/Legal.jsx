@@ -130,7 +130,7 @@ function LegalLayout({ title, subtitle, children, pageDescription }) {
         <p style={{ color:t.muted, fontSize:'13px', marginTop:'12px' }}>
           Also by Easy Branding AI:{' '}
           <a href="https://rentals.easybranding.co.za/" style={{ color:t.text, opacity:0.75 }}>
-            EasyRentals, rooms and homes to rent in Fleurhof
+            EasyRentals, rooms and homes to rent in Roodepoort and Randburg
           </a>
         </p>
       </footer>
