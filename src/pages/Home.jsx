@@ -29,7 +29,7 @@ function QuietPhone() {
 
   return (
     <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
-      <div style={{
+      <div className="quiet-phone" style={{
         width: '220px',
         height: '440px',
         background: t.voidDeep,
@@ -296,50 +296,18 @@ export default function Home() {
         }
         @media (max-width: 860px) {
           .hero-grid { grid-template-columns: 1fr !important; }
-          .phone-stage { order: -1; margin-bottom: 24px; }
+          /* The words first on a phone: the quiet phone above them filled the
+             first screen as a dark block (2026-10-30). */
+          .phone-stage { order: 1; margin-top: 8px; margin-bottom: 56px; }
+          .quiet-phone { width: 170px !important; height: 330px !important; }
           .section { padding: 72px 0; }
         }
       `}</style>
 
-      {/* ── NAV ──────────────────────────────────────────────── */}
-      <div className="wrap">
-        <nav style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '28px 0',
-          borderBottom: '1px solid rgba(13,23,18,0.1)',
-        }}>
-          <div>
-            <div style={{
-              fontFamily: "'Fraunces', serif",
-              fontWeight: 800,
-              fontSize: '22px',
-              letterSpacing: '-0.01em',
-            }}>
-              WABOS
-            </div>
-            <div style={{
-              color: t.fade,
-              fontFamily: "'Archivo', sans-serif",
-              fontWeight: 500,
-              fontSize: '13px',
-              letterSpacing: '0.02em',
-              marginTop: '2px',
-            }}>
-              by Easy Branding AI
-            </div>
-          </div>
-          <a
-            href="https://wa.me/27653318266?text=Hi"
-            target="_blank"
-            rel="noreferrer"
-            className="btn-dark"
-          >
-            Meet WABOS
-          </a>
-        </nav>
-      </div>
+      {/* The site-wide black bar (components/Nav.jsx, fixed, 64px) is this
+          page's header. Its own WABOS header sat underneath it and showed
+          through as a block; removed 2026-10-30. This is the room under it. */}
+      <div style={{ height: '88px' }} />
 
       {/* ── HERO ──────────────────────────────────────────────── */}
       <div className="wrap">
