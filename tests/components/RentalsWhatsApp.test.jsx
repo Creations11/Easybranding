@@ -109,6 +109,34 @@ describe('RentalsPanel and WhatsApp', () => {
     expect(row).toHaveTextContent('1 declined by Meta')
   })
 
+  it('Asked on WhatsApp lists who tapped Get alerts, and whether they signed up', async () => {
+    const soon = new Date(Date.now() + 3600e3).toISOString()
+    api.get.mockImplementation((url, opts) => Promise.resolve({
+      data: { data: url === '/rentals/admin/alerts'
+        ? { ...ALERTS, counts: { active: 1, removed: 0, asked: 2, askedSignedUp: 1 },
+            alerts: opts?.params?.status === 'asked' ? [] : ALERTS.alerts,
+            asked: opts?.params?.status === 'asked' ? [
+              { id: 'q1', phone: '+27831110077', name: 'Ikon', taps: 2, firstAt: '2026-10-30T07:00:00Z', lastAt: '2026-10-30T07:05:00Z', signedUpAt: null, alertActive: false, canMessageUntil: soon },
+              { id: 'q2', phone: '+27831110088', name: null, taps: 1, firstAt: '2026-10-29T07:00:00Z', lastAt: '2026-10-29T07:00:00Z', signedUpAt: '2026-10-29T07:10:00Z', alertActive: true, canMessageUntil: null },
+            ] : [] }
+        : { listings: [] } },
+    }))
+    renderWithProviders(<RentalsPanel />)
+    fireEvent.click(screen.getByRole('tab', { name: 'Alerts' }))
+    expect(await screen.findByText(/2 tapped Get alerts on WhatsApp, 1 signed up/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'Asked on WhatsApp' }))
+    const waiting = await screen.findByTestId('asked-q1')
+    expect(waiting).toHaveTextContent('Ikon')
+    expect(waiting).toHaveTextContent('Not signed up')
+    expect(waiting).toHaveTextContent('tapped 2 times')
+    expect(waiting).toHaveTextContent('can be messaged from the Inbox until')
+    const done = screen.getByTestId('asked-q2')
+    expect(done).toHaveTextContent('No name on WhatsApp')
+    expect(done).toHaveTextContent('Signed up')
+    expect(done).toHaveTextContent('alert made')
+    expect(api.get).toHaveBeenCalledWith('/rentals/admin/alerts', { params: { status: 'asked' } })
+  })
+
   it('stops an alert only after a confirmation', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
     api.delete.mockResolvedValue({ data: { data: { removed: true } } })

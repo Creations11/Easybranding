@@ -48,8 +48,8 @@ export function useRentalAccounts(q) {
 }
 
 /**
- * WhatsApp search alerts: {counts, sending: {number, on}, alerts}. `status` is
- * active (default), removed or all. Staff see the full number, because they
+ * WhatsApp search alerts: {counts, sending: {number, on}, alerts, asked}. `status` is
+ * active (default), removed, all, or asked (who tapped Get alerts on WhatsApp). Staff see the full number, because they
  * are who a subscriber asks to be taken off.
  */
 export function useRentalAlerts(status = 'active') {

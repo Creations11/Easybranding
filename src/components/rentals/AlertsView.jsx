@@ -10,20 +10,26 @@ import { Result, Sheet } from './ui';
 // one they searched for is listed (backend services/rentals/alerts.js and
 // alertSender.js). Staff see who, what they asked for, and what they were
 // told, and can take someone off when they ask by phone or email.
+//
+// Asked on WhatsApp (2026-10-30): everyone who tapped Get alerts on the
+// EasyRentals line. The tap only opens the website's form, so each row says
+// whether they finished, and whether they can still be written to for free.
 
 const SHOWING = [
   { id: 'active', label: 'Active' },
   { id: 'removed', label: 'Stopped' },
+  { id: 'asked', label: 'Asked on WhatsApp' },
 ];
 
 /** The search in words: "Ext 3 · backroom · up to R3,000 · 1+ bed · furnished". */
 const searchWords = (c = {}) => [
+  c.area || c.region,
   c.extension,
   c.propertyType && (TYPE[c.propertyType] || c.propertyType),
   c.maxRent && `up to ${rand(c.maxRent)}`,
   c.minBedrooms && `${c.minBedrooms}+ bed`,
   c.furnished && 'furnished',
-].filter(Boolean).join(' · ') || 'anything in Fleurhof';
+].filter(Boolean).join(' · ') || 'anything';
 
 function AlertRow({ alert }) {
   const { removeAlert } = useRentalsActions();
@@ -61,6 +67,31 @@ function AlertRow({ alert }) {
   );
 }
 
+/** Someone who tapped Get alerts on WhatsApp, and whether they finished on the website. */
+function AskedRow({ asked }) {
+  return (
+    <Sheet data-testid={`asked-${asked.id}`}>
+      <div className="flex flex-wrap justify-between gap-2.5">
+        <div>
+          <span className="font-bold text-ink">{asked.name || 'No name on WhatsApp'}</span>{' '}
+          <a href={whatsapp(asked.phone)} target="_blank" rel="noopener noreferrer" className="ml-1 font-mono text-xs text-emerald underline">{asked.phone}</a>
+        </div>
+        {asked.signedUpAt
+          ? <Badge tone={asked.alertActive ? 'good' : 'neutral'} dot>{asked.alertActive ? 'Signed up' : 'Signed up, since stopped'}</Badge>
+          : <Badge tone="warn" dot>Not signed up</Badge>}
+      </div>
+      <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted">
+        <span>tapped {asked.taps === 1 ? 'once' : `${asked.taps} times`}</span>
+        <span>{asked.taps > 1 ? `first ${when(asked.firstAt)}, last ${when(asked.lastAt)}` : when(asked.lastAt)}</span>
+        {asked.signedUpAt && <span>alert made {when(asked.signedUpAt)}</span>}
+        {asked.canMessageUntil
+          ? <span className="text-dim">can be messaged from the Inbox until {when(asked.canMessageUntil)}</span>
+          : !asked.signedUpAt && <span>24 hours have passed: only a template can reach them now</span>}
+      </div>
+    </Sheet>
+  );
+}
+
 export default function AlertsView() {
   const [showing, setShowing] = useState('active');
   const { data, isLoading, isError, error } = useRentalAlerts(showing);
@@ -80,7 +111,9 @@ export default function AlertsView() {
                 ? <>Meta declined {data.sending.declined} of the last {data.sending.sentRecently} alerts (131049), so sending stopped itself to protect <span className="font-mono">{data.sending.number}</span>. It starts again by itself once the last two days look healthy.</>
                 : <>From <span className="font-mono">{data.sending.number}</span>: at most one a day per person, never between 20:00 and 08:00, the newest place still live.</>}
           </span>
-          <span className="ml-auto font-mono text-xs tabular-nums text-muted">{data.counts.active} active · {data.counts.removed} stopped</span>
+          <span className="ml-auto font-mono text-xs tabular-nums text-muted">
+            {data.counts.active} active · {data.counts.removed} stopped · {data.counts.asked ?? 0} tapped Get alerts on WhatsApp, {data.counts.askedSignedUp ?? 0} signed up
+          </span>
         </Sheet>
       )}
 
@@ -97,8 +130,15 @@ export default function AlertsView() {
 
       {isLoading && <p className="text-muted">Loading…</p>}
       {isError && <Sheet role="alert" className="text-red">Couldn't load alerts. {rentalsErrorMessage(error)}</Sheet>}
-      {data && !data.alerts.length && <p className="text-muted">{showing === 'active' ? 'Nobody has asked for alerts yet.' : 'Nobody has stopped an alert.'}</p>}
-      {data?.alerts.map((a) => <AlertRow key={a.id} alert={a} />)}
+      {showing === 'asked'
+        ? <>
+            {data && !(data.asked || []).length && <p className="text-muted">Nobody has tapped Get alerts on WhatsApp yet.</p>}
+            {(data?.asked || []).map((a) => <AskedRow key={a.id} asked={a} />)}
+          </>
+        : <>
+            {data && !data.alerts.length && <p className="text-muted">{showing === 'active' ? 'Nobody has asked for alerts yet.' : 'Nobody has stopped an alert.'}</p>}
+            {data?.alerts.map((a) => <AlertRow key={a.id} alert={a} />)}
+          </>}
     </div>
   );
 }
