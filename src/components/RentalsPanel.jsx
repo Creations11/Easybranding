@@ -19,9 +19,10 @@ import AlertsView from './rentals/AlertsView';
 import MessagesView from './rentals/MessagesView';
 import ApplicationsView from './rentals/ApplicationsView';
 import PlacementsView from './rentals/PlacementsView';
+import WebsiteView from './rentals/WebsiteView';
 
 // The parts live in ./rentals/: ListingsView (ListingCard, OwnerBox) and
-// AccountsView (NewAccount, AccountRow, AccountForm), AlertsView, MessagesView, ApplicationsView, PlacementsView.
+// AccountsView (NewAccount, AccountRow, AccountForm), AlertsView, MessagesView, ApplicationsView, PlacementsView, WebsiteView.
 
 const VIEWS = [
   { id: 'pending_review', label: 'Waiting for review' },
@@ -34,6 +35,7 @@ const VIEWS = [
   { id: 'accounts', label: 'Accounts' },
   { id: 'alerts', label: 'Alerts' },
   { id: 'messages', label: 'WhatsApp' },
+  { id: 'website', label: 'Website' },
 ];
 
 export default function RentalsPanel() {
@@ -72,6 +74,7 @@ export default function RentalsPanel() {
         : view === 'messages' ? <MessagesView />
         : view === 'applications' ? <ApplicationsView />
         : view === 'placements' ? <PlacementsView />
+        : view === 'website' ? <WebsiteView />
         : <ListingsView status={view} />}
     </div>
   );

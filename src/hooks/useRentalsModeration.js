@@ -94,6 +94,18 @@ export function useRentalPlacements(status = 'due') {
   });
 }
 
+/**
+ * What people do on the EasyRentals website over the last `days` days
+ * (backend services/rentals/siteActivity.js): {days, totals, byDay, sources,
+ * campaigns, places, pages}. "Visitors" are people a day, added up.
+ */
+export function useRentalSiteActivity(days = 7) {
+  return useQuery({
+    queryKey: [...RENTALS_KEY, 'site-activity', days],
+    queryFn: () => api.get(`${ADMIN}/site-activity`, { params: { days } }).then((r) => r.data.data),
+  });
+}
+
 /** The actions. Each resolves to the server's `data` and refreshes every rentals list. */
 export function useRentalsActions() {
   const qc = useQueryClient();
