@@ -155,6 +155,15 @@ export default function Login() {
           <Link to="/register" style={{ color: t.lime, textDecoration: 'none', fontWeight: '600' }}>Request access</Link>
         </p>
 
+        {/* Docs and Help live here, not in the top bar (Ayanda, 2026-10-30):
+            the people who need them are the ones signing in. */}
+        <p style={{ textAlign: 'center', marginTop: '16px', color: t.muted, fontSize: '14px' }}>
+          Need help?{' '}
+          <Link to="/documentation" style={{ color: t.lime, textDecoration: 'none', fontWeight: '600' }}>Documentation</Link>
+          {' · '}
+          <Link to="/help" style={{ color: t.lime, textDecoration: 'none', fontWeight: '600' }}>Help centre</Link>
+        </p>
+
         <Link to="/" style={{ display: 'block', textAlign: 'center', marginTop: '16px', color: t.muted, fontSize: '13px', textDecoration: 'none' }}>← Back to home</Link>
       </div>
     </div>

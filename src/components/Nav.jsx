@@ -30,34 +30,9 @@ export default function Nav() {
   // inside Nav is a NEW component type on every render, so React threw the
   // links away and rebuilt them each time Nav re-rendered (opening the menu,
   // signing in). Called as navLinks(), its output is reconciled like any JSX.
+  // Docs and Help are on the sign-in page, not here (2026-10-30).
   const navLinks = (mobile = false) => (
     <>
-      {/* ── Public Links ────────────────────────────────────── */}
-      {!isAuthenticated && (
-        <>
-          <Link to="/documentation" onClick={() => setMenuOpen(false)} style={{ 
-            padding: mobile ? '14px 0' : '8px 16px', 
-            color: t.muted, 
-            textDecoration: 'none', 
-            fontSize: mobile ? '16px' : '14px', 
-            display: 'block', 
-            borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' 
-          }}>
-            📚 Docs
-          </Link>
-          <Link to="/help" onClick={() => setMenuOpen(false)} style={{ 
-            padding: mobile ? '14px 0' : '8px 16px', 
-            color: t.muted, 
-            textDecoration: 'none', 
-            fontSize: mobile ? '16px' : '14px', 
-            display: 'block', 
-            borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' 
-          }}>
-            ❓ Help
-          </Link>
-        </>
-      )}
-
       {/* ── Authenticated Links ────────────────────────────── */}
       {isAuthenticated && isSuperAdmin && (
         <Link to="/superadmin" onClick={() => setMenuOpen(false)} style={{ 
@@ -99,31 +74,6 @@ export default function Nav() {
         </Link>
       )}
 
-      {/* ── Documentation & Help (Logged In) ────────────────── */}
-      {isAuthenticated && (
-        <>
-          <Link to="/documentation" onClick={() => setMenuOpen(false)} style={{ 
-            padding: mobile ? '14px 0' : '8px 16px', 
-            color: t.muted, 
-            textDecoration: 'none', 
-            fontSize: mobile ? '16px' : '14px', 
-            display: 'block', 
-            borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' 
-          }}>
-            📚 Docs
-          </Link>
-          <Link to="/help" onClick={() => setMenuOpen(false)} style={{ 
-            padding: mobile ? '14px 0' : '8px 16px', 
-            color: t.muted, 
-            textDecoration: 'none', 
-            fontSize: mobile ? '16px' : '14px', 
-            display: 'block', 
-            borderBottom: mobile ? `1px solid rgba(255,255,255,0.06)` : 'none' 
-          }}>
-            ❓ Help
-          </Link>
-        </>
-      )}
 
       {/* ── Auth Actions ────────────────────────────────────── */}
       {isAuthenticated ? (
