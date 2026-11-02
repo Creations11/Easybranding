@@ -16,7 +16,7 @@ export default function DriverCard({ d, q }) {
   const papersWaiting = d.kycStatus === 'pending';
 
   const save = async (f) => {
-    const fields = changed(d, f, ['name', 'phone', 'fullName', 'vehicleType', 'vehicleRegistration']);
+    const fields = changed(d, f, ['name', 'phone', 'fullName', 'vehicleType', 'vehicleRegistration', 'helpsWithMoving']);
     if (!Object.keys(fields).length) { setEditing(false); return; }
     if (await run(() => m.updateDriver(d.phone, fields), `${f.name.trim() || who} is updated.`)) setEditing(false);
   };
@@ -47,7 +47,7 @@ export default function DriverCard({ d, q }) {
         <Badge tone={suspended ? 'bad' : d.onShift ? 'good' : 'neutral'}>{suspended ? 'suspended' : d.onShift ? 'on shift' : 'off'}</Badge>
       </CardHead>
       <div className="mt-1.5 text-xs text-muted">
-        {d.phone}{d.vehicleType ? ` · ${d.vehicleType}` : ''}{d.vehicleRegistration ? ` · ${d.vehicleRegistration}` : ''}
+        {d.phone}{d.vehicleType ? ` · ${d.vehicleType}` : ''}{d.vehicleRegistration ? ` · ${d.vehicleRegistration}` : ''}{d.helpsWithMoving ? ' · helps with moving' : ''}
       </div>
       <div className="mt-2">
         <Row left="Papers" right={d.kycStatus || 'not asked for'} />

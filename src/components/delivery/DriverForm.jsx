@@ -3,12 +3,13 @@ import Button from '../ui/Button';
 import { Input, Select } from '../ui/Field';
 import { Field } from './ui';
 
-const VEHICLES = [['', 'Not given'], ['motorbike', 'Motorbike'], ['motorcycle', 'Motorcycle'], ['car', 'Car']];
+const VEHICLES = [['', 'Not given'], ['motorbike', 'Motorbike'], ['motorcycle', 'Motorcycle'], ['car', 'Car'], ['bakkie', 'Bakkie'], ['van', 'Van'], ['truck', 'Small truck']];
 
 export default function DriverForm({ initial, submitLabel, onSubmit, onCancel, busy }) {
   const [f, setF] = useState({
     name: initial?.name || '', phone: initial?.phone || '', fullName: initial?.fullName || '',
     vehicleType: initial?.vehicleType || '', vehicleRegistration: initial?.vehicleRegistration || '',
+    helpsWithMoving: initial?.helpsWithMoving === true,
   });
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   return (
@@ -22,6 +23,10 @@ export default function DriverForm({ initial, submitLabel, onSubmit, onCancel, b
         </Select>
       </Field>
       <Field label="Registration"><Input aria-label="Registration" value={f.vehicleRegistration} onChange={set('vehicleRegistration')} /></Field>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" aria-label="Helps with moving" checked={f.helpsWithMoving} onChange={(e) => setF({ ...f, helpsWithMoving: e.target.checked })} />
+        Helps with moving (gets jobs that need movers)
+      </label>
       <div className="flex flex-wrap gap-2">
         <Button variant="primary" type="submit" disabled={busy}>{submitLabel}</Button>
         <Button variant="ghost" onClick={onCancel}>Cancel</Button>
