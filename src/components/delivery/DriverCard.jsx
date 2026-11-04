@@ -6,6 +6,7 @@ import { useRun } from './useRun';
 import { money, changed } from './helpers';
 import { Card, CardHead, Row, Said } from './ui';
 import DriverForm from './DriverForm';
+import DriverPapers from './DriverPapers';
 
 export default function DriverCard({ d, q }) {
   const m = useDeliveryManage(q);
@@ -13,7 +14,8 @@ export default function DriverCard({ d, q }) {
   const [editing, setEditing] = useState(false);
   const who = d.name || d.phone;
   const suspended = d.status === 'suspended';
-  const papersWaiting = d.kycStatus === 'pending';
+  // `pending` is also a driver still sending them, with nothing yet to accept.
+  const papersWaiting = d.kycStatus === 'pending' && !!d.kycSubmittedAt;
 
   const save = async (f) => {
     const fields = changed(d, f, ['name', 'phone', 'fullName', 'vehicleType', 'vehicleRegistration', 'helpsWithMoving']);
@@ -55,6 +57,7 @@ export default function DriverCard({ d, q }) {
         <Row left="Carrying" right={d.carrying || 'nothing'} />
         <Row left="Owed" right={money(d.owed)} mono />
       </div>
+      <DriverPapers d={d} q={q} />
       {editing
         ? <DriverForm initial={d} submitLabel="Save" onSubmit={save} onCancel={() => setEditing(false)} busy={busy} />
         : (

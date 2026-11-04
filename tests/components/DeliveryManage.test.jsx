@@ -19,7 +19,7 @@ const reply = (data) => Promise.resolve({ data: { success: true, data } })
 const OVERVIEW = { enabled: true, name: 'Kasi Delivery', open: 0, drivers: { total: 1, onShift: 0 }, money: null }
 
 const SIPHO = {
-  name: 'Sipho', phone: '+27821234567', onShift: false, kycStatus: 'pending', status: 'active',
+  name: 'Sipho', phone: '+27821234567', onShift: false, kycStatus: 'pending', kycSubmittedAt: '2026-11-04T08:00:00Z', status: 'active',
   vehicleType: 'motorbike', vehicleRegistration: null, fullName: null, practiceRequired: true, practiceDoneAt: null,
   carrying: null, owed: 0,
 }
@@ -53,6 +53,53 @@ const open = async (section) => {
 }
 
 const refusal = (message) => Promise.reject(Object.assign(new Error('409'), { response: { data: { message } } }))
+
+describe("a driver's documents", () => {
+  const PAPERS = [
+    { kind: 'licence', label: 'Driver licence', sent: true, storedOnDrive: true, receivedAt: '2026-11-04T08:00:00Z', contentType: 'image/jpeg' },
+    { kind: 'vehiclePhoto', label: 'Photo of the vehicle', sent: true, storedOnDrive: false, receivedAt: '2026-11-04T08:00:00Z', contentType: 'image/jpeg' },
+    { kind: 'bankLetter', label: 'Bank confirmation letter', sent: false, storedOnDrive: false, receivedAt: null, contentType: null },
+  ]
+  const WITH_PAPERS = { ...SIPHO, fullName: 'Sipho Dlamini', idNumber: '9001015800087', documents: PAPERS }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    URL.createObjectURL = vi.fn(() => 'blob:licence')
+    URL.revokeObjectURL = vi.fn()
+  })
+
+  it('downloads nothing until somebody asks, then asks through the chosen business', async () => {
+    wire({ base: '?tenantId=t1', drivers: [WITH_PAPERS] })
+    render(<DeliveryTab />)
+    fireEvent.click(await screen.findByText('Kasi Delivery'))
+    fireEvent.click(await screen.findByText(/Drivers/))
+    fireEvent.click(await screen.findByText('See documents (2 of 3 sent)'))
+    expect(screen.getByText('9001015800087')).toBeInTheDocument()
+    expect(screen.getByText(/not sent yet/)).toBeInTheDocument()
+    expect(screen.getByText(/Only on WhatsApp/)).toBeInTheDocument()
+    expect(api.get.mock.calls.some(([url]) => url.includes('/documents/'))).toBe(false)
+
+    fireEvent.click(screen.getAllByText('Open')[0])
+    await waitFor(() => expect(screen.getByAltText('Driver licence')).toHaveAttribute('src', 'blob:licence'))
+    expect(api.get).toHaveBeenCalledWith(
+      `/delivery/drivers/${encodeURIComponent(SIPHO.phone)}/documents/licence?tenantId=t1`, { responseType: 'blob' })
+  })
+
+  it('shows no documents to a role the API sent none to', async () => {
+    wire({ drivers: [SIPHO] })
+    await open(/Drivers/)
+    await screen.findByText('Sipho')
+    expect(screen.queryByText(/See documents/)).not.toBeInTheDocument()
+  })
+
+  it('offers nothing to accept while the driver is still sending them', async () => {
+    wire({ drivers: [{ ...SIPHO, kycSubmittedAt: null }] })
+    await open(/Drivers/)
+    await screen.findByText('Sipho')
+    expect(screen.queryByText('Accept papers')).not.toBeInTheDocument()
+  })
+})
 
 describe('managing drivers and shops', () => {
   beforeEach(() => {
