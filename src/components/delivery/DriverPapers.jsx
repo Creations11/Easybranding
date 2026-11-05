@@ -75,7 +75,8 @@ export default function DriverPapers({ d, q }) {
   return (
     <div className="mt-2.5">
       <Row left="Name on their licence" right={d.fullName || 'not given yet'} />
-      <Row left="ID number" right={d.idNumber || 'not given yet'} mono={!!d.idNumber} />
+      {/* Not asked for since 2026-11-04: it is on the licence photo. */}
+      {d.idNumber && <Row left="ID number" right={d.idNumber} mono />}
       <div className="mt-2">
         {d.documents.map((doc) => <Paper key={doc.kind} doc={doc} phone={d.phone} q={q} />)}
       </div>
