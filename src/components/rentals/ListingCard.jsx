@@ -32,7 +32,7 @@ export default function ListingCard({ listing }) {
   };
   const onTakeDown = () => {
     const reason = askReason(`Why is "${listing.title}" coming down? The landlord is emailed exactly this.`);
-    if (reason) act(() => takeDown(listing.id, reason), 'Taken down. The landlord is emailed your reason.');
+    if (reason) act(() => takeDown(listing.id, reason), 'Taken down. The landlord is emailed your reason, and anyone still waiting on it is told it has gone.');
   };
 
   return (
