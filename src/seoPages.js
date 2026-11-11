@@ -12,6 +12,12 @@ export const PAGES = {
     title: 'WABOS: the WhatsApp operating system for small businesses | Easy Branding AI',
     description: 'WABOS answers your WhatsApp, qualifies leads, books jobs, takes payments and sends invoices, inside the WhatsApp you already use. Built in South Africa by Easy Branding AI.',
   },
+  // The WhatsApp API with Coexistence (pages/WhatsAppApi.jsx). Written for
+  // what people type: "WhatsApp API", "keep my number", "WhatsApp Business app".
+  '/whatsapp-api': {
+    title: 'WhatsApp API on your existing number, with the Business app | Easy Branding AI',
+    description: 'Add the WhatsApp API to the number you already use and keep the WhatsApp Business app on your phone. Automatic replies at any hour, set up for South African businesses by a verified Meta Tech Provider.',
+  },
   '/register': {
     title: `Sign up for WABOS | ${NAME}`,
     description: 'Start WABOS for your business: connect your WhatsApp number and let it answer, follow up and take payments for you.',

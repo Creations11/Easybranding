@@ -53,6 +53,7 @@ const Onboarding          = lazyPage(() => import('./pages/Onboarding'));
 const Continue            = lazyPage(() => import('./pages/Continue'));
 const Documentation       = lazyPage(() => import('./pages/Documentation'));
 const Help                = lazyPage(() => import('./pages/Help'));
+const WhatsAppApi         = lazyPage(() => import('./pages/WhatsAppApi'));
 
 const PageLoading = () => (
   <div style={{
@@ -168,6 +169,7 @@ export default function App() {
               {/* ── Public Documentation & Help ───────────────────── */}
               <Route path="/documentation"  element={<Documentation />} />
               <Route path="/help"           element={<Help />} />
+              <Route path="/whatsapp-api"   element={<WhatsAppApi />} />
 
               {/* ── Protected Routes ──────────────────────────────── */}
               <Route path="/pending" element={

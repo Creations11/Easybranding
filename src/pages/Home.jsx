@@ -748,6 +748,8 @@ export default function Home() {
             <Link to="/terms" style={{ color: t.fade, fontSize: '13px', textDecoration: 'none' }}>Terms</Link>
             <Link to="/privacy" style={{ color: t.fade, fontSize: '13px', textDecoration: 'none' }}>Privacy</Link>
             <Link to="/contact" style={{ color: t.fade, fontSize: '13px', textDecoration: 'none' }}>Contact</Link>
+            {/* The words people search for, linked from the home page so the new page is found. */}
+            <Link to="/whatsapp-api" style={{ color: t.fade, fontSize: '13px', textDecoration: 'none' }}>WhatsApp API on your number</Link>
             <Link to="/login" style={{ color: t.fade, fontSize: '13px', textDecoration: 'none' }}>Sign In</Link>
             <Link to="/register" style={{ color: t.signal, fontSize: '13px', textDecoration: 'none', fontWeight: 600 }}>Get Started</Link>
           </div>
