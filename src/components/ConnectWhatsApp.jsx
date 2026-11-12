@@ -66,7 +66,7 @@ export default function ConnectWhatsApp({ businessName, contactEmail, onConnecte
         if (!data?.appId || !data?.configId || data.ready === false) {
           setError(
             data?.reason ||
-            'WhatsApp sign-up is not configured on this server yet. Nothing you did is wrong — we are on it.'
+            "Connecting numbers is switched off for a moment. Nothing you did is wrong; we're on it."
           );
           return;
         }
@@ -120,7 +120,7 @@ export default function ConnectWhatsApp({ businessName, contactEmail, onConnecte
       const coexistence = session?.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING';
       if (!code) {
         setBusy(false);
-        setError('Sign-up was cancelled or did not finish. Nothing has changed — you can try again.');
+        setError('Sign-up was cancelled or did not finish. Nothing has changed, so you can try again.');
         return;
       }
 
@@ -145,7 +145,7 @@ export default function ConnectWhatsApp({ businessName, contactEmail, onConnecte
           // inviting a retry that could double-connect.
           setError(
             err.response?.data?.message ||
-            'Could not finish connecting. Your account with Meta may have been created — please contact us before trying again.'
+            "Something went wrong on Meta's side. Please don't try again yet: WhatsApp us on 065 331 8266 and we'll sort it out."
           );
         });
     }, {
@@ -177,8 +177,8 @@ export default function ConnectWhatsApp({ businessName, contactEmail, onConnecte
         )}
         <div style={{ color: c.muted, fontSize: '.82rem', marginTop: '.7rem', lineHeight: 1.5 }}>
           {result.coexistence
-            ? "Your number stays in the WhatsApp Business app, so keep using it as before. Keep the app open for a few minutes while we copy across your contacts and chats. We'll set up your message templates before anything goes out to customers."
-            : "Your number is on your own WhatsApp Business Account. We'll set up your message templates before anything goes out to customers."}
+            ? "Your number stays in the WhatsApp Business app, so keep using it as before. Keep the app open for a few minutes while we copy across your contacts and chats. We'll get your messages approved by Meta before anything goes out to customers."
+            : "Your number is connected under your own business name. We'll get your messages approved by Meta before anything goes out to customers."}
         </div>
       </div>
     );
@@ -208,13 +208,14 @@ export default function ConnectWhatsApp({ businessName, contactEmail, onConnecte
       )}
 
       <div style={{ marginTop: '.8rem', color: c.muted, fontSize: '.82rem', lineHeight: 1.55 }}>
-        You'll authorise this inside Meta's own window — we never see your password.
+        You'll log in with Facebook in Meta's own window. We never see your password.
         If the number is already on the WhatsApp Business app, you'll scan a QR code
         and can keep using the app afterwards.
         <br /><br />
         <strong style={{ color: c.text }}>You'll need:</strong> a number not on personal
-        WhatsApp, and your business registration details — Meta verifies these itself,
-        which can take a few days.
+        WhatsApp, and your business registration details. Meta checks your business,
+        which can take a few days. You can start answering customers as soon as your
+        number is connected.
       </div>
     </div>
   );

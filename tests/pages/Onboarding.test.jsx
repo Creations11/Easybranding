@@ -68,8 +68,8 @@ async function walk(u, { stopAtPlan = false } = {}) {
   await u.click(screen.getByRole('button', { name: /give me a number/i }))
   await u.type(screen.getByPlaceholderText('whatsapp:+27821234567'), 'whatsapp:+27715550002')
   await next(u) // number
-
-  await next(u) // workflow (defaults to full)
+  // (No workflow step since 2026-11-12: the income question is gone, and
+  // every signup is "basic". The bot step comes straight after the number.)
 
   await waitFor(() => expect(screen.getByRole('option', { name: 'Hair & Beauty' })).toBeInTheDocument())
   await u.selectOptions(screen.getByRole('combobox'), 'salon')

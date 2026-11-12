@@ -90,7 +90,7 @@ export default function Onboarding() {
     contactPhone: '',
     industry: 'appointment',
     whatsappNumber: '',
-    workflowType: 'full',
+    workflowType: 'basic',
     ownerPhone: '',
     product: '',
     // Which industry flow template gets published when payment clears. NOT
@@ -125,7 +125,7 @@ export default function Onboarding() {
 
   const steps = [
     {
-      title: 'Welcome to WABOS',
+      title: 'Welcome to EasyBranding',
       icon: '🌿',
       description: "Let's get your business set up in under 15 minutes.",
       fields: [],
@@ -136,7 +136,7 @@ export default function Onboarding() {
       description: 'Tell us about your business.',
       fields: [
         { name: 'businessName', label: 'Business Name', placeholder: 'ABC Rentals', required: true },
-        { name: 'brandName', label: 'Brand Name (shown to customers)', placeholder: 'ABC Rentals', required: false },
+        { name: 'brandName', label: 'The name your customers know you by', placeholder: 'ABC Rentals', required: false },
         { name: 'industry', label: 'Industry', placeholder: 'Select your industry', type: 'select', options: [
           'appointment', 'salon', 'driving_school', 'car_dealership', 'medical',
           'law_firm', 'recruitment', 'education', 'rental_agency', 'property_sales',
@@ -151,7 +151,7 @@ export default function Onboarding() {
       fields: [
         { name: 'contactEmail', label: 'Your Email', placeholder: 'admin@abcrentals.co.za', type: 'email', required: true },
         { name: 'contactPhone', label: 'Your Phone Number', placeholder: '+27821234567', required: true },
-        { name: 'ownerPhone', label: 'Owner WhatsApp (for commands)', placeholder: '+27821234567', required: true },
+        { name: 'ownerPhone', label: "Your own WhatsApp number (we'll send you new customers here)", placeholder: '+27821234567', required: true },
       ],
     },
     {
@@ -166,17 +166,10 @@ export default function Onboarding() {
       fields: [],
       custom: 'whatsapp',
     },
-    {
-      title: 'Workflow Configuration',
-      icon: '⚙️',
-      description: 'Choose how you want the bot to qualify leads.',
-      fields: [
-        { name: 'workflowType', label: 'Workflow Type', type: 'select', options: [
-          { value: 'full', label: 'Full — 6 questions including income' },
-          { value: 'basic', label: 'Basic — 4 questions, no income check' },
-        ], required: true },
-      ],
-    },
+    // The "Workflow Configuration" step is gone (Ayanda, 2026-11-12). It asked
+    // how the bot should "qualify leads", with an income check left over from
+    // the loan business; no salon or bed shop has a reason to ask a customer's
+    // income. Every signup is now "basic" (no income question), set below.
     {
       // The bot that actually gets published when payment clears. Without
       // this the reconciler has nothing to publish and reports "no template
@@ -204,7 +197,7 @@ export default function Onboarding() {
       fields: [
         { name: 'product', label: 'Plan', type: 'select', options: products.map((p) => ({
           value: p.key,
-          label: `${p.label} — R${p.price}/month`,
+          label: `${p.label}: R${p.price}/month`,
         })), required: true },
       ],
     },
@@ -270,7 +263,7 @@ export default function Onboarding() {
         status: 'trial',
         plan: chosen.plan,
         monthlyFee: chosen.monthlyFee,
-        workflowType: form.workflowType || 'full',
+        workflowType: form.workflowType || 'basic',
         // Carried onto the tenant so the go-live reconciler knows what to
         // publish when payment clears. Set on BOTH paths — an operator
         // onboarding a client by hand needs it just as much, or that client
@@ -326,7 +319,7 @@ export default function Onboarding() {
       );
       navigate('/admin');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to create tenant');
+      alert(err.response?.data?.message || "We couldn't create your account. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -412,7 +405,7 @@ export default function Onboarding() {
                 {
                   key: 'managed',
                   title: 'Give me a number',
-                  blurb: 'We provide a WhatsApp number on our account. Live today — no paperwork, no card, nothing to verify. Your customers see "' + (form.brandName || form.businessName || 'Your Business') + ' by EasyBranding".',
+                  blurb: 'We provide a WhatsApp number on our account. Live today: no paperwork, no card, nothing to verify. Your customers see "' + (form.brandName || form.businessName || 'Your Business') + ' by EasyBranding".',
                 },
                 {
                   key: 'own',
@@ -476,7 +469,7 @@ export default function Onboarding() {
                     }}
                   />
                   <div style={{ color: c.muted, fontSize: '12px', marginTop: '6px' }}>
-                    Leave this to us if you don't have one yet — we'll allocate one and confirm it.
+                    Leave this to us if you don't have one yet. We'll give you one and confirm it.
                   </div>
                 </div>
               )}
@@ -558,7 +551,7 @@ export default function Onboarding() {
                 if (key === 'product') {
                   const p = products.find((x) => x.key === value);
                   if (!p) return null;
-                  const display = `${p.label} — R${p.price}/month`;
+                  const display = `${p.label}: R${p.price}/month`;
                   return (
                     <div key={key} style={{
                       display: 'flex', justifyContent: 'space-between', padding: '6px 0',

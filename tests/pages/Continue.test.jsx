@@ -80,8 +80,9 @@ describe('/continue', () => {
 
     await waitFor(() => expect(screen.getByText(/no longer works/i)).toBeTruthy())
     expect(screen.getByText(/expired or has already been used/i)).toBeTruthy()
-    // And tells them how to get another, on the channel they came from.
-    expect(screen.getByText(/SIGN UP/)).toBeTruthy()
+    // And tells them how to get another: a number to WhatsApp, which works
+    // for everyone (SIGN UP only re-mints for a WhatsApp-button signup).
+    expect(screen.getByText(/065 331 8266/)).toBeTruthy()
   })
 
   it('fails cleanly with neither token nor session', async () => {

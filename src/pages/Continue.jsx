@@ -127,8 +127,8 @@ export default function Continue() {
         <p style={{ color: c.amber, fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>{error}</p>
         <p style={{ color: c.muted, fontSize: 14, lineHeight: 1.6 }}>
           Links last 30 minutes and work once, so nobody else can use one that
-          gets forwarded. Reply <strong style={{ color: c.text }}>SIGN UP</strong> on
-          WhatsApp and we'll send a new one.
+          gets forwarded. WhatsApp us on <strong style={{ color: c.text }}>065 331 8266</strong> and
+          we'll send you a new one.
         </p>
       </div>
     );
@@ -141,12 +141,12 @@ export default function Continue() {
         <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
         <h1 style={{ fontSize: 20, marginBottom: 10 }}>Your number is connected</h1>
         <p style={{ color: c.muted, fontSize: 14, lineHeight: 1.7 }}>
-          {connected.number} — {connected.verifiedName || 'verified with Meta'}.
+          {connected.number}: {connected.verifiedName || 'verified with Meta'}.
         </p>
         <p style={{ color: c.muted, fontSize: 14, lineHeight: 1.7, marginTop: 12 }}>
-          We're setting up your message templates now. Meta reviews those, which
-          usually takes a few hours — we'll message you on WhatsApp the moment
-          you're live. You can close this page.
+          We're getting your messages approved by Meta now, which usually takes a
+          few hours. We'll WhatsApp you the moment you're live. You can close this
+          page.
         </p>
       </div>
     );
@@ -158,8 +158,8 @@ export default function Continue() {
         {user?.fullName ? `Welcome back, ${user.fullName.split(' ')[0]}` : 'One last step'}
       </h1>
       <p style={{ color: c.muted, fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
-        Connect your WhatsApp number. This runs inside Meta's own window — we
-        never see your password.
+        Connect your WhatsApp number. You'll log in with Facebook in Meta's own
+        window. We never see your password.
       </p>
       <ConnectWhatsApp
         colors={c}
