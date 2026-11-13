@@ -44,6 +44,29 @@ describe('/continue', () => {
     expect(JSON.parse(localStorage.getItem('eb_user')).fullName).toBe('Novacare')
   })
 
+  // 2026-11-12: a CONNECT-ONLY link opens the connect step for one business,
+  // checked but never spent, and signs nobody in.
+  it('a connect-only link names the business and signs nobody in', async () => {
+    get.mockResolvedValue({ data: { data: { businessName: 'Bosco Beds' } } })
+
+    at('/continue?c=connect123')
+
+    await waitFor(() => expect(screen.getByText('Connect Bosco Beds to WhatsApp')).toBeTruthy())
+    expect(screen.getByTestId('connect')).toBeTruthy()
+    expect(get).toHaveBeenCalledWith('/embedded-signup/connect-link', { params: { c: 'connect123' } })
+    expect(post).not.toHaveBeenCalled()
+    expect(localStorage.getItem('eb_user')).toBeNull()
+  })
+
+  it('an expired connect-only link says so', async () => {
+    get.mockRejectedValue({ response: { data: { message: 'That link has expired or the number is already connected.' } } })
+
+    at('/continue?c=old')
+
+    await waitFor(() => expect(screen.getByText(/no longer works/i)).toBeTruthy())
+    expect(screen.getByText(/already connected/i)).toBeTruthy()
+  })
+
   it('lets someone back in on a refresh, without a token', async () => {
     // The whole point of the fix: a failed attempt should not cost a link.
     localStorage.setItem('eb_user', JSON.stringify({ fullName: 'Novacare', role: 'admin' }))

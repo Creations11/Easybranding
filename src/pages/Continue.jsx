@@ -59,16 +59,42 @@ function withoutToken() {
 export default function Continue() {
   const [params] = useSearchParams();
   const token = params.get('t');
+  // A CONNECT-ONLY link (2026-11-12): opens the connect step for one business,
+  // signs nobody in, lasts a day and can be retried (signupHandoffService
+  // mintConnectToken). Checked, never spent, by looking.
+  const connectToken = params.get('c');
+  const [businessName, setBusinessName] = useState(null);
 
   // checking | ready | failed
   const [result, setResult] = useState(() =>
-    token ? { state: 'checking', error: null, user: null } : withoutToken());
+    token || connectToken ? { state: 'checking', error: null, user: null } : withoutToken());
   const { state, error, user } = result;
   const [connected, setConnected] = useState(null);
 
   // Deliberately an effect and NOT a query. The token is single use: a query
   // retries failures and refetches when the window regains focus, and every
   // repeat would spend it again and turn a success into "already used".
+  useEffect(() => {
+    if (!connectToken || token) return undefined;
+    let cancelled = false;
+    api.get('/embedded-signup/connect-link', { params: { c: connectToken } })
+      .then((r) => {
+        if (cancelled) return;
+        const data = r.data?.data || r.data;
+        setBusinessName(data?.businessName || null);
+        setResult({ state: 'ready', error: null, user: null });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setResult({
+          state: 'failed',
+          user: null,
+          error: err.response?.data?.message || 'That link has expired or the number is already connected.',
+        });
+      });
+    return () => { cancelled = true; };
+  }, [connectToken, token]);
+
   useEffect(() => {
     if (!token) return undefined;
 
@@ -155,7 +181,9 @@ export default function Continue() {
   return wrap(
     <>
       <h1 style={{ fontSize: 22, marginBottom: 8 }}>
-        {user?.fullName ? `Welcome back, ${user.fullName.split(' ')[0]}` : 'One last step'}
+        {businessName
+          ? `Connect ${businessName} to WhatsApp`
+          : user?.fullName ? `Welcome back, ${user.fullName.split(' ')[0]}` : 'One last step'}
       </h1>
       <p style={{ color: c.muted, fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
         Connect your WhatsApp number. You'll log in with Facebook in Meta's own
@@ -163,6 +191,7 @@ export default function Continue() {
       </p>
       <ConnectWhatsApp
         colors={c}
+        connectToken={connectToken || undefined}
         onConnected={(d) => setConnected(d)}
       />
     </>

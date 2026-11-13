@@ -34,7 +34,7 @@
 import { useEffect, useRef, useState } from 'react';
 import api from '../api';
 
-export default function ConnectWhatsApp({ businessName, contactEmail, onConnected, colors }) {
+export default function ConnectWhatsApp({ businessName, contactEmail, onConnected, colors, connectToken }) {
   const c = colors || {
     lime: '#B8F040', text: '#EEF0E8', muted: '#8A9080',
     card: '#121710', border: 'rgba(184,240,64,0.12)',
@@ -124,7 +124,9 @@ export default function ConnectWhatsApp({ businessName, contactEmail, onConnecte
         return;
       }
 
-      api.post('/embedded-signup/complete', { code, businessName, contactEmail, coexistence })
+      // connectToken: a connect-only link names the business this number is
+      // for, so the server attaches it to THAT account (2026-11-12).
+      api.post('/embedded-signup/complete', { code, businessName, contactEmail, coexistence, connectToken })
         .then((r) => {
           const d = r.data?.data || r.data;
           setResult(d);
@@ -186,6 +188,19 @@ export default function ConnectWhatsApp({ businessName, contactEmail, onConnecte
 
   return (
     <div>
+      {/* The traps in Meta's window, named BEFORE they bite (2026-11-12).
+          Each one stalls a connection with no useful message from Meta:
+          the option to keep the app never appears with a linked Facebook
+          Page or Instagram, and the QR code needs the business's phone. */}
+      <div style={{ marginBottom: '1rem', color: c.muted, fontSize: '.86rem', lineHeight: 1.6 }}>
+        <strong style={{ color: c.text }}>Before you start:</strong>
+        <ol style={{ margin: '.4rem 0 0', paddingLeft: '1.2rem' }}>
+          <li>Have the phone with the business's WhatsApp Business app in your hand. You'll scan a QR code with it.</li>
+          <li>Update the WhatsApp Business app from the Play Store or App Store.</li>
+          <li>In the app, go to Settings, then Facebook and Instagram, and unlink any Page there for now. Otherwise Meta may not offer to keep the app.</li>
+        </ol>
+      </div>
+
       <button
         type="button"
         onClick={connect}
