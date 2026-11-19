@@ -5,7 +5,7 @@ import { Select } from '../ui/Field';
 import { useRentalApplications, useRentalsActions, rentalsErrorMessage } from '../../hooks/useRentalsModeration';
 import { useAct } from './useAct';
 import { when, whatsapp, rand } from './helpers';
-import { Result, Sheet } from './ui';
+import { Result, Sheet, ShowMore } from './ui';
 
 // Rental applications, for one job above all: the privacy policy says an
 // application and its documents are kept "for up to 12 months after it
@@ -75,7 +75,8 @@ function ApplicationRow({ app }) {
 
 export default function ApplicationsView() {
   const [status, setStatus] = useState('');
-  const { data, isLoading, isError, error } = useRentalApplications(status);
+  const list = useRentalApplications(status);
+  const { data, isLoading, isError, error } = list;
   return (
     <div>
       <Sheet className="text-[13px] text-dim">
@@ -91,6 +92,7 @@ export default function ApplicationsView() {
       {isError && <Sheet role="alert" className="text-red">Couldn't load applications. {rentalsErrorMessage(error)}</Sheet>}
       {data && !data.length && <p className="text-muted">No applications{status ? ' like that' : ' yet'}.</p>}
       {data?.map((a) => <ApplicationRow key={a.id} app={a} />)}
+      <ShowMore list={list} noun="applications" />
     </div>
   );
 }

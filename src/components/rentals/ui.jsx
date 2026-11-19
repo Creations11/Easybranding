@@ -33,3 +33,18 @@ export function TemporaryPassword({ who, password, onDone }) {
 export const Sheet = ({ className = '', ...props }) => (
   <div {...props} className={`mb-3 rounded-xl border border-edge bg-card px-4 py-3.5 ${className}`} />
 );
+
+/** Under a paged list (usePagedList): how many are shown, and Show more while there are more. */
+export function ShowMore({ list, noun }) {
+  if (!list.data?.length) return null;
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-muted">
+      <span>Showing {list.data.length} {noun}{list.hasMore ? '' : ', all of them'}.</span>
+      {list.hasMore && (
+        <Button variant="secondary" onClick={list.showMore} disabled={list.loadingMore}>
+          {list.loadingMore ? 'Loading…' : 'Show more'}
+        </Button>
+      )}
+    </div>
+  );
+}

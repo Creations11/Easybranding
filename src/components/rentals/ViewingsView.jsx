@@ -3,7 +3,7 @@ import Badge from '../ui/Badge';
 import { Select } from '../ui/Field';
 import { useRentalViewings, rentalsErrorMessage } from '../../hooks/useRentalsModeration';
 import { when, whatsapp } from './helpers';
-import { Sheet } from './ui';
+import { Sheet, ShowMore } from './ui';
 
 // Every viewing booked (Ayanda, 2026-11-19: "see all bookings"). Read only:
 // renters book, move and cancel on WhatsApp or the website, and each booking
@@ -57,7 +57,8 @@ function ViewingRow({ v }) {
 
 export default function ViewingsView() {
   const [show, setShow] = useState('upcoming');
-  const { data, isLoading, isError, error } = useRentalViewings(show);
+  const list = useRentalViewings(show);
+  const { data, isLoading, isError, error } = list;
   return (
     <div>
       <div className="mb-3 flex items-center gap-2">
@@ -69,6 +70,7 @@ export default function ViewingsView() {
       {isError && <Sheet role="alert" className="text-red">Couldn't load viewings. {rentalsErrorMessage(error)}</Sheet>}
       {data && !data.length && <p className="text-muted">No viewings here.</p>}
       {data?.map((v) => <ViewingRow key={v.id} v={v} />)}
+      <ShowMore list={list} noun="viewings" />
     </div>
   );
 }

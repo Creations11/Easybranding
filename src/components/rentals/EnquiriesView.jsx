@@ -3,7 +3,7 @@ import Badge from '../ui/Badge';
 import { Select } from '../ui/Field';
 import { useRentalEnquiries, rentalsErrorMessage } from '../../hooks/useRentalsModeration';
 import { when, whatsapp } from './helpers';
-import { Sheet } from './ui';
+import { Sheet, ShowMore } from './ui';
 
 // Everyone who has written to EasyRentals on WhatsApp (Ayanda, 2026-11-19:
 // "see all inquiries"). Read only: the answering happens in the Inbox, where
@@ -37,7 +37,8 @@ function EnquiryRow({ e }) {
 export default function EnquiriesView() {
   const [kind, setKind] = useState('');
   const [waiting, setWaiting] = useState(false);
-  const { data, isLoading, isError, error } = useRentalEnquiries({ kind, waiting });
+  const list = useRentalEnquiries({ kind, waiting });
+  const { data, isLoading, isError, error } = list;
   return (
     <div>
       <Sheet className="text-[13px] text-dim">
@@ -56,6 +57,7 @@ export default function EnquiriesView() {
       {isError && <Sheet role="alert" className="text-red">Couldn't load enquiries. {rentalsErrorMessage(error)}</Sheet>}
       {data && !data.length && <p className="text-muted">{waiting ? 'Nobody is waiting for an answer.' : 'No enquiries yet.'}</p>}
       {data?.map((e) => <EnquiryRow key={e.id} e={e} />)}
+      <ShowMore list={list} noun="enquiries" />
     </div>
   );
 }

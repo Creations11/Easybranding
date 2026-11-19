@@ -8,7 +8,7 @@
 // because the reviewer needs both to spot a fake listing. Photos come back as
 // links relative to the API (a draft's are signed for an hour), so they are
 // turned into absolute links here.
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import api from '../api';
 
 export const RENTALS_KEY = ['rentals', 'admin'];
@@ -29,6 +29,31 @@ export const photoSrc = (url) => (typeof url === 'string' && url.startsWith('/')
 // for review", a missing reason) says what to fix, so show it verbatim.
 export const rentalsErrorMessage = (err) =>
   err?.response?.data?.message || 'Something went wrong. Nothing was changed.';
+
+
+/**
+ * A staff list the API pages (page=1, 2, ...), with Show more. `data` is
+ * every row loaded so far, so a view reads it like a plain list; `hasMore`
+ * is true while the last page came back full (the API's page size: 20 for
+ * applications, 50 for enquiries and viewings). Ayanda, 2026-11-19: "will I
+ * now see all applications?" There were 53, and the tab showed the newest 20.
+ */
+function usePagedList(key, path, params, field, pageSize) {
+  const q = useInfiniteQuery({
+    queryKey: [...RENTALS_KEY, ...key],
+    queryFn: ({ pageParam }) => api.get(`${ADMIN}${path}`, { params: { ...params, ...(pageParam > 1 ? { page: pageParam } : {}) } })
+      .then((r) => r.data.data[field] || []),
+    initialPageParam: 1,
+    getNextPageParam: (last, pages) => (last.length >= pageSize ? pages.length + 1 : undefined),
+  });
+  return {
+    ...q,
+    data: q.data ? q.data.pages.flat() : undefined,
+    hasMore: Boolean(q.hasNextPage),
+    showMore: () => q.fetchNextPage(),
+    loadingMore: q.isFetchingNextPage,
+  };
+}
 
 /** Listings in one status: pending_review (the queue), published, draft, rented, archived. */
 export function useRentalListings(status, { enabled = true } = {}) {
@@ -76,10 +101,7 @@ export function useRentalNotices(status = 'all') {
  * `status` narrows it to one; empty is every application.
  */
 export function useRentalApplications(status = '') {
-  return useQuery({
-    queryKey: [...RENTALS_KEY, 'applications', status],
-    queryFn: () => api.get(`${ADMIN}/applications`, { params: status ? { status } : {} }).then((r) => r.data.data.applications),
-  });
+  return usePagedList(['applications', status], '/applications', status ? { status } : {}, 'applications', 20);
 }
 
 /**
@@ -89,11 +111,8 @@ export function useRentalApplications(status = '') {
  * landlord; `waiting` true keeps only those still waiting.
  */
 export function useRentalEnquiries({ kind = '', waiting = false } = {}) {
-  return useQuery({
-    queryKey: [...RENTALS_KEY, 'enquiries', kind, waiting],
-    queryFn: () => api.get(`${ADMIN}/enquiries`, { params: { ...(kind ? { kind } : {}), ...(waiting ? { waiting: 1 } : {}) } })
-      .then((r) => r.data.data.enquiries),
-  });
+  return usePagedList(['enquiries', kind, waiting], '/enquiries',
+    { ...(kind ? { kind } : {}), ...(waiting ? { waiting: 1 } : {}) }, 'enquiries', 50);
 }
 
 /**
@@ -102,10 +121,7 @@ export function useRentalEnquiries({ kind = '', waiting = false } = {}) {
  * no time yet) or all.
  */
 export function useRentalViewings(show = 'upcoming') {
-  return useQuery({
-    queryKey: [...RENTALS_KEY, 'viewings', show],
-    queryFn: () => api.get(`${ADMIN}/viewings`, { params: { show } }).then((r) => r.data.data.viewings),
-  });
+  return usePagedList(['viewings', show], '/viewings', { show }, 'viewings', 50);
 }
 
 /**

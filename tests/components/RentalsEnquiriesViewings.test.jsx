@@ -112,6 +112,29 @@ describe('RentalsPanel: enquiries, viewings, applications', () => {
     expect(await screen.findByText('No viewings here.')).toBeInTheDocument()
   })
 
+  it('every application can be reached: Show more fetches the next page until the last one', async () => {
+    // 53 in production on 2026-11-19, and the tab showed the newest 20 with no way to the rest.
+    const row = (n) => ({ ...APPLICATIONS[0], id: `a${n}`, fullName: `Applicant ${n}` })
+    api.get.mockImplementation((url, config) => {
+      if (url === '/rentals/admin/applications') {
+        const page = config?.params?.page || 1
+        const rows = page === 1 ? Array.from({ length: 20 }, (_, i) => row(i + 1)) : Array.from({ length: 5 }, (_, i) => row(i + 21))
+        return Promise.resolve({ data: { data: { applications: rows } } })
+      }
+      if (url === '/rentals/admin/listings') return Promise.resolve({ data: { data: { listings: [] } } })
+      if (url === '/rentals/admin/placements') return Promise.resolve({ data: { data: { owed: 0, placements: [] } } })
+      return Promise.reject(new Error(`Unmocked api.get call in test: ${url}`))
+    })
+    renderWithProviders(<RentalsPanel />)
+    await open('Applications')
+    expect(await screen.findByText('Showing 20 applications.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Show more' }))
+    expect(await screen.findByTestId('application-a25')).toBeInTheDocument()
+    expect(screen.getByText('Showing 25 applications, all of them.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument()
+    expect(api.get).toHaveBeenCalledWith('/rentals/admin/applications', { params: { page: 2 } })
+  })
+
   it('Applications names the place each one is for', async () => {
     renderWithProviders(<RentalsPanel />)
     await open('Applications')
