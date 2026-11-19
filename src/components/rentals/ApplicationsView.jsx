@@ -4,7 +4,7 @@ import Button from '../ui/Button';
 import { Select } from '../ui/Field';
 import { useRentalApplications, useRentalsActions, rentalsErrorMessage } from '../../hooks/useRentalsModeration';
 import { useAct } from './useAct';
-import { when, whatsapp } from './helpers';
+import { when, whatsapp, rand } from './helpers';
 import { Result, Sheet } from './ui';
 
 // Rental applications, for one job above all: the privacy policy says an
@@ -50,8 +50,15 @@ function ApplicationRow({ app }) {
         </div>
         <Badge tone={s.tone}>{s.label}</Badge>
       </div>
+      {app.listing && (
+        <div className="mt-1 text-xs text-muted">
+          For <span className="text-ink">{app.listing.title}</span>{app.listing.place ? `, ${app.listing.place}` : ''}
+        </div>
+      )}
       <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted">
-        <span>applied {when(app.createdAt)}</span>
+        <span>applied {when(app.createdAt)} on {app.via === 'whatsapp' ? 'WhatsApp' : 'the website'}</span>
+        {app.monthlyIncome != null && <span>earns {rand(app.monthlyIncome)} a month</span>}
+        {app.occupants ? <span>{app.occupants} {app.occupants === 1 ? 'person' : 'people'}</span> : null}
         <span>{app.documents?.length || 0} document{app.documents?.length === 1 ? '' : 's'}</span>
         {app.closedAt && <span>closed {when(app.closedAt)}</span>}
         {app.deleteAfter

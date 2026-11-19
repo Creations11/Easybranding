@@ -83,6 +83,32 @@ export function useRentalApplications(status = '') {
 }
 
 /**
+ * Everyone who has written to EasyRentals on WhatsApp (backend
+ * services/rentals/staffLists.js), newest first, each with the last thing they
+ * said and `waiting` when nobody has answered since. `kind` is renter or
+ * landlord; `waiting` true keeps only those still waiting.
+ */
+export function useRentalEnquiries({ kind = '', waiting = false } = {}) {
+  return useQuery({
+    queryKey: [...RENTALS_KEY, 'enquiries', kind, waiting],
+    queryFn: () => api.get(`${ADMIN}/enquiries`, { params: { ...(kind ? { kind } : {}), ...(waiting ? { waiting: 1 } : {}) } })
+      .then((r) => r.data.data.enquiries),
+  });
+}
+
+/**
+ * Viewings (backend services/rentals/staffLists.js). `show` is upcoming
+ * (soonest first, the default), past, cancelled, pending (agreed to the fee,
+ * no time yet) or all.
+ */
+export function useRentalViewings(show = 'upcoming') {
+  return useQuery({
+    queryKey: [...RENTALS_KEY, 'viewings', show],
+    queryFn: () => api.get(`${ADMIN}/viewings`, { params: { show } }).then((r) => r.data.data.viewings),
+  });
+}
+
+/**
  * Placement fees (backend services/rentals/placements.js): {owed, placements},
  * newest first. `status` is due (default), accepted, paid, waived,
  * fell_through, or empty for all. `owed` is the total of every due one.

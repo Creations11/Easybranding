@@ -18,6 +18,8 @@ import AccountsView from './rentals/AccountsView';
 import AlertsView from './rentals/AlertsView';
 import MessagesView from './rentals/MessagesView';
 import ApplicationsView from './rentals/ApplicationsView';
+import EnquiriesView from './rentals/EnquiriesView';
+import ViewingsView from './rentals/ViewingsView';
 import PlacementsView from './rentals/PlacementsView';
 import WebsiteView from './rentals/WebsiteView';
 
@@ -30,6 +32,8 @@ const VIEWS = [
   { id: 'draft', label: 'Drafts' },
   { id: 'rented', label: 'Let' },
   { id: 'archived', label: 'Archived' },
+  { id: 'enquiries', label: 'Enquiries' },
+  { id: 'viewings', label: 'Viewings' },
   { id: 'applications', label: 'Applications' },
   { id: 'placements', label: 'Placements' },
   { id: 'accounts', label: 'Accounts' },
@@ -72,6 +76,8 @@ export default function RentalsPanel() {
       {view === 'accounts' ? <AccountsView />
         : view === 'alerts' ? <AlertsView />
         : view === 'messages' ? <MessagesView />
+        : view === 'enquiries' ? <EnquiriesView />
+        : view === 'viewings' ? <ViewingsView />
         : view === 'applications' ? <ApplicationsView />
         : view === 'placements' ? <PlacementsView />
         : view === 'website' ? <WebsiteView />
