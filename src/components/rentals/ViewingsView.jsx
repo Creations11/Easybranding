@@ -55,8 +55,8 @@ function ViewingRow({ v }) {
   );
 }
 
-export default function ViewingsView() {
-  const [show, setShow] = useState('upcoming');
+export default function ViewingsView({ initialShow = 'upcoming' }) {
+  const [show, setShow] = useState(initialShow);
   const list = useRentalViewings(show);
   const { data, isLoading, isError, error } = list;
   return (

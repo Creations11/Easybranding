@@ -45,6 +45,13 @@ const mockGets = ({ listings = {}, accounts = [] } = {}) => {
   })
 }
 
+// The tab opens on Overview since 2026-11-19; these tests are about the
+// review queue, so they start there, as a person would by tapping it.
+const renderPanel = async () => {
+  renderWithProviders(<RentalsPanel />)
+  fireEvent.click(await screen.findByRole('tab', { name: /^Waiting for review/ }))
+}
+
 describe('RentalsPanel', () => {
   beforeEach(() => {
     api.get.mockReset()
@@ -55,7 +62,7 @@ describe('RentalsPanel', () => {
   afterEach(() => vi.restoreAllMocks())
 
   it('shows a waiting listing with everything the reviewer needs', async () => {
-    renderWithProviders(<RentalsPanel />)
+    await renderPanel()
     const card = await screen.findByTestId('listing-l1')
     expect(within(card).getByText('1 bedroom flat')).toBeInTheDocument()
     expect(within(card).getByText(/7 Example Road/)).toBeInTheDocument()
@@ -69,7 +76,7 @@ describe('RentalsPanel', () => {
   })
 
   it('shows where the listing is on a map, on request', async () => {
-    renderWithProviders(<RentalsPanel />)
+    await renderPanel()
     const card = await screen.findByTestId('listing-l1')
     const query = encodeURIComponent('7 Example Road, Ext 5, Fleurhof, Johannesburg, South Africa')
     expect(within(card).getByRole('link', { name: 'Open in Google Maps' }))
@@ -82,7 +89,7 @@ describe('RentalsPanel', () => {
 
   it('publishes only after the person confirms, and says so', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
-    renderWithProviders(<RentalsPanel />)
+    await renderPanel()
     const card = await screen.findByTestId('listing-l1')
 
     fireEvent.click(within(card).getByText('Approve'))
@@ -96,7 +103,7 @@ describe('RentalsPanel', () => {
 
   it('sends a listing back only with a reason, and sends exactly that reason', async () => {
     const prompt = vi.spyOn(window, 'prompt').mockReturnValueOnce('   ').mockReturnValueOnce('The photos are of a different house.')
-    renderWithProviders(<RentalsPanel />)
+    await renderPanel()
     const card = await screen.findByTestId('listing-l1')
 
     fireEvent.click(within(card).getByText('Send back with a reason'))
@@ -112,7 +119,7 @@ describe('RentalsPanel', () => {
   it("shows the server's refusal word for word", async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     api.post.mockRejectedValue({ response: { data: { message: 'This listing is not waiting for review.' } } })
-    renderWithProviders(<RentalsPanel />)
+    await renderPanel()
     const card = await screen.findByTestId('listing-l1')
     fireEvent.click(within(card).getByText('Approve'))
     expect(await within(card).findByText('This listing is not waiting for review.')).toBeInTheDocument()
@@ -120,7 +127,7 @@ describe('RentalsPanel', () => {
 
   it('takes a live listing down with a reason, and offers no Approve for it', async () => {
     vi.spyOn(window, 'prompt').mockReturnValue('Reported as a scam')
-    renderWithProviders(<RentalsPanel />)
+    await renderPanel()
     fireEvent.click(await screen.findByRole('tab', { name: 'Live' }))
     const card = await screen.findByTestId('listing-l2')
     expect(within(card).queryByText('Approve')).not.toBeInTheDocument()
@@ -132,7 +139,7 @@ describe('RentalsPanel', () => {
 
   it('suspends the landlord, with a reason', async () => {
     vi.spyOn(window, 'prompt').mockReturnValue('Posting fake listings')
-    renderWithProviders(<RentalsPanel />)
+    await renderPanel()
     const card = await screen.findByTestId('listing-l1')
     fireEvent.click(within(card).getByText('Suspend landlord'))
     await waitFor(() => expect(api.post).toHaveBeenCalledWith(
@@ -143,14 +150,14 @@ describe('RentalsPanel', () => {
   // An empty queue on a failed load reads as "nothing to check".
   it('never says nothing is waiting when the list failed to load', async () => {
     api.get.mockRejectedValue({ response: { data: { message: 'Access denied' } } })
-    renderWithProviders(<RentalsPanel />)
+    await renderPanel()
     expect(await screen.findByText(/Couldn't load listings/)).toBeInTheDocument()
     expect(screen.queryByText('Nothing is waiting for review.')).not.toBeInTheDocument()
   })
 
   it('says so when nothing is waiting', async () => {
     mockGets({ listings: { pending_review: [] } })
-    renderWithProviders(<RentalsPanel />)
+    await renderPanel()
     expect(await screen.findByText('Nothing is waiting for review.')).toBeInTheDocument()
   })
 
@@ -162,7 +169,7 @@ describe('RentalsPanel', () => {
       }],
     })
     vi.spyOn(window, 'confirm').mockReturnValue(true)
-    renderWithProviders(<RentalsPanel />)
+    await renderPanel()
     fireEvent.click(await screen.findByRole('tab', { name: 'Accounts' }))
     fireEvent.change(screen.getByLabelText('Find an account'), { target: { value: 'thabo' } })
     fireEvent.click(screen.getByText('Find'))

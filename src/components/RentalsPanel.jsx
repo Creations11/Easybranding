@@ -20,6 +20,7 @@ import MessagesView from './rentals/MessagesView';
 import ApplicationsView from './rentals/ApplicationsView';
 import EnquiriesView from './rentals/EnquiriesView';
 import ViewingsView from './rentals/ViewingsView';
+import OverviewView from './rentals/OverviewView';
 import PlacementsView from './rentals/PlacementsView';
 import WebsiteView from './rentals/WebsiteView';
 
@@ -27,6 +28,7 @@ import WebsiteView from './rentals/WebsiteView';
 // AccountsView (NewAccount, AccountRow, AccountForm), AlertsView, MessagesView, ApplicationsView, PlacementsView, WebsiteView.
 
 const VIEWS = [
+  { id: 'overview', label: 'Overview' },
   { id: 'pending_review', label: 'Waiting for review' },
   { id: 'published', label: 'Live' },
   { id: 'draft', label: 'Drafts' },
@@ -43,7 +45,10 @@ const VIEWS = [
 ];
 
 export default function RentalsPanel() {
-  const [view, setView] = useState('pending_review');
+  // The overview first (2026-11-19); a tile opens its list, sometimes pre-filtered.
+  const [view, setView] = useState('overview');
+  const [opts, setOpts] = useState({});
+  const go = (v, o = {}) => { setOpts(o); setView(v); };
   const waiting = useRentalListings('pending_review').data?.length || 0;
   // Placement fees to invoice: shown on the tab so a due one is not missed.
   const due = useRentalPlacements('due').data?.placements?.length || 0;
@@ -64,7 +69,7 @@ export default function RentalsPanel() {
 
       <div role="tablist" className="mb-4 flex flex-wrap gap-1.5">
         {VIEWS.map((v) => (
-          <button key={v.id} type="button" role="tab" aria-selected={view === v.id} onClick={() => setView(v.id)}
+          <button key={v.id} type="button" role="tab" aria-selected={view === v.id} onClick={() => go(v.id)}
             className={`inline-flex min-h-[44px] cursor-pointer items-center rounded-lg border px-3 text-xs ${
               view === v.id ? 'border-lime/30 bg-lime/10 font-bold text-lime' : 'border-white/10 bg-transparent text-muted hover:bg-raise'
             }`}>
@@ -73,12 +78,13 @@ export default function RentalsPanel() {
         ))}
       </div>
 
-      {view === 'accounts' ? <AccountsView />
+      {view === 'overview' ? <OverviewView go={go} />
+        : view === 'accounts' ? <AccountsView />
         : view === 'alerts' ? <AlertsView />
         : view === 'messages' ? <MessagesView />
-        : view === 'enquiries' ? <EnquiriesView />
-        : view === 'viewings' ? <ViewingsView />
-        : view === 'applications' ? <ApplicationsView />
+        : view === 'enquiries' ? <EnquiriesView key={JSON.stringify(opts)} {...opts} />
+        : view === 'viewings' ? <ViewingsView key={JSON.stringify(opts)} {...opts} />
+        : view === 'applications' ? <ApplicationsView key={JSON.stringify(opts)} {...opts} />
         : view === 'placements' ? <PlacementsView />
         : view === 'website' ? <WebsiteView />
         : <ListingsView status={view} />}

@@ -105,6 +105,19 @@ export function useRentalApplications(status = '') {
 }
 
 /**
+ * The Rentals tab's front page (backend services/rentals/staffLists.js
+ * rentalsOverview): people waiting for an answer, today's viewings, new
+ * applications, listings to check, fees due. Refreshed every minute.
+ */
+export function useRentalsOverview() {
+  return useQuery({
+    queryKey: [...RENTALS_KEY, 'overview'],
+    queryFn: () => api.get(`${ADMIN}/overview`).then((r) => r.data.data.overview),
+    refetchInterval: 60000,
+  });
+}
+
+/**
  * Everyone who has written to EasyRentals on WhatsApp (backend
  * services/rentals/staffLists.js), newest first, each with the last thing they
  * said and `waiting` when nobody has answered since. `kind` is renter or

@@ -34,9 +34,9 @@ function EnquiryRow({ e }) {
   );
 }
 
-export default function EnquiriesView() {
+export default function EnquiriesView({ onlyWaiting = false }) {
   const [kind, setKind] = useState('');
-  const [waiting, setWaiting] = useState(false);
+  const [waiting, setWaiting] = useState(onlyWaiting);
   const list = useRentalEnquiries({ kind, waiting });
   const { data, isLoading, isError, error } = list;
   return (

@@ -58,9 +58,62 @@ const mockGets = ({ failEnquiries = false } = {}) => {
       return Promise.resolve({ data: { data: { viewings: config?.params?.show === 'upcoming' ? VIEWINGS : [] } } })
     }
     if (url === '/rentals/admin/applications') return Promise.resolve({ data: { data: { applications: APPLICATIONS } } })
+    if (url === '/rentals/admin/overview') return Promise.resolve({ data: { data: { overview: OVERVIEW } } })
     return Promise.reject(new Error(`Unmocked api.get call in test: ${url}`))
   })
 }
+
+const OVERVIEW = {
+  waiting: { count: 25, today: 5, newest: [{ id: 'e1', name: 'Kigo', phone: '+27831110001', lastMessage: 'Is the room still available?', lastMessageAt: new Date().toISOString() }] },
+  viewings: { today: [VIEWINGS[0]], nextSevenDays: 6, pickingATime: 1 },
+  applicationsNew: 15,
+  listingsToReview: 0,
+  listingsLive: 7,
+  feesDue: { count: 0, owed: 0 },
+}
+
+describe('RentalsPanel: the overview', () => {
+  beforeEach(() => {
+    api.get.mockReset()
+    mockGets()
+  })
+  afterEach(() => vi.restoreAllMocks())
+
+  it('opens first, with the numbers to act on and today\'s viewings', async () => {
+    renderWithProviders(<RentalsPanel />)
+    expect(await screen.findByRole('tab', { name: 'Overview', selected: true })).toBeInTheDocument()
+    const waiting = await screen.findByRole('button', { name: /Waiting for an answer/ })
+    expect(waiting).toHaveTextContent('25')
+    expect(waiting).toHaveTextContent('5 wrote today')
+    expect(screen.getByRole('button', { name: /New applications/ })).toHaveTextContent('15')
+    expect(screen.getByRole('button', { name: /Viewings today/ })).toHaveTextContent('6 in the next 7 days')
+    const today = screen.getByTestId('today-v1')
+    expect(within(today).getByText('Room to Rent')).toBeInTheDocument()
+    expect(within(today).getByText('not in the diary')).toBeInTheDocument()
+    expect(screen.getByText(/Is the room still available\?/)).toBeInTheDocument()
+  })
+
+  it('a tile opens its list already filtered: waiting enquiries, new applications', async () => {
+    renderWithProviders(<RentalsPanel />)
+    fireEvent.click(await screen.findByRole('button', { name: /Waiting for an answer/ }))
+    expect(await screen.findByRole('checkbox', { name: /Only those waiting/ })).toBeChecked()
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith('/rentals/admin/enquiries', { params: { waiting: 1 } }))
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Overview' }))
+    fireEvent.click(await screen.findByRole('button', { name: /New applications/ }))
+    expect(await screen.findByRole('combobox', { name: 'Show' })).toHaveValue('submitted')
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith('/rentals/admin/applications', { params: { status: 'submitted' } }))
+  })
+
+  it('a failed overview says so in the server\'s words, never shows zeros', async () => {
+    api.get.mockImplementation((url) => (url === '/rentals/admin/overview'
+      ? Promise.reject({ response: { data: { message: 'The database is busy.' } } })
+      : Promise.resolve({ data: { data: { listings: [], owed: 0, placements: [] } } })))
+    renderWithProviders(<RentalsPanel />)
+    expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load the overview. The database is busy.")
+    expect(screen.queryByRole('button', { name: /Waiting for an answer/ })).not.toBeInTheDocument()
+  })
+})
 
 const open = async (name) => fireEvent.click(await screen.findByRole('tab', { name }))
 

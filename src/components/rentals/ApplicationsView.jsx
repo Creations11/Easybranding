@@ -73,8 +73,8 @@ function ApplicationRow({ app }) {
   );
 }
 
-export default function ApplicationsView() {
-  const [status, setStatus] = useState('');
+export default function ApplicationsView({ initialStatus = '' }) {
+  const [status, setStatus] = useState(initialStatus);
   const list = useRentalApplications(status);
   const { data, isLoading, isError, error } = list;
   return (
